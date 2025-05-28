@@ -1,5 +1,4 @@
 local c = require("Beez.flotes.config")
-local f = require("Beez.flotes")
 local u = require("Beez.u")
 local utils = require("Beez.flotes.utils")
 local M = {}
@@ -43,6 +42,7 @@ end
 --- Create a new note from a template
 ---@param opts Beez.flotes.templates.opts
 function M.create_template(opts)
+  local f = require("Beez.flotes")
   local template = c.config.templates.templates[opts.template]
   if template == nil then
     error("Template not found: " .. opts.template)

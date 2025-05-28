@@ -97,7 +97,7 @@ function M.grep()
     },
     deck = {
       run = function(opts)
-        require("u.pickers.deck.pickers").grep.deck(opts)
+        require("Beez.pickers.deck").grep(opts)
       end,
     },
   }
@@ -713,17 +713,6 @@ function M.grep_help()
   }
 end
 
-function M.code_marks()
-  return {
-    deck = {
-      run = function(opts)
-        local source, specifier = deck_pickers.sources.codemarks(opts)
-        require("deck").start(source, specifier)
-      end,
-    },
-  }
-end
-
 function M.spelling()
   return {
     snacks = {
@@ -763,6 +752,12 @@ function M.codemarks()
         snack_pickers.codemarks.marks(opts)
       end,
     },
+    deck = {
+      run = function(opts)
+        local source, specifier = deck_pickers.codemarks.sources.find(opts)
+        require("deck").start(source, specifier)
+      end,
+    },
   }
 end
 
@@ -771,6 +766,11 @@ function M.scratches()
     snacks = {
       run = function(opts)
         snack_pickers.scratches.find(opts)
+      end,
+    },
+    deck = {
+      run = function(opts)
+        deck_pickers.scratches.find(opts)
       end,
     },
   }

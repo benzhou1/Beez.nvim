@@ -1,7 +1,6 @@
 local M = {}
 
 M.deck = require("Beez.u.apps.deck")
-M.flotes = require("Beez.u.apps.flotes")
 M.monoglow = require("Beez.u.apps.monoglow")
 M.codemarks = require("Beez.u.apps.codemarks")
 M.options = require("Beez.u.apps.options")
@@ -13,5 +12,6 @@ M.lazy = require("Beez.u.apps.lazyvim")
 M.plenary = require("Beez.u.apps.plenary")
 M.nui = require("Beez.u.apps.nui")
 M.navigator = require("Beez.u.apps.navigator")
+M.Beez = require("Beez.u.apps.Beez")
 
 return M

@@ -6,7 +6,7 @@ local actions = require("Beez.pickers.snacks.codemarks.actions")
 --- Picker for searching marks
 function M.marks(opts)
   local function marks_finder(_, ctx)
-    local marks = require("codemarks").marks
+    local marks = require("Beez.codemarks").marks
     local filter_marks = {}
     if not utils.get_global_toggle() then
       local root = u.root.get({ buf = vim.api.nvim_get_current_buf() })

@@ -587,10 +587,8 @@ end
 ---@param opts? table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.notes_grep(opts)
-  opts = utils.resolve_opts(
-    opts or {},
-    { is_grep = false, filename_first = false, cwd = require("flotes").config.notes_dir }
-  )
+  local flotes_dir = require("Beez.u.apps.Beez").flotes_dir
+  opts = utils.resolve_opts(opts or {}, { is_grep = false, filename_first = false, cwd = flotes_dir })
   local source = utils.resolve_source(
     opts,
     require("deck.builtin.source.grep")(vim.tbl_deep_extend("keep", opts.source_opts, {
@@ -659,7 +657,7 @@ function M.notes_files(opts)
     execute = function(ctx)
       local System = require("deck.kit.System")
       local notify = require("deck.notify")
-      local flotes = require("flotes")
+      local f = require("Beez.flotes")
       local query = ctx.get_query()
       local cmd = {
         "rg",
@@ -684,7 +682,7 @@ function M.notes_files(opts)
       end
 
       ctx.on_abort(System.spawn(cmd, {
-        cwd = flotes.config.notes_dir,
+        cwd = f.config.notes_dir,
         env = {},
         buffering = System.LineBuffering.new({
           ignore_empty = true,
@@ -694,7 +692,7 @@ function M.notes_files(opts)
           ---@diagnostic disable-next-line: redefined-local
           local file, _, _, text = text:match("^(.+):(%d+):(%d+):(.*)$")
           if file then
-            local file_path = flotes.config.notes_dir .. u.paths.sep .. file
+            local file_path = f.config.notes_dir .. u.paths.sep .. file
             item.data.title = text
             item.data.filename = file_path
           end
@@ -731,12 +729,12 @@ end
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.notes_templates(opts)
   opts = opts or {}
-  local flotes = require("flotes")
+  local f = require("Beez.flotes")
   opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
   local source = utils.resolve_source(opts, {
     name = "note_templates",
     execute = function(ctx)
-      for name, template in pairs(flotes.config.templates.templates) do
+      for name, template in pairs(f.config.templates.templates) do
         ctx.item({
           display_text = name,
           data = {
@@ -768,80 +766,6 @@ function M.notes_templates(opts)
       },
     },
   })
-  local specifier = utils.resolve_specifier(opts)
-  return source, specifier
-end
-
---- Deck source for codemarks
----@param opts table
----@return deck.Source, deck.StartConfigSpecifier
-function M.codemarks(opts)
-  opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
-  local source = utils.resolve_source(opts, {
-    name = "codemarks",
-    execute = function(ctx)
-      local marks = require("codemarks").marks
-      local cm_utils = require("codemarks.utils")
-      local filter_marks = {}
-      if not M.toggles.global_codemarks then
-        local root = cm_utils.path.get_root_dir()
-        for _, m in pairs(marks.marks) do
-          if m.root == root then
-            table.insert(filter_marks, m)
-          end
-        end
-        if #filter_marks == 0 then
-          vim.notify("No marks found, showing all marks...", vim.log.levels.WARN)
-          M.toggles.global_codemarks = true
-        end
-      end
-
-      if M.toggles.global_codemarks then
-        for _, m in pairs(marks.marks) do
-          table.insert(filter_marks, m)
-        end
-      end
-
-      for _, m in ipairs(filter_marks) do
-        local item = {
-          display_text = {
-            { m.desc, "Normal" },
-          },
-          data = {
-            filename = m.file,
-            lnum = tonumber(m.lineno),
-            data = m.data,
-          },
-        }
-        ctx.item(item)
-      end
-      ctx.done()
-    end,
-    actions = {
-      require("deck").alias_action("default", opts.default_action or "open"),
-      require("deck").alias_action("toggle1", "toggle_global"),
-      require("deck").alias_action("delete", "delete_mark"),
-      actions.open_zed({ quit = opts.open_zed.quit }),
-      {
-        name = "toggle_global",
-        execute = function(ctx)
-          M.toggles.global_codemarks = not M.toggles.global_codemarks
-          ctx.execute()
-        end,
-      },
-      {
-        name = "delete_mark",
-        execute = function(ctx)
-          local marks = require("codemarks").marks
-          for _, item in ipairs(ctx.get_action_items()) do
-            marks:del(item.data.data)
-          end
-          ctx.execute()
-        end,
-      },
-    },
-  })
-
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
 end

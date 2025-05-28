@@ -1,5 +1,6 @@
 --- Taken from LazyVim
-local u = require("Beez.u")
+local paths = require("Beez.u.paths")
+local os = require("Beez.u.os")
 
 ---@class Beez.u.root
 ---@overload fun(): string
@@ -64,7 +65,7 @@ function M.detectors.lsp(buf)
     end
   end
   return vim.tbl_filter(function(path)
-    path = u.paths.norm(path)
+    path = paths.norm(path)
     return path and bufpath:find(path, 1, true) == 1
   end, roots)
 end
@@ -182,7 +183,7 @@ function M.get(opts)
   if opts and opts.normalize then
     return ret
   end
-  return u.os.is_win() and ret:gsub("/", "\\") or ret
+  return os.is_win() and ret:gsub("/", "\\") or ret
 end
 
 function M.git()

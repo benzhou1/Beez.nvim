@@ -39,6 +39,7 @@ function M.select_items_in_visual_selection(ctx, opts)
 end
 
 local function keymaps(ctx)
+  local u = require("Beez.u")
   local deck = require("deck")
 
   ctx.keymap("n", "?", deck.action_mapping("choose_action"))
@@ -49,47 +50,8 @@ local function keymaps(ctx)
   ctx.keymap("n", "P", deck.action_mapping("toggle_preview_mode"))
   ctx.keymap("n", "p", deck.action_mapping("paste"))
   ctx.keymap("n", "dd", deck.action_mapping("delete"))
-  ctx.keymap({ "n", "c" }, "<CR>", function(ctx)
-    if vim.fn.getcmdtype() == "/" then
-      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
-      return
-    end
-
-    if vim.fn.mode() == "c" then
-      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<esc>", true, false, true), "t", false)
-      require("u.utils.async").delayed({
-        delay = 100,
-        cb = function()
-          deck.action_mapping("default")(ctx)
-        end,
-      })
-      return
-    end
-
-    deck.action_mapping("default")(ctx)
-  end)
-  ctx.keymap({ "c" }, "<down>", function(_)
-    if vim.fn.mode() == "c" then
-      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<esc>", true, false, true), "t", false)
-    end
-    require("u.utils.async").delayed({
-      delay = 100,
-      cb = function()
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<down>", true, false, true), "t", false)
-      end,
-    })
-  end)
-  ctx.keymap({ "n", "c" }, "<S-CR>", function(ctx)
-    if vim.fn.mode() == "c" then
-      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<esc>", true, false, true), "t", false)
-    end
-    require("u.utils.async").delayed({
-      delay = 100,
-      cb = function()
-        deck.action_mapping("alt_default")(ctx)
-      end,
-    })
-  end)
+  ctx.keymap("n", "<cr>", deck.action_mapping("default"))
+  ctx.keymap("n", "<s-cr>", deck.action_mapping("alt_default"))
   ctx.keymap("n", "-", deck.action_mapping("prev_default"))
   ctx.keymap("n", "o", deck.action_mapping("open_keep"))
   ctx.keymap("n", "O", deck.action_mapping("insert_above"))
@@ -158,22 +120,24 @@ local function autocmds(opts)
 
   -- Setup autocmds
   local augroup = vim.api.nvim_create_augroup("deck.easy", { clear = true })
-  local flotes_plugin = require("u.utils.apps.flotes")
-  local ignore_patterns = {
-    ".*%.cache",
-    flotes_plugin.notes_dir .. ".*",
-  }
   vim.api.nvim_create_autocmd("BufEnter", {
     group = augroup,
     callback = function()
       local bufname = vim.api.nvim_buf_get_name(0)
       local valid = vim.fn.filereadable(bufname) == 1
-      for _, pattern in ipairs(ignore_patterns) do
-        valid = valid and not bufname:match(pattern)
-        if not valid then
-          break
+      if opts.flotes_dir then
+        local ignore_patterns = {
+          ".*%.cache",
+          opts.flotes_dir .. ".*",
+        }
+        for _, pattern in ipairs(ignore_patterns) do
+          valid = valid and not bufname:match(pattern)
+          if not valid then
+            break
+          end
         end
       end
+
       if not valid then
         return
       end
@@ -223,7 +187,7 @@ local function autocmds(opts)
   })
 end
 
----@param config_opts? {autocmds?: boolean, sort_bufferline?: boolean}
+---@param config_opts? {autocmds?: boolean, sort_bufferline?: boolean, flotes_dir?: string}
 function M.spec.config(_, opts, config_opts)
   config_opts = config_opts or {}
   local deck = require("deck")
@@ -248,7 +212,7 @@ function M.spec.config(_, opts, config_opts)
   })
 
   if config_opts.autocmds ~= false then
-    autocmds({ sort_bufferline = config_opts.sort_bufferline })
+    autocmds({ sort_bufferline = config_opts.sort_bufferline, flotes_dir = config_opts.flotes_dir })
   end
 end
 
@@ -272,11 +236,74 @@ M.spec.opts = {
         }
       end,
       set_title = function(win_config, filename)
-        win_config.title = filename and require("u.utils.paths").basename(filename)
+        local u = require("Beez.u")
+        win_config.title = filename and u.paths.basename(filename)
         win_config.title_pos = "center"
       end,
       win_hl = "Normal:Normal,FloatBorder:Comment,FloatTitle:CursorLineNr,FloatFooter:Normal",
     },
+    before_prompt_cb = function(ctx)
+      local u = require("Beez.u")
+      local deck = require("deck")
+
+      -- Enter will apply default action to the current item
+      ctx.keymap({ "c" }, "<CR>", function(ctx)
+        local cmdtype = vim.fn.getcmdtype()
+        if cmdtype == "/" then
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, false, true), "n", false)
+          return
+        end
+
+        if vim.fn.mode() == "c" then
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<esc>", true, false, true), "t", false)
+          u.async.delayed({
+            delay = 100,
+            cb = function()
+              deck.action_mapping("default")(ctx)
+            end,
+          })
+          return
+        end
+
+        deck.action_mapping("default")(ctx)
+      end)
+
+      -- Down will cancel input and move to the next item
+      ctx.keymap({ "c" }, "<down>", function(_)
+        if vim.fn.mode() == "c" then
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<esc>", true, false, true), "t", false)
+        end
+        u.async.delayed({
+          delay = 100,
+          cb = function()
+            vim.api.nvim_feedkeys(
+              vim.api.nvim_replace_termcodes("<down>", true, false, true),
+              "t",
+              false
+            )
+          end,
+        })
+      end)
+
+      -- Shift-Enter will apply alt-default action to the current item
+      ctx.keymap({ "c" }, "<S-CR>", function(ctx)
+        if vim.fn.mode() == "c" then
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<esc>", true, false, true), "t", false)
+        end
+        u.async.delayed({
+          delay = 100,
+          cb = function()
+            deck.action_mapping("alt_default")(ctx)
+          end,
+        })
+      end)
+    end,
+
+    after_prompt_cb = function(ctx)
+      pcall(vim.keymap.del, { "c" }, "<down>", { buffer = ctx.buf })
+      pcall(vim.keymap.del, { "c" }, "<cr>", { buffer = ctx.buf })
+      pcall(vim.keymap.del, { "c" }, "<s-cr>", { buffer = ctx.buf })
+    end,
   },
 }
 

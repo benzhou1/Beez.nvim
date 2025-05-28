@@ -14,6 +14,7 @@ local M = {
     zoomed = nil,
   },
   utils = utils,
+  config = {}
 }
 
 --- Setup configurationk
@@ -24,13 +25,24 @@ M.setup = function(opts)
   if not ok then
     return false
   end
+  M.config = c.config
 
-  -- Keymaps per buffer
-  c.config.float_opts.buf_keymap_cb = function(bufnr)
-    keymaps.bind_note_keymaps(bufnr)
-  end
+  ---@type Beez.ui.float.opts
+  local float_opts = {
+    win = c.config.float.float_opts,
+    buffer = {
+      del_bufs_on_close = c.config.float.del_bufs_on_close,
+    },
+    keymaps = {
+      -- Keymaps per buffer
+      buf_keymap_cb = function(bufnr)
+        keymaps.bind_note_keymaps(bufnr)
+      end,
+    },
+  }
+
   -- Initialize float window
-  M.states.float = require("flotes.float").Float:new(c.config.float_opts)
+  M.states.float = require("Beez.ui.float").Float:new(float_opts)
 end
 
 ---@class Beez.flotes.showopts
@@ -38,7 +50,7 @@ end
 ---@field note_path string? Path to the note to show
 
 --- Show floating window with the note
----@param opts Flotes.ShowOpts?
+---@param opts Beez.flotes.showopts?
 function M.show(opts)
   opts = opts or {}
 
@@ -82,7 +94,7 @@ function M.close()
 end
 
 --- Toggles the floating window depending on quit_action
----@param opts Flotes.ShowOpts?
+---@param opts Beez.flotes.showopts?
 function M.toggle(opts)
   opts = opts or {}
   if M.states.float ~= nil then

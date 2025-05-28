@@ -1,8 +1,12 @@
 local u = require("Beez.u")
-local M = {}
+local M = {
+  ---@type Beez.flotes.config
+  config = {}
+}
 
 ---@class Beez.flotes.float.config
 ---@field quit_action "close" | "hide" Action to take when the float is closed. Defaults to "close"
+---@field del_bufs_on_close boolean? Whether to delete buffers on close. Defaults to true
 ---@field float_opts Beez.ui.float.win.opts Options for the floating window
 
 ---@class Beez.flotes.keymaps.config
@@ -59,13 +63,13 @@ M.def_config = {
   },
   float = {
     quit_action = "close",
+    del_bufs_on_close = true,
     float_opts = {
       x = 0.25,
       y = 0.25,
       w = 0.5,
       h = 0.5,
       border = "rounded",
-      del_bufs_on_close = true,
     },
   },
   pickers = {
@@ -85,7 +89,7 @@ M.def_config = {
 ---@param opts Beez.flotes.config
 ---@return boolean
 function M.init(opts)
-  M.config = vim.tbl_deep_extend("keep", {}, opts or {}, M.config)
+  M.config = vim.tbl_deep_extend("keep", {}, opts or {}, M.def_config)
 
   -- Notes dir is required
   if M.config.notes_dir == nil then
@@ -116,16 +120,16 @@ function M.init(opts)
   -- Support percentage values for float_opts
   local float_opts = vim.tbl_deep_extend("keep", {}, opts, M.config.float.float_opts)
   if float_opts.x < 1 then
-    float_opts.x = math.floor(vim.o.columns * float_opts.x)
+    M.config.float.float_opts.x = math.floor(vim.o.columns * float_opts.x)
   end
   if float_opts.y < 1 then
-    float_opts.y = math.floor(vim.o.lines * float_opts.y)
+    M.config.float.float_opts.y = math.floor(vim.o.lines * float_opts.y)
   end
   if float_opts.w < 1 then
-    float_opts.w = math.floor(vim.o.columns * float_opts.w)
+    M.config.float.float_opts.w = math.floor(vim.o.columns * float_opts.w)
   end
   if float_opts.h < 1 then
-    float_opts.h = math.floor(vim.o.lines * float_opts.h)
+    M.config.float.float_opts.h = math.floor(vim.o.lines * float_opts.h)
   end
   return true
 end

@@ -1,3 +1,5 @@
+local decorators = require("Beez.pickers.deck.decorators")
+local formatters = require("Beez.pickers.deck.formatters")
 local previewers = require("Beez.pickers.deck.previewers")
 local M = {}
 
@@ -28,13 +30,13 @@ function M.resolve_opts(opts, ...)
   }, ... or {}, opts or {})
 
   if opts.filename_first then
-    opts.source_opts.transform = M.formats.filename_first.transform(opts)
+    opts.source_opts.transform = formatters.filename_first.transform(opts)
   end
   if opts.cwd then
     opts.source_opts.root_dir = opts.cwd
   end
   if opts.is_grep then
-    opts.source_opts.transform = M.formats.grep.transform
+    opts.source_opts.transform = formatters.grep.transform
   end
   return opts
 end
@@ -64,7 +66,7 @@ end
 function M.resolve_source(opts, ...)
   local source = { decorators = {} }
   if opts.buf_flags then
-    table.insert(source.decorators, M.decorators.buf_flags)
+    table.insert(source.decorators, decorators.buf_flags)
   end
   source = vim.tbl_deep_extend("force", opts.source_opts, source, ...)
   return source

@@ -41,8 +41,8 @@ M.Float.__index = M.Float
 
 ---@class Beez.ui.float.opts
 ---@field win Beez.ui.float.win.opts
----@field keymaps Beez.ui.float.keymaps.opts
----@field buffer Beez.ui.float.buffer.opts
+---@field keymaps Beez.ui.float.keymaps.opts?
+---@field buffer Beez.ui.float.buffer.opts?
 ---@field set_title_filename boolean?
 ---@field close_on_leave boolean?
 
@@ -58,7 +58,10 @@ function M.Float:new(opts)
   f.bufnrs = {}
   f.hidden = false
   f.zoomed = false
-  f.opts = opts
+  f.opts = vim.tbl_deep_extend("keep", opts, {
+    keymaps = {},
+    buffer = {},
+  })
 
   f.set_title_filename = true
   if opts.set_title_filename ~= nil then
@@ -206,10 +209,10 @@ function M.Float:get_win_opts()
       row = math.floor(vim.o.lines * 0.05),
       width = math.floor(vim.o.columns * 0.9),
       height = math.floor(vim.o.lines * 0.9),
-    }, self.opts)
+    }, self.win_opts)
     return opts
   end
-  return self.opts
+  return self.win_opts
 end
 
 --- Create a new floating window

@@ -8,7 +8,7 @@ function M.spec(opts)
       marks_file = vim.fn.expand("~/SynologyDrive/codemarks.txt"),
     },
     config = function(_, opts)
-      require("codemarks").setup(opts)
+      require("Beez.codemarks").setup(opts)
     end,
   })
   return spec

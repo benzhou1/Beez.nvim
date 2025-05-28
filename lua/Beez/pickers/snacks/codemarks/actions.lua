@@ -8,7 +8,7 @@ function M.delete(picker)
     return
   end
 
-  local marks = require("codemarks").marks
+  local marks = require("Beez.codemarks").marks
   marks:del(item.data)
 
   picker:close()
@@ -41,7 +41,7 @@ function M.update_desc(picker)
     return
   end
 
-  local marks = require("codemarks").marks
+  local marks = require("Beez.codemarks").marks
   local mark = marks:get(item.data)
   if mark == nil then
     return

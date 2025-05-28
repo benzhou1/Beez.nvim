@@ -4,21 +4,23 @@ local M = { notes = { actions = {} }, templates = { actions = {} } }
 
 --- Confirm the selected note and open it in a new buffer.
 function M.notes.actions.confirm(picker)
+  local f = require("Beez.flotes")
   picker:close()
   local item = picker:current()
   if not item then
     return
   end
-  require("flotes").show({ note_path = item.file })
+  f.show({ note_path = item.file })
 end
 
 --- Confirm the selected note and open it in a new buffer.
 function M.notes.actions.create(picker, opts)
+  local f = require("Beez.flotes")
   opts = opts or {}
   picker:close()
   local filter = picker.input.filter:clone({ trim = true })
   local title = filter.search
-  return require("flotes").new_note(title, opts)
+  return f.new_note(title, opts)
 end
 
 --- Delete the selected note
@@ -50,7 +52,7 @@ end
 ---@param opts snacks.picker.Config?
 function M.notes.finder(opts)
   opts = opts or {}
-  local flotes = require("flotes")
+  local flotes = require("Beez.flotes")
 
   local function notes_finder(finder_opts, ctx)
     local cwd = flotes.config.notes_dir
@@ -160,10 +162,10 @@ end
 ---@param opts snacks.picker.Config?
 function M.templates.finder(opts)
   opts = opts or {}
-  local flotes = require("flotes")
+  local f = require("Beez.flotes")
   local function templates_finder(finder_opts, ctx)
     local items = {}
-    for name, template in pairs(flotes.config.templates.templates) do
+    for name, template in pairs(f.config.templates.templates) do
       table.insert(items, {
         text = name,
         template = template.template,

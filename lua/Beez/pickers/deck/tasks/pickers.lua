@@ -3,7 +3,7 @@ local u = require("Beez.u")
 local resolve_opts = require("Beez.pickers.deck.pickers").resolve_opts
 local resolve_source = require("Beez.pickers.deck.pickers").resolve_source
 local resolve_specifier = require("Beez.pickers.deck.pickers").resolve_specifier
-local tasks = require("Beez.pickers.tasks.tasks")
+local tasks = require("Beez.flotes.tasks")
 local M = { toggles = { show_done = false } }
 
 --- Tasks deck

@@ -1,97 +1,57 @@
 local c = require("Beez.flotes.config")
-local f = require("Beez.flotes")
 local journal = require("Beez.flotes.journal")
 local links = require("Beez.flotes.links")
 local u = require("Beez.u")
-
-local M = {
-  def_keymaps = {
-    quit = function(buf)
-      return {
-        "q",
-        f.hide,
-        noremap = true,
-        buffer = buf,
-        desc = "Close flotes",
-      }
-    end,
-    hide = function(buf)
-      return {
-        "q",
-        f.hide,
-        noremap = true,
-        buffer = buf,
-        desc = "Hide flotes",
-      }
-    end,
-    add_note_link = function(lhs, buf)
-      return {
-        lhs,
-        mode = { "i" },
-        links.add_note_link,
-        noremap = true,
-        buffer = buf,
-        desc = "Add note link",
-      }
-    end,
-    add_note_link_visual = function(lhs, buf)
-      return {
-        lhs,
-        mode = { "x" },
-        links.replace_with_link,
-        noremap = true,
-        buffer = buf,
-        desc = "Replace with note link",
-      }
-    end,
-  },
-  journal_keymaps = {
-    prev_journal = function(lhs, buf)
-      return {
-        lhs,
-        function()
-          f.journal({ direction = "prev" })
-        end,
-        noremap = true,
-        buffer = buf,
-        desc = "Previous journal",
-      }
-    end,
-    next_journal = function(lhs, buf)
-      return {
-        lhs,
-        function()
-          f.journal({ direction = "next" })
-        end,
-        noremp = true,
-        buffer = buf,
-        desc = "Next journal",
-      }
-    end,
-  },
-}
+local M = {}
 
 --- Bind default keymaps to notes
 ---@param bufnr integer
 function M.bind_note_keymaps(bufnr)
+  local f = require("Beez.flotes")
   local set_spec = {}
 
   -- Hide keymap
   if c.config.float.quit_action == "hide" then
-    table.insert(set_spec, M.def_keymaps.hide(bufnr))
+    table.insert(set_spec, {
+      "q",
+      f.hide,
+      noremap = true,
+      buffer = bufnr,
+      desc = "Hide flotes",
+    })
   -- Close keymap
   else
-    table.insert(set_spec, M.def_keymaps.quit(bufnr))
+    table.insert(set_spec, {
+      "q",
+      f.close,
+      noremap = true,
+      buffer = bufnr,
+      desc = "Close flotes",
+    })
   end
 
   -- Insert link to note keymap
   if c.config.keymaps.add_note_link ~= false then
-    table.insert(set_spec, M.def_keymaps.add_note_link(bufnr))
+    table.insert(set_spec, {
+      c.config.keymaps.add_note_link,
+      mode = { "i" },
+      links.add_note_link,
+      noremap = true,
+      buffer = bufnr,
+      desc = "Add note link",
+    })
   end
 
   -- Convert visual selection to link keymap
   if c.config.keymaps.add_note_link_visual ~= false then
-    table.insert(set_spec, M.def_keymaps.add_note_link_visual(bufnr))
+    table.insert(set_spec, {
+      c.config.keymaps.add_note_link_visual,
+      mode = { "x" },
+      links.replace_with_link,
+      noremap = true,
+      buffer = bufnr,
+      desc = "Replace with note link",
+    })
   end
 
   u.keymaps.set(set_spec)

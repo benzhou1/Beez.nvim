@@ -1,4 +1,4 @@
-local u = require("Beez.utils")
+local u = require("Beez.u")
 local M = {}
 
 --- Neo-img previewer

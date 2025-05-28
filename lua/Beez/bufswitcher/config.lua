@@ -1,4 +1,4 @@
-local M = {}
+local M = { config = {} }
 
 local modes = {
   preview = {
@@ -68,11 +68,6 @@ local modes = {
 ---@field dirname string? Highlight group for dirname
 ---@field lnum string? Highlight group for line number
 
----@class Beez.bufswitcher.config.keymaps
----@field enabled boolean? Enable auto mapping of keys
----@field prev string? Keybind to use for switching to previous buffer. Set to false to disable.
----@field next string? Keybind to use for switching to next buffer. Set to false to disable.
-
 ---@class Beez.bufswitcher.config.hooks.options
 ---@field preview_bufnr integer? Preview buffer number, if preview is enabled
 ---@field prev_win_id integer Previous window id
@@ -94,7 +89,6 @@ local modes = {
 ---@field preview Beez.bufswitcher.config.preview? Describes the preview configuration
 ---@field autocmds Beez.bufswitcher.config.autocmds? Describes the autocmds configuration
 ---@field highlights Beez.bufswitcher.config.highlights? Describes the highlights configuration
----@field keymaps Beez.bufswitcher.config.keymaps? Configure keymaps
 ---@field hooks Beez.bufswitcher.config.hooks? Configure hooks
 ---@field popup table? Options for nui popup buffer
 ---@field mode "preview" | "popup" | "timeout"? Pre configured modes, defaults to preview
@@ -133,11 +127,6 @@ M.def_config = {
     after_show_popup = M.after_show_popup,
     before_show_popup = M.before_show_popup,
   },
-  keymaps = {
-    enabled = true,
-    prev = "<C-S-Tab>",
-    next = "<C-Tab>",
-  },
   popup = {
     enter = false,
     focusable = false,
@@ -165,6 +154,8 @@ M.def_config = {
 ---@param opts Beez.bufswitcher.config?
 function M.init(opts)
   opts = opts or {}
+  M.config = M.def_config
+
   -- Configure opts based on the mode
   if opts.mode ~= nil then
     local mode_config = modes[opts.mode]
@@ -175,7 +166,7 @@ function M.init(opts)
     M.config = vim.tbl_deep_extend("keep", mode_config, M.config)
   end
 
-  M.config = vim.tbl_deep_extend("force", M.def_config, opts or {})
+  M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 
   -- Make sure there are conflicting options
   if M.config.preview.enabled then

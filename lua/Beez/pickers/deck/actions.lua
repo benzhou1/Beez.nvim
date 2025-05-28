@@ -111,11 +111,11 @@ end
 M.open_note = {
   name = "open_note",
   execute = function(ctx)
-    local flotes = require("flotes")
+    local f = require("Beez.flotes")
     local item = ctx.get_action_items()[1]
     ctx:hide()
     vim.schedule(function()
-      flotes.show({ note_path = item.data.filename })
+      f.show({ note_path = item.data.filename })
       if item.data.lnum then
         vim.fn.cursor(item.data.lnum, item.data.col)
       end
@@ -127,9 +127,10 @@ M.open_note = {
 M.new_note = {
   name = "new_note",
   execute = function(ctx)
+    local f = require("Beez.flotes")
     local title = ctx.get_query()
     ctx:hide()
-    require("flotes").new_note(title, {})
+    f.new_note(title, {})
   end,
 }
 

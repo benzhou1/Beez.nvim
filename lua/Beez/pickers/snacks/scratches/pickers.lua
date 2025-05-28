@@ -3,7 +3,7 @@ local M = { scratches = { actions = {} } }
 --- Snacks picker for finding scratch files
 ---@param opts table?
 function M.find(opts)
-  local scratches = require("scratches")
+  local scratches = require("Beez.scratches")
   local cwd = scratches.config.scratch_dir
 
   opts = vim.tbl_deep_extend("keep", {

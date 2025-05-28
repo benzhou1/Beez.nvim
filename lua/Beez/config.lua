@@ -1,56 +1,45 @@
 local M = {}
 
+---@class Beez.pickers.config
+---@field type_priority table<"deck"|"snacks"|"fzf">
+
 ---@class Beez.config
----@field flotes Beez.flotes.config? Configuration for the flotes module
+---@field flotes Beez.flotes.config?
+---@field bufswitcher Beez.bufswitcher.config?
+---@field scratches Beez.scratches.config?
+---@field codemarks Beez.codemarks.config?
+---@field pickers Beez.pickers.config?
 
 ---@type Beez.config
 local def_config = {
-  flotes = {
-    enabled = false,
-    notes_dir = nil,
-    journal_dir = nil,
-    open_in_float = true,
-    keymaps = {
-      prev_journal = false,
-      next_journal = false,
-      add_note_link = false,
-      add_note_link_visual = false,
-      today_journal = false,
-      notes_picker = false,
-      notes_grep_picker = false,
-      templates_picker = false,
-      journal_keys = nil,
-      note_keys = nil,
-    },
-    float = {
-      quit_action = "close",
-      float_opts = {
-        x = 0.25,
-        y = 0.25,
-        w = 0.5,
-        h = 0.5,
-        border = "rounded",
-        del_bufs_on_close = true,
-      },
-    },
-    pickers = {
-      notes = { type = "deck" },
-      insert_link = { type = "snacks" },
-      templates = { type = "snacks" },
-    },
-    templates = {
-      expand = function(...)
-        vim.snippet.expand(...)
-      end,
-      templates = {},
+  pickers = {
+    type_priority = {
+      "deck",
+      "snacks",
+      "fzf",
     },
   },
 }
 
 --- Initializes configuration with default
----@param opts Beez.config
+---@param opts Beez.config?
 function M.init(opts)
+  ---@type Beez.config
   M.config = vim.tbl_deep_extend("force", {}, def_config, opts or {})
+  require("Beez.u").setup(opts)
+
+  if M.config.flotes then
+    require("Beez.flotes").setup(M.config.flotes)
+  end
+  if M.config.bufswitcher then
+    require("Beez.bufswitcher").setup(M.config.bufswitcher)
+  end
+  if M.config.scratches then
+    require("Beez.scratches").setup(M.config.scratches)
+  end
+  if M.config.codemarks then
+    require("Beez.codemarks").setup(M.config.codemarks)
+  end
 end
 
 return M

@@ -1,14 +1,13 @@
-local f = require("Beez.flotes")
 local utils = require("Beez.flotes.utils")
 local M = {}
 
 --- Make sure to focus back the float after closing the picker
 local function add_link_finder_close(picker)
-  local flotes = require("flotes")
+  local f = require("Beez.flotes")
   picker:close()
   ---@diagnostic disable-next-line: undefined-field
-  if flotes.config.open_in_float then
-    flotes.states.float:focus()
+  if f.config.open_in_float then
+    f.states.float:focus()
   end
 end
 
@@ -63,8 +62,8 @@ local add_link_finder_opts = {
 
 --- Adds a link to a note at the cursor
 function M.add_note_link()
-  local flotes = require("flotes")
-  local pickers = require("flotes.pickers")
+  local f = require("Beez.flotes")
+  local pickers = require("Beez.pickers")
 
   local picker_opts = vim.tbl_deep_extend("keep", add_link_finder_opts, {
     confirm = function(picker)
@@ -73,24 +72,24 @@ function M.add_note_link()
       if not item then
         return
       end
-      if flotes.config.open_in_float then
+      if f.config.open_in_float then
         ---@diagnostic disable-next-line: undefined-field
-        flotes.states.float:focus()
+        f.states.float:focus()
       end
       add_link_at_cursor(item.file)
     end,
     actions = {
       create_new_note = function(picker)
         local note_path = pickers.notes.actions.create(picker, { show = false })
-        if flotes.config.open_in_float then
+        if f.config.open_in_float then
           ---@diagnostic disable-next-line: undefined-field
-          flotes.states.float:focus()
+          f.states.float:focus()
         end
         add_link_at_cursor(note_path)
       end,
     },
   })
-  flotes.find_notes(picker_opts)
+  f.find_notes(picker_opts)
 end
 
 --- Replace selection with a link to a note
@@ -98,8 +97,8 @@ function M.replace_with_link()
   -- Get the current visual selection
   local s, e = utils.nvim.get_visual_selection_range()
   local line = vim.api.nvim_get_current_line()
-  local pickers = require("flotes.pickers")
-  local flotes = require("flotes")
+  local pickers = require("Beez.pickers")
+  local f = require("Beez.flotes")
 
   local picker_opts = vim.tbl_deep_extend("keep", add_link_finder_opts, {
     confirm = function(picker)
@@ -108,27 +107,28 @@ function M.replace_with_link()
       if not item then
         return
       end
-      if flotes.config.open_in_float then
+      if f.config.open_in_float then
         ---@diagnostic disable-next-line: undefined-field
-        flotes.states.float:focus()
+        f.states.float:focus()
       end
       replace_with_link(line, s, e, item.file)
     end,
     actions = {
       create_new_note = function(picker)
         local note_path = pickers.notes.actions.create(picker, { show = false })
-        if flotes.config.open_in_float then
+        if f.config.open_in_float then
           M.states.float:focus()
         end
         replace_with_link(line, s, e, note_path)
       end,
     },
   })
-  flotes.find_notes(picker_opts)
+  f.find_notes(picker_opts)
 end
 
 --- Follows the markdown link under the cursor
 function M.follow_link()
+  local f = require("Beez.flotes")
   if vim.bo.filetype ~= "markdown" then
     return false
   end

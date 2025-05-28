@@ -289,10 +289,10 @@ end
 ---@param opts snacks.picker.Config?
 function M.notes_files(opts)
   opts = opts or {}
-  local flotes = require("flotes")
+  local f = require("Beez.flotes")
 
   local function notes_finder(finder_opts, ctx)
-    local cwd = flotes.config.notes_dir
+    local cwd = f.config.notes_dir
     local cmd = "rg"
     local args = {
       "--color=never",
@@ -389,10 +389,10 @@ end
 ---@param opts snacks.picker.Config?
 function M.note_templates(opts)
   opts = opts or {}
-  local flotes = require("flotes")
+  local f = require("Beez.flotes")
   local function templates_finder(finder_opts, ctx)
     local items = {}
-    for name, template in pairs(flotes.config.templates.templates) do
+    for name, template in pairs(f.config.templates.templates) do
       table.insert(items, {
         text = name,
         template = template.template,

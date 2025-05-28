@@ -3,21 +3,23 @@ local M = {}
 
 --- Confirm the selected note and open it in a new buffer.
 function M.note_confirm(picker)
+  local f = require("Beez.flotes")
   picker:close()
   local item = picker:current()
   if not item then
     return
   end
-  require("flotes").show({ note_path = item.file })
+  f.show({ note_path = item.file })
 end
 
 --- Confirm the selected note and open it in a new buffer.
 function M.note_create(picker, opts)
+  local f = require("Beez.flotes")
   opts = opts or {}
   picker:close()
   local filter = picker.input.filter:clone({ trim = true })
   local title = filter.search
-  return require("flotes").new_note(title, opts)
+  return f.new_note(title, opts)
 end
 
 --- Delete the selected note

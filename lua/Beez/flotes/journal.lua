@@ -1,4 +1,5 @@
 local utils = require("Beez.flotes.utils")
+local c = require("Beez.flotes.config")
 local M = {}
 
 --- Checks whether a path a file under the journal directory
@@ -8,7 +9,7 @@ function M.is_journal(path)
   if path == nil then
     return false
   end
-  return string.find(path, M.config.journal_dir) ~= nil
+  return string.find(path, c.config.journal_dir) ~= nil
 end
 
 --- Gets the timestamp used for a journal file
@@ -47,7 +48,7 @@ function M.find_journal(opts)
 
   -- Find relative to currently opened note
   if opts.direction ~= nil then
-    local entries = vim.split(vim.fn.glob(M.config.journal_dir .. "/*"), "\n", { trimempty = true })
+    local entries = vim.split(vim.fn.glob(c.config.journal_dir .. "/*"), "\n", { trimempty = true })
 
     local journal_entries = {}
     for _, entry in ipairs(entries) do

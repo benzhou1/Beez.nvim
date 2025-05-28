@@ -21,6 +21,7 @@ local M = {
     popup = nil,
     timer = nil,
   },
+  config = {},
 }
 
 --- Do something before showing the preview buffer
@@ -316,6 +317,7 @@ end
 function M.setup(opts)
   opts = vim.tbl_deep_extend("keep", {}, opts or {})
   c.init(opts)
+  M.config = c.config
 end
 
 --- Map all possible characters so that any keypress will open the target buffer

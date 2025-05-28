@@ -2,7 +2,6 @@ local M = {
   git_root_cache = {},
   ctags_cache = {},
   sep = package.config:sub(1, 1),
-  Path = require("plenary.path"),
 }
 
 --- Gets the basename of a path
@@ -34,7 +33,7 @@ end
 ---@param path string
 ---@return string, string
 function M.splitext(path)
-  local basename = M.path.basename(path)
+  local basename = M.basename(path)
   local name = string.gsub(basename, "(.*)(%..*)", "%1")
   local ext = string.gsub(basename, "(.*)(%..*)", "%2")
   return name, ext

@@ -1,9 +1,9 @@
-local u = require("Beez.u")
 local tasks = require("Beez.flotes.tasks")
+local u = require("Beez.u")
 local utils = require("Beez.pickers.deck.tasks.utils")
 local M = {}
 
-M.actions.open_task = {
+M.open_task = {
   name = "open_task",
   execute = function(ctx)
     local _, item = utils.get_current_task(ctx)
@@ -11,7 +11,8 @@ M.actions.open_task = {
     M.show_task_deck({ task_id = item.data.id })
   end,
 }
-M.actions.show_task = {
+
+M.show_task = {
   name = "show_task",
   execute = function(ctx)
     local t, _ = utils.get_current_task(ctx)
@@ -21,7 +22,8 @@ M.actions.show_task = {
     M.show_task_deck({ task_id = task_id, task_select = t.id })
   end,
 }
-M.actions.parent_task = function(opts)
+
+M.parent_task = function(opts)
   return {
     name = "parent_task",
     execute = function(ctx)
@@ -38,14 +40,16 @@ M.actions.parent_task = function(opts)
     end,
   }
 end
-M.actions.toggle_show_done = {
+
+M.toggle_show_done = {
   name = "toggle_show_done",
   execute = function(ctx)
     M.toggles.show_done = not M.toggles.show_done
     ctx.execute()
   end,
 }
-M.actions.edit_tasks = function(opts)
+
+M.edit_tasks = function(opts)
   opts = opts or {}
   return {
     name = opts.name or "edit_tasks",

@@ -1,4 +1,4 @@
-local picks = require("u.pickers.picks")
+local picks = require("Beez.pickers.picks")
 local u = require("Beez.u")
 local M = {
   state = { type = nil },
@@ -10,7 +10,7 @@ local M = {
 ---@field cwd? boolean|string
 ---@field pick_opts? table
 
----@alias Beez.pick.name "smart"|"resume"|"files"|"git_files"|"grep"|"grep_string"|"grep_curbuf"|"grep_curbuf_ripgrep"|"grep_curbuf_live_grep"|"grep_curbuf_live_grep_ripgrep"|"lsp_definitions"|"lsp_references"|"lsp_implementations"|"lsp_type_definitions"|"lsp_symbols"|"lsp_workspace_symbols"|"codemarks"
+---@alias Beez.pick.name "smart"|"resume"|"files"|"git_files"|"grep"|"grep_string"|"grep_curbuf"|"grep_curbuf_ripgrep"|"grep_curbuf_live_grep"|"grep_curbuf_live_grep_ripgrep"|"lsp_definitions"|"lsp_references"|"lsp_implementations"|"lsp_type_definitions"|"lsp_symbols"|"lsp_workspace_symbols"|"codemarks"|"scratches"
 
 --- Pick a picker
 ---@param name Beez.pick.name
@@ -24,6 +24,7 @@ function M.pick(name, opts)
   if pickers == nil then
     error("Picker: " .. name .. " not found")
   end
+  pickers = pickers()
 
   -- Use the resume of the previous picker type
   if name == "resume" then
@@ -35,8 +36,6 @@ function M.pick(name, opts)
   local pick = pickers[opts.type]
   if pick == nil then
     error("Picker: " .. opts.type .. "." .. name .. " not found")
-  else
-    pick = pick()
   end
 
   local def_opts = {}
@@ -75,5 +74,9 @@ function M.pick(name, opts)
   M.state.type = opts.type
   pick.run(pick_opts)
 end
+
+M.snacks = require("Beez.pickers.snacks")
+M.fzf = require("Beez.pickers.fzf")
+M.deck = require("Beez.pickers.deck")
 
 return M

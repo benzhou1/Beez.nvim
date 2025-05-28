@@ -7,5 +7,7 @@ M.decorators = require("Beez.pickers.deck.decorators")
 M.sources = require("Beez.pickers.deck.sources")
 M.utils = require("Beez.pickers.deck.utils")
 M.tasks = require("Beez.pickers.deck.tasks")
+M.codemarks = require("Beez.pickers.deck.codemarks")
+M.scratches = require("Beez.pickers.deck.scratches")
 
 return M
