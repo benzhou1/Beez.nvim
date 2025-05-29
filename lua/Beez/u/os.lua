@@ -63,4 +63,17 @@ function M.read_first_line(file_path)
   return first_line
 end
 
+--- Reads a specific line from a file using `sed`
+---@param file_path string
+---@param line_number integer
+---@return string?
+function M.read_line_at(file_path, line_number)
+  local handle = io.popen(string.format("sed -n '%dp' %s", line_number, file_path))
+  if handle then
+    local line = handle:read("*l")
+    handle:close()
+    return line
+  end
+end
+
 return M
