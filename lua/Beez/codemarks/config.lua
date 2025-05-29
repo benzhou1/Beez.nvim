@@ -2,55 +2,12 @@ local M = {}
 
 ---@class Beez.codemarks.config
 ---@field marks_file string? The path to the marks file
----@field pick_opts snacks.picker.Config? Options for snacks picker
+---@field auto_update_out_of_sync_marks boolean? Whether to automatically update marks that are out of sync in the current buffer
+
 ---@type Beez.codemarks.config
 M.def_config = {
   marks_file = vim.fn.stdpath("data") .. "/codemarks/codemarks.txt",
-  pick_opts = {
-    layout = {
-      layout = {
-        width = 0.6,
-        height = 0.6,
-        title = "{title}",
-      },
-    },
-    win = {
-      input = {
-        keys = {
-          ["<esc>"] = {
-            "switch_to_list",
-            mode = { "i" },
-            desc = "Switch to the list view",
-          },
-          ["<c-g>"] = {
-            "toggle_global",
-            mode = { "i", "n" },
-            desc = "Toggle to show all marks",
-          },
-        },
-      },
-      list = {
-        keys = {
-          ["dd"] = {
-            "delete",
-            desc = "Delete current mark",
-          },
-          ["a"] = {
-            "toggle_focus",
-            desc = "Focus input",
-          },
-          ["i"] = {
-            "toggle_focus",
-            desc = "Focus input",
-          },
-          ["r"] = {
-            "rename_mark",
-            desc = "Updates the mark description",
-          },
-        },
-      },
-    },
-  },
+  auto_update_out_of_sync_marks = false,
 }
 
 --- Initlaize config

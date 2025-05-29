@@ -1,11 +1,12 @@
 local actions = require("Beez.pickers.deck.codemarks.actions")
 local utils = require("Beez.pickers.deck.utils")
-local M = {}
+local M = { toggles = { global_codemarks = false } }
 
 --- Deck source for codemarks
 ---@param opts table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.find(opts)
+  local u = require("Beez.u")
   opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
   local source = utils.resolve_source(opts, {
     name = "codemarks",
@@ -35,6 +36,8 @@ function M.find(opts)
         local item = {
           display_text = {
             { m.desc, "Normal" },
+            { " " },
+            { m.root, "Comment" },
           },
           data = {
             filename = m.file,
@@ -47,12 +50,13 @@ function M.find(opts)
       ctx.done()
     end,
     actions = {
-      require("deck").alias_action("default", opts.default_action or "open"),
+      require("deck").alias_action("default", opts.default_action or "open_codemarks"),
       require("deck").alias_action("toggle1", "toggle_global"),
       require("deck").alias_action("delete", "delete_mark"),
       actions.open_zed({ quit = opts.open_zed.quit }),
       actions.toggle_global(),
       actions.delete(),
+      actions.open(),
     },
   })
 

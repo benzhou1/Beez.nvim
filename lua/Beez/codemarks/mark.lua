@@ -7,6 +7,10 @@
 
 ---@class Beez.codemarks.mark: Beez.codemarks.markdata
 ---@field line string
+---@field desc string
+---@field file string
+---@field lineno integer
+---@field root string
 ---@field data Beez.codemarks.markdata
 local Mark = {}
 Mark.__index = Mark
@@ -54,6 +58,13 @@ end
 function Mark:update_desc(desc)
   self.desc = desc
   self.data.desc = desc
+end
+
+--- Updates the mark's line number
+---@param lineno integer
+function Mark:update_lineno(lineno)
+  self.lineno = lineno
+  self.data.lineno = lineno
 end
 
 return Mark

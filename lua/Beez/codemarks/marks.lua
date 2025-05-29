@@ -49,6 +49,22 @@ function Marks:get(data)
   return self.marks[key]
 end
 
+--- Filter marks based on options
+---@param opts {file: string?}
+---@return table<Beez.codemarks.mark>
+function Marks:list(opts)
+  opts = opts or {}
+  local marks = {}
+  for _, mark in pairs(self.marks) do
+    if opts.file then
+      if mark.file == opts.file then
+        table.insert(marks, mark)
+      end
+    end
+  end
+  return marks
+end
+
 --- Add a mark
 ---@param desc string Describe the mark
 function Marks:add(desc)
@@ -121,7 +137,7 @@ function Marks:del(data)
 end
 
 --- Save marks to file
----@param opts {cb: function?}
+---@param opts {cb: function?}?
 function Marks:save(opts)
   opts = opts or {}
   local lines = ""

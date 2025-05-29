@@ -49,6 +49,13 @@ function M.marks(opts)
     format = function(item, _)
       return { { item.text } }
     end,
+    layout = {
+      layout = {
+        width = 0.6,
+        height = 0.6,
+        title = "{title}",
+      },
+    },
     matcher = {
       frecency = true,
       sort_empty = true,
@@ -63,6 +70,40 @@ function M.marks(opts)
     },
     win = {
       title = "{title}",
+      input = {
+        keys = {
+          ["<esc>"] = {
+            "switch_to_list",
+            mode = { "i" },
+            desc = "Switch to the list view",
+          },
+          ["<c-g>"] = {
+            "toggle_global",
+            mode = { "i", "n" },
+            desc = "Toggle to show all marks",
+          },
+        },
+      },
+      list = {
+        keys = {
+          ["dd"] = {
+            "delete",
+            desc = "Delete current mark",
+          },
+          ["a"] = {
+            "toggle_focus",
+            desc = "Focus input",
+          },
+          ["i"] = {
+            "toggle_focus",
+            desc = "Focus input",
+          },
+          ["r"] = {
+            "rename_mark",
+            desc = "Updates the mark description",
+          },
+        },
+      },
     },
   })
 
