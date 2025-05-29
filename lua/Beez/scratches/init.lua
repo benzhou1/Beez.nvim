@@ -88,20 +88,8 @@ function M.open(opts)
       return
     end
 
-    if c.config.keymaps.quit then
-      vim.keymap.set("n", c.config.keymaps.quit, function()
-        M.close()
-      end, { desc = "Close scratch", buffer = bufnr })
-    end
-    if c.config.keymaps.copy then
-      vim.keymap.set("n", c.config.keymaps.copy, function()
-        vim.ui.input({ prompt = "Name of scratch" }, function(res)
-          if res == nil then
-            return
-          end
-          c.copy_scratch(res)
-        end)
-      end, { desc = "Create copy of scratch", buffer = bufnr })
+    if c.config.keymaps.buf_keymaps then
+      c.config.keymaps.buf_keymaps(bufnr)
     end
 
     require("lua-console.utils").attach_toggle()
@@ -146,6 +134,19 @@ function M.copy_scratch(name)
     new_file:write(line, "a")
   end
   vim.notify("Created new scratch file " .. new_file.filename, vim.log.levels.INFO)
+end
+
+--- Find scratch file by name picker
+---@param opts table
+function M.find_picker(opts)
+  local def_type = "deck"
+  local ok, _ = pcall(require, "deck")
+  if not ok then
+    def_type = "snacks"
+  end
+
+  opts = vim.tbl_deep_extend("keep", opts or {}, { type = def_type })
+  require("Beez.pickers").pick("scratches", opts)
 end
 
 return M

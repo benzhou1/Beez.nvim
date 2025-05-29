@@ -3,29 +3,21 @@ local M = {}
 
 ---@class Beez.scratches.config
 ---@field scratch_dir string Directory to store scratch files
----@field keymaps Beez.scratches.config.keymaps Keymaps for scratch files
----@field split_opts nui_split_options Options for split window
----@field snacks_picker_opts snacks.picker.files.Config
+---@field keymaps Beez.scratches.config.keymaps? Keymaps for scratch files
+---@field split_opts nui_split_options? Options for split window
 
 ---@class Beez.scratches.config.keymaps
----@field quit string|false Keymap to close scratch file
----@field copy string|false Keymap to copy scratch file
+---@field buf_keymaps fun(buf: integer)? Keymap to close scratch file
+
 ---@type Beez.scratches.config
 M.def_config = {
   ---@diagnostic disable-next-line: assign-type-mismatch
   scratch_dir = nil,
-  keymaps = {
-    quit = "q",
-    copy = "<leader>cs",
-  },
+  keymaps = {},
   split_opts = {
     relative = "editor",
     position = "bottom",
     size = "50%",
-  },
-  ---@diagnostic disable-next-line: missing-fields
-  snacks_picker_opts = {
-    exclude = { "*.pyc", "*__pycache__*", "*__init__.py" },
   },
 }
 

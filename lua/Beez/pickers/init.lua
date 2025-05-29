@@ -10,7 +10,7 @@ local M = {
 ---@field cwd? boolean|string
 ---@field pick_opts? table
 
----@alias Beez.pick.name "smart"|"resume"|"files"|"git_files"|"grep"|"grep_string"|"grep_curbuf"|"grep_curbuf_ripgrep"|"grep_curbuf_live_grep"|"grep_curbuf_live_grep_ripgrep"|"lsp_definitions"|"lsp_references"|"lsp_implementations"|"lsp_type_definitions"|"lsp_symbols"|"lsp_workspace_symbols"|"codemarks"|"scratches"
+---@alias Beez.pick.name "smart"|"resume"|"files"|"git_files"|"grep"|"grep_string"|"grep_curbuf"|"grep_curbuf_ripgrep"|"grep_curbuf_live_grep"|"grep_curbuf_live_grep_ripgrep"|"lsp_definitions"|"lsp_references"|"lsp_implementations"|"lsp_type_definitions"|"lsp_symbols"|"lsp_workspace_symbols"|"codemarks"|"scratches"|"find_notes"|"grep_notes"|"find_note_templates"
 
 --- Pick a picker
 ---@param name Beez.pick.name

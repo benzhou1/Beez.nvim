@@ -791,6 +791,11 @@ end
 function M.scratches()
   return {
     snacks = {
+      def_opts = function(opts)
+        return {
+          exclude = { "*.pyc", "*__pycache__*", "*__init__.py" },
+        }
+      end,
       run = function(opts)
         snack_pickers.scratches.find(opts)
       end,
