@@ -10,14 +10,6 @@ local M = {
 ---@field float_opts Beez.ui.float.win.opts Options for the floating window
 
 ---@class Beez.flotes.keymaps.config
----@field prev_journal string | false? Keymap to navigate to the previous journal note
----@field next_journal string | false? Keymap to navigate to the next journal note
----@field add_note_link string | false? Keymap to add a link to a note
----@field add_note_link_visual string | false? Keymap to add a link to a note from visual selection
----@field today_journal string | false? Keymap to show the journal for today
----@field notes_picker string | false? Keymap to show notes picker
----@field notes_grep_picker string | false? Keymap to show notes grep picker
----@field templtes_picker string | false? Keymap to show templates picker
 ---@field journal_keys fun(bufnr: integer)? Callback to create custom keymaps for journal files
 ---@field note_keys fun(bufnr: integer)? Callback to create custom keymaps for note files
 
@@ -28,11 +20,6 @@ local M = {
 ---@field templates table<string, Beez.flotes.templates.template.config> Templates for creating notes
 ---@field expand fun(...) Function to expand a template
 
----@class Beez.flotes.pickers.config
----@field notes Beez.pick.opts? Picker options for notes picker
----@field insert_link Beez.pick.opts? Picker options for insert link picker
----@field templates Beez.pick.opts? Picker options for templates picker
-
 ---@class Beez.flotes.config
 ---@field enabled boolean? Enable the flotes module. Defaults to false.
 ---@field notes_dir string? Absolute path to the notes directory
@@ -41,7 +28,6 @@ local M = {
 ---@field float Beez.flotes.float.config? Configuration for the floating window
 ---@field keymaps Beez.flotes.keymaps.config? Keymaps for the notes and journal files
 ---@field templates Beez.flotes.templates.config? Templates for creating notes
----@field pickers Beez.flotes.pickers.config? Options for various pickers
 
 ---@type Beez.flotes.config
 M.def_config = {
@@ -50,14 +36,6 @@ M.def_config = {
   journal_dir = nil,
   open_in_float = true,
   keymaps = {
-    prev_journal = false,
-    next_journal = false,
-    add_note_link = false,
-    add_note_link_visual = false,
-    today_journal = false,
-    notes_picker = false,
-    notes_grep_picker = false,
-    templates_picker = false,
     journal_keys = nil,
     note_keys = nil,
   },
@@ -71,11 +49,6 @@ M.def_config = {
       h = 0.5,
       border = "rounded",
     },
-  },
-  pickers = {
-    notes = { type = "deck" },
-    insert_link = { type = "snacks" },
-    templates = { type = "snacks" },
   },
   templates = {
     expand = function(...)

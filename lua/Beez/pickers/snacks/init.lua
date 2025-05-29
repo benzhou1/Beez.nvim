@@ -6,5 +6,6 @@ M.options = require("Beez.pickers.snacks.options")
 M.actions = require("Beez.pickers.snacks.actions")
 M.codemarks = require("Beez.pickers.snacks.codemarks")
 M.scratches = require("Beez.pickers.snacks.scratches")
+M.flotes = require("Beez.pickers.snacks.flotes")
 
 return M

@@ -738,7 +738,34 @@ function M.find_notes()
     },
     deck = {
       run = function(opts)
-        local source, specifier = deck_pickers.sources.notes_files(opts)
+        local source, specifier = deck_pickers.flotes.sources.files(opts)
+        require("deck").start(source, specifier)
+      end,
+    },
+  }
+end
+
+function M.grep_notes()
+  return {
+    deck = {
+      run = function(opts)
+        local source, specifier = deck_pickers.flotes.sources.grep(opts)
+        require("deck").start(source, specifier)
+      end,
+    },
+  }
+end
+
+function M.find_note_templates()
+  return {
+    snacks = {
+      run = function(opts)
+        snack_pickers.flotes.templates(opts)
+      end,
+    },
+    deck = {
+      run = function(opts)
+        local source, specifier = deck_pickers.flotes.sources.templates(opts)
         require("deck").start(source, specifier)
       end,
     },

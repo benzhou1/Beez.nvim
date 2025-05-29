@@ -3,7 +3,6 @@ local journal = require("Beez.flotes.journal")
 local keymaps = require("Beez.flotes.keymaps")
 local links = require("Beez.flotes.links")
 local notes = require("Beez.flotes.notes")
-local pickers = require("Beez.flotes.pickers")
 local u = require("Beez.u")
 local utils = require("Beez.flotes.utils")
 local M = {
@@ -14,7 +13,7 @@ local M = {
     zoomed = nil,
   },
   utils = utils,
-  config = {}
+  config = {},
 }
 
 --- Setup configurationk
@@ -36,7 +35,7 @@ M.setup = function(opts)
     keymaps = {
       -- Keymaps per buffer
       buf_keymap_cb = function(bufnr)
-        keymaps.bind_note_keymaps(bufnr)
+        keymaps.bind_buf_keymaps(bufnr)
       end,
     },
   }
@@ -69,7 +68,7 @@ function M.show(opts)
   else
     vim.cmd("edit " .. note_path)
     vim.schedule(function()
-      keymaps.bind_note_keymaps(vim.api.nvim_get_current_buf())
+      keymaps.bind_buf_keymaps(vim.api.nvim_get_current_buf())
     end)
   end
 
@@ -118,6 +117,13 @@ function M.toggle_focus()
   end
 end
 
+--- Focus on the floating window
+function M.focus()
+  if c.config.open_in_float then
+    M.states.float:focus()
+  end
+end
+
 --- Zoom the floating window
 function M.zoom()
   M.states.zoom = true
@@ -156,13 +162,6 @@ function M.new_note(title, opts)
   return path
 end
 
---- Search for notes by name
----@param opts snacks.picker.Config? Options for the picker
-function M.find_notes(opts)
-  local pick_opts = vim.tbl_deep_extend("keep", opts or {}, c.config.pickers.notes)
-  pickers.notes.finder(pick_opts)
-end
-
 ---@class Beez.flotes.journalfindopts
 ---@field desc "today"|"yesterday"|"tomorrow"? Description of the journal to open
 ---@field direction "next"|"prev"? Get previous or next journal relative to current note
@@ -191,16 +190,6 @@ function M.journal(opts)
   end
 end
 
---- Follows the markdown link under the cursor
-function M.follow_link()
-  links.follow_link()
-end
-
---- Show picker to insert a note link at cursor
-function M.insert_link()
-  links.add_note_link()
-end
-
 ---@class Beez.flotes.newnotetemplateopts
 ---@field picker_opts snacks.picker.Config? Options for the template picker
 ---@field template_opts Beez.flotes.templates.opts? Options for the template creation
@@ -220,6 +209,56 @@ function M.new_note_from_template(template_name, opts)
   })
   ---@diagnostic disable-next-line: param-type-mismatch
   require("flotes.notes").create_template(template_opts)
+end
+
+--- Search for notes by name picker
+---@param opts table Options for the picker
+function M.find_picker(opts)
+  local def_type = "deck"
+  local ok, _ = pcall(require, "deck")
+  if not ok then
+    def_type = "snacks"
+  end
+
+  opts = vim.tbl_deep_extend("keep", opts or {}, { type = def_type })
+  require("Beez.pickers").pick("find_notes", opts)
+end
+
+--- Grep contents of notes picker
+---@param opts table Options for the picker
+function M.grep_picker(opts)
+  opts = vim.tbl_deep_extend("keep", opts or {}, { type = "deck" })
+  require("Beez.pickers").pick("grep_notes", opts)
+end
+
+--- Find templates for notes picker
+---@param opts table
+function M.templates_picker(opts)
+  local def_type = "deck"
+  local ok, _ = pcall(require, "deck")
+  if not ok then
+    def_type = "snacks"
+  end
+
+  opts = vim.tbl_deep_extend("keep", opts or {}, { type = def_type })
+  require("Beez.pickers").pick("find_note_templates", opts)
+end
+
+--- Follows the markdown link under the cursor
+function M.follow_link()
+  links.follow_link()
+end
+
+--- Show picker to insert a link to a note at cursor position
+---@param opts table
+function M.insert_link_picker(opts)
+  require("Beez.pickers").snacks.flotes.insert_link(opts)
+end
+
+--- Show picker to replace visual selection with a link to a note
+---@param opts table
+function M.replace_with_link_picker(opts)
+  require("Beez.pickers").snacks.flotes.replace_with_link(opts)
 end
 
 return M
