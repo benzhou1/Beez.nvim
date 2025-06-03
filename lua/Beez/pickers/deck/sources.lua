@@ -78,8 +78,9 @@ function M.buffers(opts)
       local items = {}
       for _, buf in ipairs(buffers) do
         local bufname = vim.api.nvim_buf_get_name(buf)
+        local basename = u.paths.basename(bufname)
         local acceptable = u.nvim.valid_buf(buf, { current = false })
-        acceptable = acceptable and bufname ~= ""
+        acceptable = acceptable and bufname ~= "" and basename ~= nil and basename ~= ""
         if acceptable then
           local filename = bufname
           local info = vim.fn.getbufinfo(buf)[1]

@@ -127,7 +127,7 @@ function M.grep_buffer()
     },
     deck = {
       run = function(opts)
-        local source, specifier = require("u.pickers.deck.pickers").grep.buffer.source(opts)
+        local source, specifier = deck_pickers.sources.grep_buffer(opts)
         require("deck").start(source, specifier)
       end,
     },
@@ -562,7 +562,7 @@ function M.git_hunks()
     snacks = {
       def_opts = function(opts)
         return {
-          layout = snack_layouts.vertical,
+          layout = snack_pickers.layouts.vertical,
         }
       end,
       run = function(opts)
@@ -577,7 +577,7 @@ function M.undo()
     snacks = {
       def_opts = function(opts)
         return {
-          layout = snack_layouts.max,
+          layout = snack_pickers.layouts.max,
         }
       end,
       run = function(opts)
@@ -592,7 +592,7 @@ function M.regs()
     snacks = {
       def_opts = function(opts)
         return {
-          layout = snack_layouts.vertical,
+          layout = snack_pickers.layouts.vertical,
         }
       end,
       run = function(opts)
@@ -607,7 +607,7 @@ function M.git_status()
     snacks = {
       def_opts = function(opts)
         return {
-          layout = snack_layouts.max,
+          layout = snack_pickers.layouts.max,
         }
       end,
       run = function(opts)
@@ -804,6 +804,30 @@ function M.scratches()
       run = function(opts)
         deck_pickers.scratches.find(opts)
       end,
+    },
+  }
+end
+
+M["dbfp.connections"] = function()
+  return {
+    deck = {
+      run = deck_pickers.dbfp.connections,
+    },
+  }
+end
+
+M["dbfp.queries"] = function()
+  return {
+    deck = {
+      run = deck_pickers.dbfp.queries,
+    },
+  }
+end
+
+M["dbfp.queryfiles"] = function()
+  return {
+    deck = {
+      run = deck_pickers.dbfp.queryfiles,
     },
   }
 end

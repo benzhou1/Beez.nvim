@@ -1,5 +1,6 @@
 local sources = require("Beez.pickers.deck.sources")
 local u = require("Beez.u")
+local utils = require("Beez.pickers.deck.utils")
 local M = {}
 
 --- Grep deck with input
@@ -21,7 +22,7 @@ end
 --- Grep selected word or word under cursor
 ---@param opts table
 function M.grep_word(opts)
-  opts = M.resolve_opts(opts, { is_grep = true })
+  opts = utils.resolve_opts(opts, { is_grep = true })
   local visual_text = u.nvim.get_visual_selection()
   if visual_text ~= "" then
     opts.pattern = visual_text

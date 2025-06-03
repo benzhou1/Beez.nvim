@@ -6,20 +6,22 @@ local M = {}
 M.open_task = {
   name = "open_task",
   execute = function(ctx)
+    local tasks_picker = require("Beez.pickers.deck.tasks")
     local _, item = utils.get_current_task(ctx)
     ctx.hide()
-    M.show_task_deck({ task_id = item.data.id })
+    tasks_picker.show({ task_id = item.data.id })
   end,
 }
 
 M.show_task = {
   name = "show_task",
   execute = function(ctx)
+    local tasks_picker = require("Beez.pickers.deck.tasks")
     local t, _ = utils.get_current_task(ctx)
     ctx.hide()
 
     local task_id = t.parent.id
-    M.show_task_deck({ task_id = task_id, task_select = t.id })
+    tasks_picker.show({ task_id = task_id, task_select = t.id })
   end,
 }
 
@@ -27,6 +29,7 @@ M.parent_task = function(opts)
   return {
     name = "parent_task",
     execute = function(ctx)
+      local tasks_picker = require("Beez.pickers.deck.tasks")
       local tl = tasks.get_tasks()
       local t = tl:get(opts.task_id)
       assert(t ~= nil, "Task not found: " .. opts.task_id)
@@ -36,7 +39,7 @@ M.parent_task = function(opts)
       if t.parent ~= nil then
         task_id = t.parent.id
       end
-      M.show_task_deck({ task_id = task_id, task_select = t.id })
+      tasks_picker.show_task_deck({ task_id = task_id, task_select = t.id })
     end,
   }
 end
