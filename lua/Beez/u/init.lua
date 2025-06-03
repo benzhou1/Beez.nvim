@@ -13,8 +13,6 @@ M.root = require("Beez.u.root")
 M.lazy = require("Beez.u.lazy")
 M.keymaps = require("Beez.u.keymaps")
 
-M.apps = require("Beez.u.apps")
-
 --- Setup u
 ---@param opts table?
 function M.setup(opts)
