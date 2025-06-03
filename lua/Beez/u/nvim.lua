@@ -5,7 +5,9 @@ local M = {}
 function M.get_visual()
   local modes = { "v", "V", vim.api.nvim_replace_termcodes("<c-v>", true, true, true) }
   local mode = vim.fn.mode():sub(1, 1) ---@type string
-  if not vim.tbl_contains(modes, mode) then return end
+  if not vim.tbl_contains(modes, mode) then
+    return
+  end
 
   local pos = vim.api.nvim_buf_get_mark(0, "<")
   local end_pos = vim.api.nvim_buf_get_mark(0, ">")
@@ -30,7 +32,9 @@ end
 function M.get_visual_selection()
   local modes = { "v", "V", vim.api.nvim_replace_termcodes("<c-v>", true, true, true) }
   local mode = vim.fn.mode():sub(1, 1) ---@type string
-  if not vim.tbl_contains(modes, mode) then return "" end
+  if not vim.tbl_contains(modes, mode) then
+    return ""
+  end
 
   return table.concat(vim.fn.getregion(vim.fn.getpos("v"), vim.fn.getpos(".")), "\n")
 end
@@ -78,7 +82,9 @@ end
 ---@return table[int]
 function M.sort_bufs_by_lastused(bufnrs)
   -- Sort buffers by lastused with fzf lua hack
-  table.sort(bufnrs, function(a, b) return M.get_unixtime(a) > M.get_unixtime(b) end)
+  table.sort(bufnrs, function(a, b)
+    return M.get_unixtime(a) > M.get_unixtime(b)
+  end)
   return bufnrs
 end
 
@@ -102,6 +108,20 @@ function M.valid_buf(buf, opts)
   acceptable = acceptable and (not opts.current or buf ~= current_buf)
   acceptable = acceptable and (not opts.modified or vim.bo[buf].modified)
   return acceptable
+end
+
+--- Converts a row percentage to a row number
+---@param percent number
+---@return integer
+function M.percent_to_row(percent)
+  return math.floor(vim.o.lines * percent)
+end
+
+--- Converts a column percentage to a column number
+---@param percent number
+---@return integer
+function M.percent_to_col(percent)
+  return math.floor(vim.o.columns * percent)
 end
 
 return M
