@@ -19,10 +19,10 @@ M.Float.__index = M.Float
 
 ---@class Beez.ui.float.win.opts
 ---@field win_opts table?
----@field x number
----@field y number
----@field w number
----@field h number
+---@field x number?
+---@field y number?
+---@field w number?
+---@field h number?
 ---@field relative string?
 ---@field border (string | table)?
 ---@field zindex number?
@@ -31,7 +31,7 @@ M.Float.__index = M.Float
 
 ---@class Beez.ui.float.keymaps.opts
 ---@field buf_keymap_cb function?(bufnr: number)
----@field quit string | boolean?
+---@field quit (string | boolean)?
 
 ---@class Beez.ui.float.buffer.opts
 ---@field buf_cb function?
@@ -45,6 +45,8 @@ M.Float.__index = M.Float
 ---@field buffer Beez.ui.float.buffer.opts?
 ---@field set_title_filename boolean?
 ---@field close_on_leave boolean?
+---@field close_win_cb fun(win: integer)?
+---@field open_win_cb fun(win: integer)?
 
 --- Creates a new Float class
 ---@param opts Beez.ui.float.opts
@@ -71,6 +73,7 @@ function M.Float:new(opts)
   self.buf_cb = opts.buffer.buf_cb
   if self.buf_cb == nil then
     self.buf_cb = function()
+      print("Buffer created")
       return vim.api.nvim_create_buf(false, false)
     end
   end
@@ -100,8 +103,10 @@ function M.Float:_get_autocmd_group()
 end
 
 --- Checks if current float is valid as in does it still exist
+---@param opts? {reset: boolean?
 ---@return boolean
-function M.Float:_check_win_valid()
+function M.Float:_check_win_valid(opts)
+  opts = opts or {}
   local valid = true
   -- Window has not been created
   -- Window no longer exists
@@ -109,10 +114,16 @@ function M.Float:_check_win_valid()
     valid = false
   end
 
-  if not valid then
+  if not valid and opts.reset ~= false then
     self:_reset()
   end
   return valid
+end
+
+--- Check if float is open
+---@return boolean
+function M.Float:is_open()
+  return self:_check_win_valid({ reset = false })
 end
 
 --- Resets the state of the float
@@ -133,7 +144,9 @@ function M.Float:_clean_bufs()
   end
 
   for _, buf in ipairs(self.bufnrs) do
-    pcall(autocmd.buf.remove, buf.bufnr, self:_get_autocmd_group())
+    if self.win_id then
+      pcall(autocmd.buf.remove, buf.bufnr, self:_get_autocmd_group())
+    end
     buf:clean()
   end
 end
@@ -179,6 +192,9 @@ function M.Float:_init_autocmd_track_bufs()
     callback = function(opts)
       if opts.match == tostring(self.win_id) then
         self:close()
+        if self.opts.close_win_cb ~= nil then
+          self.opts.close_win_cb(self.win_id)
+        end
       end
     end,
   })
@@ -226,13 +242,17 @@ function M.Float:_create_win()
   local win_opts = self:get_win_opts()
   local win_id = vim.api.nvim_open_win(bufnr, true, win_opts)
   if self.opts.win.set_win_opts_cb ~= nil then
-    vim.api.nvim_win_call(self.win_id, function()
+    vim.api.nvim_win_call(win_id, function()
       self.opts.win.set_win_opts_cb()
     end)
   end
   self.win_id = win_id
   self.hidden = false
   self:_init_autocmd_track_bufs()
+
+  if self.opts.open_win_cb ~= nil then
+    self.opts.open_win_cb(win_id)
+  end
 end
 
 --- Creates a float with buffer
