@@ -1,7 +1,6 @@
 local M = {}
 
 --- Map over each element in the table
----@param tbl table
 ---@param f fun(v: any): boolean
 ---@return table
 function M.map(tbl, f)
@@ -23,17 +22,27 @@ function M.keys(tbl)
   return keys
 end
 
+--- Return a table of values in the table
+---@param tbl table
+---@return string[]
+function M.values(tbl)
+  local values = {}
+  for _, v in pairs(tbl) do
+    table.insert(values, v)
+  end
+  return values
+end
+
 --- Find an element in the table
 ---@param tbl table
 ---@param f fun(v: any): boolean
 ---@return any?
 function M.find(tbl, f)
-  for k, v in pairs(tbl) do
+  for _, v in pairs(tbl) do
     if f(v) then
       return v
     end
   end
-  return nil
 end
 
 --- Reverse the order of a table
