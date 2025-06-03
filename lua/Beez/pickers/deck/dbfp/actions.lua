@@ -82,7 +82,7 @@ function M.dbfp.open_queryfile(opts)
 end
 
 --- Deck action to set the active connection
----@param opts table
+---@param opts table?
 ---@return deck.Action
 function M.dbfp.set_active_connection(opts)
   opts = opts or {}
@@ -107,17 +107,11 @@ function M.dbfp.execute_query(opts)
     name = "dbfp.execute_query",
     ---@param ctx deck.Context
     execute = function(ctx)
-      local u = require("Beez.u")
       local item = ctx.get_action_items()[1]
       local dbfp = require("Beez.dbfp")
       dbfp.execute_raw_query(item.data.qf.connection, item.data.q.query:gsub("\n", " "))
-      u.async.delayed({
-        delay = 500,
-        cb = function()
-          ctx:hide()
-          dbfp.focus_dbout()
-        end,
-      })
+      dbfp.focus_dbout()
+      ctx:hide()
     end,
   }
 end

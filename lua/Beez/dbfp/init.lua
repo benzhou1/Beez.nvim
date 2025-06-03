@@ -159,11 +159,8 @@ function M.execute_query(opts)
     )
   end
 
-  vim.api.nvim_feedkeys(
-    vim.api.nvim_replace_termcodes(":DB g:" .. connection .. "<CR>", true, false, true),
-    "n",
-    false
-  )
+  local lines = u.nvim.get_visual_selection()
+  vim.cmd("DB g:" .. connection .. " " .. lines:gsub("\n", " "))
   M.qf = qf
 end
 

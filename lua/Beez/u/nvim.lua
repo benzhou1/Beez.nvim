@@ -30,13 +30,28 @@ end
 --- Get the text that is selected
 ---@return string
 function M.get_visual_selection()
-  local modes = { "v", "V", vim.api.nvim_replace_termcodes("<c-v>", true, true, true) }
-  local mode = vim.fn.mode():sub(1, 1) ---@type string
-  if not vim.tbl_contains(modes, mode) then
+  local mode = vim.fn.mode()
+  if mode ~= "v" and mode ~= "V" and mode ~= "\22" then -- "\22" is <C-v>
     return ""
   end
 
-  return table.concat(vim.fn.getregion(vim.fn.getpos("v"), vim.fn.getpos(".")), "\n")
+  local start_pos = vim.fn.getpos("v")
+  local end_pos = vim.fn.getpos(".")
+  local lines = vim.fn.getline(start_pos[2], end_pos[2])
+
+  if #lines == 0 then
+    return ""
+  end
+
+  if mode == "V" then
+    return table.concat(lines, "\n")
+  end
+
+  -- Adjust columns for start and end
+  lines[#lines] = string.sub(lines[#lines], 1, end_pos[3])
+  lines[1] = string.sub(lines[1], start_pos[3], #lines[1])
+
+  return table.concat(lines, "\n")
 end
 
 --- Get the row range of the visual selection
