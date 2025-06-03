@@ -64,8 +64,7 @@ end
 ---@param line string
 ---@return string[]?
 local function match_lua_traceback(line)
-  local path, lineno, text =
-    line:match("([%w%./_%-%(%)]+/[%w%./_%-%(%)]+%.%w+):(%d+):(.*)")
+  local path, lineno, text = line:match("([%w%./_%-%(%)]+/[%w%./_%-%(%)]+%.%w+):(%d+):(.*)")
   if path ~= nil then
     if path:startswith("...") then
       path = infer_truncated_path(path)
@@ -191,15 +190,14 @@ function M.go_to_file()
 
   if path ~= nil then
     vim.cmd("wincmd p")
-    vim.cmd("e " .. path)
-    if lineno ~= nil then
-      vim.cmd(lineno)
-    end
+    vim.schedule(function()
+      vim.cmd("e " .. path)
+      if lineno ~= nil then
+        vim.cmd(lineno)
+      end
+    end)
   else
-    require("snacks.notify").notify(
-      "No path found on current line...",
-      { level = "warn" }
-    )
+    require("snacks.notify").notify("No path found on current line...", { level = "warn" })
   end
 end
 
