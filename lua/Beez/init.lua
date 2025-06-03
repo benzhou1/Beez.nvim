@@ -16,5 +16,6 @@ M.flotes = require("Beez.flotes")
 M.bufswitcher = require("Beez.bufswitcher")
 M.scratches = require("Beez.scratches")
 M.codemarks = require("Beez.codemarks")
+M.dbfp = require("Beez.dbfp")
 
 return M

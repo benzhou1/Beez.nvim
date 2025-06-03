@@ -1,14 +1,11 @@
 local M = {}
 
----@class Beez.pickers.config
----@field type_priority table<"deck"|"snacks"|"fzf">
-
 ---@class Beez.config
 ---@field flotes Beez.flotes.config?
 ---@field bufswitcher Beez.bufswitcher.config?
 ---@field scratches Beez.scratches.config?
 ---@field codemarks Beez.codemarks.config?
----@field pickers Beez.pickers.config?
+---@field dbfp Beez.dbfp.config?
 
 ---@type Beez.config
 local def_config = {
@@ -39,6 +36,9 @@ function M.init(opts)
   end
   if M.config.codemarks then
     require("Beez.codemarks").setup(M.config.codemarks)
+  end
+  if M.config.dbfp then
+    require("Beez.dbfp").setup(M.config.dbfp)
   end
 end
 
