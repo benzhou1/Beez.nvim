@@ -35,7 +35,9 @@ function string:replace(old, new)
   while true do
     ---@diagnostic disable-next-line: param-type-mismatch
     local start_idx, end_idx = s:find(old, search_start_idx, true)
-    if not start_idx then break end
+    if not start_idx then
+      break
+    end
 
     ---@diagnostic disable-next-line: param-type-mismatch
     local postfix = s:sub(end_idx + 1)
@@ -45,7 +47,7 @@ function string:replace(old, new)
     search_start_idx = -1 * postfix:len()
   end
 
----@diagnostic disable-next-line: return-type-mismatch
+  ---@diagnostic disable-next-line: return-type-mismatch
   return s
 end
 
@@ -96,6 +98,20 @@ end
 function M.trim(s)
   ---@diagnostic disable-next-line: redundant-return-value
   return string.gsub(s, "^%s+", "")
+end
+
+--- Trims leading whitespace from a string
+---@return string
+function string:trim()
+  ---@diagnostic disable-next-line: redundant-return-value
+  return string.gsub(self, "^%s+", "")
+end
+
+--- Trims trailing whitespace from a string
+---@return string
+function string:trimr(s)
+  local ts = (self:gsub("(.-)%s*$", "%1"))
+  return ts
 end
 
 return M
