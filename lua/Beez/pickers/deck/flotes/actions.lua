@@ -51,7 +51,7 @@ M.new_note_from_template = {
     local item = ctx.get_action_items()[1]
     ctx:hide()
     vim.schedule(function()
-      require("flotes.notes").create_template({ template = item.data.name })
+      require("Beez.flotes").new_note_from_template(item.data.name)
     end)
   end,
 }

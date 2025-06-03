@@ -196,7 +196,7 @@ end
 
 --- Create a new note with template
 ---@param template_name string? Name of the template, empty to show picker
----@param opts Beez.flotes.newnotetemplateopts Options for the picker or template creation
+---@param opts? Beez.flotes.newnotetemplateopts Options for the picker or template creation
 function M.new_note_from_template(template_name, opts)
   opts = opts or {}
   if template_name == nil then
@@ -204,11 +204,11 @@ function M.new_note_from_template(template_name, opts)
     return pickers.templates.finder(picker_opts)
   end
 
-  local template_opts = vim.tbl_deep_extend("keep", opts.template_opts, {
+  local template_opts = vim.tbl_deep_extend("keep", opts.template_opts or {}, {
     template = template_name,
   })
   ---@diagnostic disable-next-line: param-type-mismatch
-  require("flotes.notes").create_template(template_opts)
+  require("Beez.flotes.notes").create_template(template_opts)
 end
 
 --- Search for notes by name picker

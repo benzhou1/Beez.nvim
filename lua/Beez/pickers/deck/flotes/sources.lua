@@ -131,8 +131,10 @@ end
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.grep(opts)
   local u = require("Beez.u")
-  local flotes_dir = require("Beez.u.apps.Beez").flotes_dir
-  opts = utils.resolve_opts(opts or {}, { is_grep = false, filename_first = false, cwd = flotes_dir })
+  local flotes_dir = require("Beez.flotes").config.notes_dir
+  opts.cwd = flotes_dir
+  opts = utils.resolve_opts(opts or {}, { is_grep = false, filename_first = false })
+
   local source = utils.resolve_source(
     opts,
     require("deck.builtin.source.grep")(vim.tbl_deep_extend("keep", opts.source_opts, {
