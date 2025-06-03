@@ -1,6 +1,6 @@
 local actions = require("Beez.pickers.deck.codemarks.actions")
 local utils = require("Beez.pickers.deck.utils")
-local M = { toggles = { global_codemarks = false } }
+local M = {}
 
 --- Deck source for codemarks
 ---@param opts table
@@ -13,20 +13,21 @@ function M.find(opts)
     execute = function(ctx)
       local marks = require("Beez.codemarks").marks
       local filter_marks = {}
-      if not M.toggles.global_codemarks then
-        local root = u.root.get({ buf = vim.api.nvim_get_current_buf() })
-        for _, m in pairs(marks.marks) do
+      local toggles = actions.toggles
+      if not toggles.global_codemarks then
+        local root = u.root.get_name({ buf = vim.api.nvim_get_current_buf() })
+        for _, m in pairs(marks:list({ root = root })) do
           if m.root == root then
             table.insert(filter_marks, m)
           end
         end
         if #filter_marks == 0 then
           vim.notify("No marks found, showing all marks...", vim.log.levels.WARN)
-          M.toggles.global_codemarks = true
+          toggles.global_codemarks = true
         end
       end
 
-      if M.toggles.global_codemarks then
+      if toggles.global_codemarks then
         for _, m in pairs(marks.marks) do
           table.insert(filter_marks, m)
         end

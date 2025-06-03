@@ -9,6 +9,11 @@ function M.toggle_global()
     ---@param ctx deck.Context
     execute = function(ctx)
       M.toggles.global_codemarks = not M.toggles.global_codemarks
+      if M.toggles.global_codemarks then
+        vim.notify("Showing all codemarks globally", vim.log.levels.INFO)
+      else
+        vim.notify("Showing codemarks for current project only", vim.log.levels.INFO)
+      end
       ctx.execute()
     end,
   }
