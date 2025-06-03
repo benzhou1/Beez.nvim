@@ -50,7 +50,7 @@ function Marks:get(data)
 end
 
 --- Filter marks based on options
----@param opts {file: string?}
+---@param opts {file: string?, root: string?}
 ---@return table<Beez.codemarks.mark>
 function Marks:list(opts)
   opts = opts or {}
@@ -58,6 +58,11 @@ function Marks:list(opts)
   for _, mark in pairs(self.marks) do
     if opts.file then
       if mark.file == opts.file then
+        table.insert(marks, mark)
+      end
+    end
+    if opts.root then
+      if mark.root == opts.root then
         table.insert(marks, mark)
       end
     end
@@ -70,7 +75,7 @@ end
 function Marks:add(desc)
   local file_path = vim.api.nvim_buf_get_name(0)
   local pos = vim.api.nvim_win_get_cursor(0)
-  local root = u.root.get({ buf = vim.api.nvim_get_current_buf() })
+  local root = u.root.get_name({ buf = vim.api.nvim_get_current_buf() })
   local line = vim.api.nvim_get_current_line()
   ---@type Beez.codemarks.markdata
   local data = {

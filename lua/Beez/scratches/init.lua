@@ -11,13 +11,7 @@ local M = {
 
 --- Gets the the parent folder of the scratch file
 local function get_scratch_parent()
-  local root = u.root.get({ buf = vim.api.nvim_get_current_buf() })
-  if root == nil then
-    root = "rootless"
-  else
-    root = u.paths.basename(root)
-  end
-
+  local root = u.root.get_name({ buf = vim.api.nvim_get_current_buf() })
   local scratch_parent = u.paths.Path:new(c.config.scratch_dir):joinpath(root).filename
   return scratch_parent
 end
@@ -53,7 +47,6 @@ function M.open(opts)
   if name ~= nil then
     local parent_path = get_scratch_parent()
     local parent = u.paths.Path:new(parent_path)
-    print(parent_path)
     -- Create the parent folder if it does not exist
     if not parent:exists() then
       parent:mkdir()

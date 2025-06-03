@@ -1,6 +1,6 @@
 --- Taken from LazyVim
-local paths = require("Beez.u.paths")
 local os = require("Beez.u.os")
+local paths = require("Beez.u.paths")
 
 ---@class Beez.u.root
 ---@overload fun(): string
@@ -191,6 +191,18 @@ function M.git()
   local git_root = vim.fs.find(".git", { path = root, upward = true })[1]
   local ret = git_root and vim.fn.fnamemodify(git_root, ":h") or root
   return ret
+end
+
+--- Gets the the name of the root directory based on the current buffer.
+---@param opts? {normalize?:boolean, buf?:number}
+---@return string
+function M.get_name(opts)
+  local root_dir = M.get(opts)
+  local root = "rootless"
+  if root_dir then
+    root = require("Beez.u.paths").basename(root_dir)
+  end
+  return root
 end
 
 return M
