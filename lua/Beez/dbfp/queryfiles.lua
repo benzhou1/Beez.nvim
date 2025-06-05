@@ -226,4 +226,28 @@ function QueryFiles:delete_queryfile(path)
   self.files[path] = nil
 end
 
+--- Sets the connection for a query file
+---@param path string
+---@param connection string
+function QueryFiles:set_queryfile_connection(path, connection)
+  local qf = self.files[path]
+  if not qf then
+    return
+  end
+
+  local old_connection = qf.connection
+  if old_connection == connection then
+    return
+  end
+
+  qf:set_connection(connection)
+  qf:save()
+
+  self.con_to_files[connection] = self.con_to_files[connection] or {}
+  table.insert(self.con_to_files[connection], path)
+  if old_connection then
+    u.tables.remove(self.con_to_files[old_connection], path)
+  end
+end
+
 return QueryFiles

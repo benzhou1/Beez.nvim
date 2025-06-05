@@ -4,6 +4,7 @@ local M = {}
 --- Deck for dbfp connections
 ---@param opts table?
 function M.connections(opts)
+  opts = vim.tbl_deep_extend("keep", opts or {}, { prompt = false })
   local source, specifier = sources.connections(opts)
   require("deck").start(source, specifier)
 end

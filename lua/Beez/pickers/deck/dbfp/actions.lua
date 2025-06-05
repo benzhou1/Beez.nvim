@@ -253,10 +253,9 @@ function M.dbfp.queryfile_set_connection(opts)
       local item = ctx.get_action_items()[1]
       require("Beez.pickers.deck.dbfp").connections({
         default_action = function(con_ctx)
+          local dbfp = require("Beez.dbfp")
           local con_item = con_ctx.get_action_items()[1]
-          print(con_item.data.name)
-          item.data.qf:set_connection(con_item.data.name)
-          item.data.qf:save()
+          dbfp.queryfiles:set_queryfile_connection(item.data.qf.path.filename, con_item.data.name)
           require("Beez.pickers.deck.dbfp").queryfiles({
             prompt = false,
             select_queryfile = item.data.qf.basename,

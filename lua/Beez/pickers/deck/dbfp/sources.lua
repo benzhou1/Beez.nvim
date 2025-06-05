@@ -71,7 +71,7 @@ function M.connections(opts)
       require("deck").alias_action("insert_above", actions.dbfp.add_queryfile_name),
       actions.dbfp.queryfiles({
         get_opts = function(item)
-          return { connection = item.data.name }
+          return { connection = item.data.name, prompt = false }
         end,
       }),
       actions.dbfp.delete_connection(),
