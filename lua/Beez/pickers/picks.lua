@@ -324,7 +324,7 @@ function M.git_log()
   return {
     deck = {
       run = function(opts)
-        require("deck").start(require("deck.builtin.source.git.log")(opts))
+        deck_pickers.git.log(opts)
       end,
     },
     fzf = {

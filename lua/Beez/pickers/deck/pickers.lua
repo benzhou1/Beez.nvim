@@ -1,7 +1,7 @@
 local sources = require("Beez.pickers.deck.sources")
 local u = require("Beez.u")
 local utils = require("Beez.pickers.deck.utils")
-local M = {}
+local M = { git = {} }
 
 --- Grep deck with input
 ---@param opts table
@@ -98,6 +98,25 @@ function M.git_compare_project_with_branch(opts)
       local branch = item.data.name
       ctx:hide()
       require("diffview").open({ branch })
+    end,
+  })
+
+  require("deck").start(source)
+end
+
+--- Deck picker for git log
+---@param opts table?
+function M.git.log(opts)
+  opts = opts or {}
+  local source = require("deck.builtin.source.git.log")(opts)
+
+  source.actions[1] = require("deck").alias_action("default", "git.diffview.commit")
+  table.insert(source.actions, {
+    name = "git.diffview.commit",
+    execute = function(ctx)
+      local item = ctx.get_action_items()[1]
+      local hash = item.data.hash
+      vim.cmd("DiffviewOpen " .. hash .. "~1.." .. hash)
     end,
   })
 
