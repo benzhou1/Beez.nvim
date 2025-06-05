@@ -70,10 +70,9 @@ function M.Float:new(opts)
     f.set_title_filename = opts.set_title_filename
   end
 
-  self.buf_cb = opts.buffer.buf_cb
-  if self.buf_cb == nil then
-    self.buf_cb = function()
-      print("Buffer created")
+  f.buf_cb = opts.buffer.buf_cb
+  if f.buf_cb == nil then
+    f.buf_cb = function()
       return vim.api.nvim_create_buf(false, false)
     end
   end
