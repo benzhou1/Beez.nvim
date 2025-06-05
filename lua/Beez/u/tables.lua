@@ -56,4 +56,33 @@ function M.reverse(tbl)
   return reversed
 end
 
+--- Extends a table with another table
+---@param t table
+---@vararg table
+---@return table
+function M.extend(t, ...)
+  for _, v in ipairs({ ... }) do
+    if type(v) == "table" then
+      for _, val in pairs(v) do
+        table.insert(t, val)
+      end
+    else
+      table.insert(t, v)
+    end
+  end
+  return t
+end
+
+--- Removes a value from a table
+---@param t table
+---@param rv any
+function M.remove(t, rv)
+  for i, v in ipairs(t) do
+    if rv == v then
+      table.remove(t, i)
+      break
+    end
+  end
+end
+
 return M
