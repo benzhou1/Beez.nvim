@@ -20,6 +20,15 @@ function M.ext(path)
   return ext
 end
 
+--- Gets the name of the path without extension
+---@param path string
+---@return string
+function M.name(path)
+  local name = M.basename(path)
+  name = name:match("(.+)%..+$") or name
+  return name
+end
+
 --- Gets the dirname of a path
 ---@param path string
 ---@return string
