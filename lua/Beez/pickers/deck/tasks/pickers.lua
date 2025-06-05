@@ -4,7 +4,7 @@ local resolve_opts = require("Beez.pickers.deck.utils").resolve_opts
 local resolve_source = require("Beez.pickers.deck.utils").resolve_source
 local resolve_specifier = require("Beez.pickers.deck.utils").resolve_specifier
 local tasks = require("Beez.flotes.tasks")
-local M = { toggles = { show_done = false } }
+local M = {}
 
 --- Tasks deck
 ---@param opts? table
@@ -24,7 +24,7 @@ function M.show(opts)
       local idx = 1
       ---@diagnostic disable-next-line: redefined-local
       for _, t in ipairs(t.children) do
-        if tasks.should_show_task(t, { show_done = M.toggles.show_done }) then
+        if tasks.should_show_task(t, { show_done = actions.toggles.show_done }) then
           local display_text = t:line({ show_fields = false, show_hyphen = false })
           display_text = u.strs.trim(display_text)
           local item = {
@@ -109,7 +109,7 @@ function M.find(opts)
     execute = function(ctx)
       local tl = tasks.get_tasks()
       for _, t in tl:lines() do
-        if tasks.should_show_task(t, { show_done = M.toggles.show_done }) then
+        if tasks.should_show_task(t, { show_done = actions.toggles.show_done }) then
           local item = {
             display_text = t:line({ show_fields = false, show_hyphen = false }),
             data = { id = t.id },

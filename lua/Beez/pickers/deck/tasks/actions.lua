@@ -1,7 +1,7 @@
 local tasks = require("Beez.flotes.tasks")
 local u = require("Beez.u")
 local utils = require("Beez.pickers.deck.tasks.utils")
-local M = {}
+local M = { toggles = { show_done = false } }
 
 M.open_task = {
   name = "open_task",
@@ -39,7 +39,7 @@ M.parent_task = function(opts)
       if t.parent ~= nil then
         task_id = t.parent.id
       end
-      tasks_picker.show_task_deck({ task_id = task_id, task_select = t.id })
+      tasks_picker.show({ task_id = task_id, task_select = t.id })
     end,
   }
 end
