@@ -1,4 +1,6 @@
+local dbfp_pickers = require("Beez.pickers.deck.dbfp")
 local deck_pickers = require("Beez.pickers.deck")
+local flotes_pickers = require("Beez.pickers.deck.flotes")
 local fzf_pickers = require("Beez.pickers.fzf.pickers")
 local snack_pickers = require("Beez.pickers.snacks")
 
@@ -729,49 +731,6 @@ function M.spelling()
   }
 end
 
-function M.find_notes()
-  return {
-    snacks = {
-      run = function(opts)
-        snack_pickers.flotes.notes(opts)
-      end,
-    },
-    deck = {
-      run = function(opts)
-        local source, specifier = deck_pickers.flotes.sources.files(opts)
-        require("deck").start(source, specifier)
-      end,
-    },
-  }
-end
-
-function M.grep_notes()
-  return {
-    deck = {
-      run = function(opts)
-        local source, specifier = deck_pickers.flotes.sources.grep(opts)
-        require("deck").start(source, specifier)
-      end,
-    },
-  }
-end
-
-function M.find_note_templates()
-  return {
-    snacks = {
-      run = function(opts)
-        snack_pickers.flotes.templates(opts)
-      end,
-    },
-    deck = {
-      run = function(opts)
-        local source, specifier = deck_pickers.flotes.sources.templates(opts)
-        require("deck").start(source, specifier)
-      end,
-    },
-  }
-end
-
 function M.codemarks()
   return {
     snacks = {
@@ -808,10 +767,52 @@ function M.scratches()
   }
 end
 
+M["notes.find"] = function()
+  return {
+    snacks = {
+      run = function(opts)
+        snack_pickers.flotes.notes(opts)
+      end,
+    },
+    deck = {
+      run = flotes_pickers.find,
+    },
+  }
+end
+
+M["notes.grep"] = function()
+  return {
+    deck = {
+      run = flotes_pickers.grep,
+    },
+  }
+end
+
+M["notes.find_templates"] = function()
+  return {
+    snacks = {
+      run = function(opts)
+        snack_pickers.flotes.templates(opts)
+      end,
+    },
+    deck = {
+      run = flotes_pickers.find_templates,
+    },
+  }
+end
+
+M["notes.backlinks"] = function()
+  return {
+    deck = {
+      run = flotes_pickers.backlinks,
+    },
+  }
+end
+
 M["dbfp.connections"] = function()
   return {
     deck = {
-      run = deck_pickers.dbfp.connections,
+      run = dbfp_pickers.connections,
     },
   }
 end
@@ -819,7 +820,7 @@ end
 M["dbfp.queries"] = function()
   return {
     deck = {
-      run = deck_pickers.dbfp.queries,
+      run = dbfp_pickers.queries,
     },
   }
 end
@@ -827,7 +828,7 @@ end
 M["dbfp.queryfiles"] = function()
   return {
     deck = {
-      run = deck_pickers.dbfp.queryfiles,
+      run = dbfp_pickers.queryfiles,
     },
   }
 end

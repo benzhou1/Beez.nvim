@@ -9,9 +9,11 @@ M.open_note = {
     ctx:hide()
     vim.schedule(function()
       f.show({ note_path = item.data.filename })
-      if item.data.lnum then
-        vim.fn.cursor(item.data.lnum, item.data.col)
-      end
+      vim.schedule(function()
+        if item.data.lnum then
+          vim.fn.cursor(item.data.lnum, item.data.col)
+        end
+      end)
     end)
   end,
 }

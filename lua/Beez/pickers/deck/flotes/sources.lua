@@ -193,4 +193,76 @@ function M.grep(opts)
   return source, specifier
 end
 
+--- Deck source for backlinks
+---@param opts? table
+---@return deck.Source, deck.StartConfigSpecifier
+function M.backlinks(opts)
+  local u = require("Beez.u")
+  local flotes_dir = require("Beez.flotes").config.notes_dir
+  local filepath = vim.api.nvim_buf_get_name(0)
+  local filename = u.paths.basename(filepath)
+
+  opts.cwd = flotes_dir
+  opts.pattern = "(" .. filename .. ")"
+  opts = utils.resolve_opts(opts or {}, { is_grep = false, filename_first = false })
+
+  local source = utils.resolve_source(
+    opts,
+    require("deck.builtin.source.grep")(vim.tbl_deep_extend("keep", opts.source_opts, {
+      cmd = function(query)
+        local cmd = {
+          "rg",
+          "--color=never",
+          "--no-heading",
+          "--with-filename",
+          "--line-number",
+          "--column",
+          "--smart-case",
+          "--max-columns=500",
+          "--max-columns-preview",
+          "-g",
+          "!.git",
+        }
+        table.insert(cmd, query)
+        print(table.concat(cmd, " "))
+        return cmd
+      end,
+      transform = function(item, text)
+        local filename = text:match("^[^:]+")
+        local file_path = opts.cwd .. u.paths.sep .. filename
+        local title = u.os.read_first_line(file_path)
+        local lnum = tonumber(text:match(":(%d+):"))
+        local col = tonumber(text:match(":%d+:(%d+):"))
+        local match = text:match(":%d+:%d+:(.*)$")
+        item.display_text = {
+          { title, "Comment" },
+          { " " },
+          { "(" .. lnum .. ":" .. col .. "): ", "Comment" },
+          { " " },
+        }
+        local start_idx, end_idx = string.find(string.lower(match), string.lower(item.data.query))
+        if start_idx ~= nil then
+          local before_match = string.sub(match, 1, start_idx - 1)
+          local query_match = string.sub(match, start_idx, end_idx)
+          local after_match = string.sub(match, end_idx + 1)
+          table.insert(item.display_text, { before_match, "Normal" })
+          table.insert(item.display_text, { query_match, "Search" })
+          table.insert(item.display_text, { after_match, "Normal" })
+        else
+          table.insert(item.display_text, { match, "Normal" })
+        end
+        item.data.filename = file_path
+        item.data.lnum = lnum
+        item.data.col = col
+      end,
+    }))
+  )
+  source.actions = {
+    require("deck").alias_action("default", "open_note"),
+    actions.open_note,
+  }
+  local specifier = utils.resolve_specifier(opts)
+  return source, specifier
+end
+
 return M

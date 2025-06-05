@@ -149,6 +149,15 @@ function M.toggle_zoom()
   end
 end
 
+--- Whether the floating window is open
+---@return boolean
+function M.is_open()
+  if M.states.float ~= nil then
+    return M.states.float:is_showing()
+  end
+  return false
+end
+
 --- Creates a new note and shows it
 ---@param title string Title of the note
 ---@param opts {show: boolean?}
@@ -212,7 +221,7 @@ function M.new_note_from_template(template_name, opts)
 end
 
 --- Search for notes by name picker
----@param opts table Options for the picker
+---@param opts? table Options for the picker
 function M.find_picker(opts)
   local def_type = "deck"
   local ok, _ = pcall(require, "deck")
@@ -221,18 +230,18 @@ function M.find_picker(opts)
   end
 
   opts = vim.tbl_deep_extend("keep", opts or {}, { type = def_type })
-  require("Beez.pickers").pick("find_notes", opts)
+  require("Beez.pickers").pick("notes.find", opts)
 end
 
 --- Grep contents of notes picker
----@param opts table Options for the picker
+---@param opts? table Options for the picker
 function M.grep_picker(opts)
   opts = vim.tbl_deep_extend("keep", opts or {}, { type = "deck" })
-  require("Beez.pickers").pick("grep_notes", opts)
+  require("Beez.pickers").pick("notes.grep", opts)
 end
 
 --- Find templates for notes picker
----@param opts table
+---@param opts? table
 function M.templates_picker(opts)
   local def_type = "deck"
   local ok, _ = pcall(require, "deck")
@@ -241,7 +250,14 @@ function M.templates_picker(opts)
   end
 
   opts = vim.tbl_deep_extend("keep", opts or {}, { type = def_type })
-  require("Beez.pickers").pick("find_note_templates", opts)
+  require("Beez.pickers").pick("notes.find_templates", opts)
+end
+
+--- Show picker for backlinks to the current note
+---@param opts? table
+function M.backlinks_picker(opts)
+  opts = opts or {}
+  require("Beez.pickers").pick("notes.backlinks", opts)
 end
 
 --- Follows the markdown link under the cursor
@@ -250,13 +266,13 @@ function M.follow_link()
 end
 
 --- Show picker to insert a link to a note at cursor position
----@param opts table
+---@param opts? table
 function M.insert_link_picker(opts)
   require("Beez.pickers").snacks.flotes.insert_link(opts)
 end
 
 --- Show picker to replace visual selection with a link to a note
----@param opts table
+---@param opts? table
 function M.replace_with_link_picker(opts)
   require("Beez.pickers").snacks.flotes.replace_with_link(opts)
 end

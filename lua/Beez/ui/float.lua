@@ -243,7 +243,7 @@ function M.Float:_create_win()
   local win_id = vim.api.nvim_open_win(bufnr, true, win_opts)
   if self.opts.win.set_win_opts_cb ~= nil then
     vim.api.nvim_win_call(win_id, function()
-      self.opts.win.set_win_opts_cb()
+      self.opts.win.set_win_opts_cb(win_id, bufnr)
     end)
   end
   self.win_id = win_id

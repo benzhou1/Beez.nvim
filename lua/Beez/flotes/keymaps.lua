@@ -5,7 +5,6 @@ local M = {}
 --- Bind keymap hooks to buffer
 ---@param bufnr integer
 function M.bind_buf_keymaps(bufnr)
-  local f = require("Beez.flotes")
   if c.config.keymaps.note_keys then
     c.config.keymaps.note_keys(bufnr)
   end
