@@ -47,10 +47,12 @@ function QueryFiles:init_autocmds()
 
       -- Update files maps if connection changes
       if qf.connection ~= old_connection then
-        for i, v in ipairs(self.con_to_files[old_connection]) do
-          if v == qf.path.filename then
-            table.remove(self.con_to_files[old_connection], i)
-            break
+        if old_connection then
+          for i, v in ipairs(self.con_to_files[old_connection]) do
+            if v == qf.path.filename then
+              table.remove(self.con_to_files[old_connection], i)
+              break
+            end
           end
         end
         self.con_to_files[qf.connection] = self.con_to_files[qf.connection] or {}
@@ -134,9 +136,9 @@ end
 
 --- Adds a new query file to the connection
 ---@param name string
----@param connection string
----@param opts? {table: string?}
-function QueryFiles:add(name, connection, opts)
+---@param opts? {connection: string?, table: string?}
+---@return Beez.dbfp.queryfile
+function QueryFiles:add(name, opts)
   opts = opts or {}
   --- Ensure the queryfiles directory exists
   if not self.path:exists() then
@@ -145,19 +147,83 @@ function QueryFiles:add(name, connection, opts)
 
   local path = self.path:joinpath(name .. ".sql")
   local qf = QueryFile:new(path.filename)
-  qf:set_connection(connection)
+
+  if opts.connection then
+    qf:set_connection(opts.connection)
+  end
   if opts.table then
     qf:set_table(opts.table)
   end
   qf:save()
 
   self.files[path.filename] = qf
-  self.con_to_files[connection] = self.con_to_files[connection] or {}
-  table.insert(self.con_to_files[connection], path.filename)
+  if opts.connection then
+    self.con_to_files[opts.connection] = self.con_to_files[opts.connection] or {}
+    table.insert(self.con_to_files[opts.connection], path.filename)
+  end
   if opts.table then
     self.table_to_files[opts.table] = self.table_to_files[opts.table] or {}
     table.insert(self.table_to_files[opts.table], path.filename)
   end
+  return qf
+end
+
+--- Remove metadata from each query file for a connection
+---@param connection string
+function QueryFiles:remove_connection(connection)
+  local paths = self.con_to_files[connection]
+  if not paths then
+    return
+  end
+
+  for _, path in ipairs(paths) do
+    local qf = self.files[path]
+    if qf then
+      qf:set_connection(nil)
+      qf:set_table(nil)
+      qf:save()
+    end
+  end
+  self.con_to_files[connection] = nil
+end
+
+--- Renames the connection metadata for each query file for a connection
+---@param connection string
+---@param new_connection string
+function QueryFiles:rename_connection(connection, new_connection)
+  local paths = self.con_to_files[connection]
+  if not paths then
+    return
+  end
+
+  for _, path in ipairs(paths) do
+    local qf = self.files[path]
+    if qf then
+      qf:set_connection(new_connection)
+      qf:save()
+    end
+  end
+  self.con_to_files[new_connection] = self.con_to_files[connection]
+  self.con_to_files[connection] = nil
+end
+
+--- Removes a query file from the list
+---@param path string
+function QueryFiles:delete_queryfile(path)
+  local qf = self.files[path]
+  if not qf then
+    return
+  end
+
+  qf:delete()
+  if qf.connection then
+    u.tables.remove(self.con_to_files[qf.connection], path)
+  end
+  if qf.table then
+    u.tables.remove(self.table_to_files[qf.table], path)
+  end
+
+  self.files[path] = nil
 end
 
 return QueryFiles

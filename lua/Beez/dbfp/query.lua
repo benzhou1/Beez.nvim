@@ -37,9 +37,6 @@ end
 ---@return string[]
 function Query:serialize()
   local lines = {}
-  if self.comment ~= "" then
-    table.insert(lines, "-- " .. self.comment)
-  end
   for _, line in ipairs(self.paragraph) do
     table.insert(lines, line)
   end

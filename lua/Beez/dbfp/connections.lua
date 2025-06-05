@@ -32,11 +32,29 @@ end
 --- Save a new connection string
 ---@param name string
 ---@param conn_str string
-function Connections:add(name, conn_str)
-  if self.cons[name] then
-    return vim.notify("Connection with name '" .. name .. "' already exists.", vim.log.levels.WARN)
+---@param opts {replace: boolean?}?
+function Connections:add(name, conn_str, opts)
+  opts = opts or {}
+  if opts.replace and not self.cons[name] then
+    return
   end
+
   self.cons[name] = conn_str
+  self:save()
+end
+
+--- Deletes a connection
+---@param name string
+function Connections:delete(name)
+  if not self.cons[name] then
+    return
+  end
+
+  if self.active == name then
+    self.active = nil
+  end
+
+  self.cons[name] = nil
   self:save()
 end
 
@@ -71,27 +89,16 @@ function Connections:get(name)
 end
 
 --- Renames a connection string
----@param con_str string
+---@param name string
 ---@param new_name string
-function Connections:rename(con_str, new_name)
-  local old_name = nil
-  for k, v in pairs(self.cons) do
-    if v == con_str then
-      old_name = k
-      break
-    end
-  end
-
-  if not old_name then
-    return vim.notify("Connection string '" .. con_str .. "' does not exist.", vim.log.levels.ERROR)
-  end
-
-  if self.active == old_name then
-    self.active = new_name
+function Connections:rename(name, new_name)
+  local con_str = self.cons[name]
+  if not con_str then
+    return
   end
 
   self.cons[new_name] = con_str
-  self.cons[old_name] = nil
+  self.cons[name] = nil
   self:save()
 end
 

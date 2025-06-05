@@ -7,11 +7,10 @@ local regex_metadata = "^--%s(.+)%s=%s(.+)$"
 ---@field path Path
 ---@field basename string
 ---@field dirname string
----@field metadata table<string, string>
+---@field metadata table<string, string?>
 ---@field queries Beez.dbfp.query[]
 ---@field connection string?
 ---@field table string?
----@field filename string
 QueryFile = {}
 QueryFile.__index = QueryFile
 
@@ -29,7 +28,6 @@ function QueryFile:new(path)
   qf.queries = {}
   qf.connection = nil
   qf.table = nil
-  qf.filename = u.paths.basename(path)
 
   qf:deserialize()
   return qf
@@ -95,21 +93,21 @@ function QueryFile:serialize()
   end
 
   for _, query in ipairs(self.queries) do
-    lines:extend(query:serialize())
+    u.tables.extend(lines, query:serialize())
     table.insert(lines, "")
   end
   return lines
 end
 
 --- Sets the metadata connection for the query file
----@param connection string
+---@param connection string?
 function QueryFile:set_connection(connection)
   self.connection = connection
   self.metadata.connection = connection
 end
 
 --- Sets the table connection for the query file
----@param table string
+---@param table string?
 function QueryFile:set_table(table)
   self.table = table
   self.metadata.table = table
@@ -120,6 +118,24 @@ function QueryFile:save()
   local lines = self:serialize()
   local txt = table.concat(lines, "\n")
   self.path:write(txt, "w")
+end
+
+--- Renames the query file
+---@param new_name string
+function QueryFile:rename(new_name)
+  if new_name == nil or new_name == "" then
+    return
+  end
+
+  local new_path = u.paths.Path:new(self.dirname, new_name .. ".sql")
+  self.path:rename({ new_name = new_path.filename })
+  self.basename = u.paths.basename(new_path.filename)
+  self.path = new_path
+end
+
+--- Removes the query file from the filesystem
+function QueryFile:delete()
+  self.path:rm()
 end
 
 return QueryFile

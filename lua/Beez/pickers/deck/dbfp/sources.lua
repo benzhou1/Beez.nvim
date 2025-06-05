@@ -3,13 +3,22 @@ local utils = require("Beez.pickers.deck.utils")
 local M = {}
 
 --- Deck source for dbfp connections
----@param opts table
+---@param opts? {default_action?: string|fun(ctx: deck.Context), select_connection?: string}
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.connections(opts)
   opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
+  local set_cursor = nil
+  local custom_action_name = "dbfp.connections.custom"
+  local default_action = actions.dbfp.queryfiles_name
+  if type(opts.default_action) == "string" then
+    default_action = opts.default_action
+  elseif type(opts.default_action) == "function" then
+    default_action = custom_action_name
+  end
 
   local source = utils.resolve_source(opts, {
     name = "dbfp.connections",
+    ---@param ctx deck.ExecuteContext
     execute = function(ctx)
       local dbfp = require("Beez.dbfp")
       local cons = dbfp.cons.cons
@@ -22,6 +31,7 @@ function M.connections(opts)
         vim.notify("No connections found...", vim.log.levels.WARN)
       end
 
+      local i = 1
       for name, con_str in pairs(cons) do
         local item = {
           display_text = {
@@ -36,31 +46,64 @@ function M.connections(opts)
           },
         }
         ctx.item(item)
+        print(opts.select_connection)
+        if opts.select_connection and opts.select_connection == name then
+          set_cursor = i
+        end
+        i = i + 1
       end
       ctx.done()
     end,
+    events = {
+      BufWinEnter = function(ctx, _)
+        if set_cursor then
+          ctx.set_cursor(set_cursor)
+        end
+      end,
+    },
     actions = {
-      require("deck").alias_action("default", opts.default_action or "dbfp.choose_connection"),
-      require("deck").alias_action("delete", "delete_connection"),
-      require("deck").alias_action("open_keep", "dbfp.add_connection"),
-      require("deck").alias_action("delete", "rename_connection"),
-      actions.dbfp.choose_connection(),
-      -- actions.delete_connection(),
+      require("deck").alias_action("default", default_action),
+      require("deck").alias_action("open_keep", actions.dbfp.add_connection_name),
+      require("deck").alias_action("delete", actions.dbfp.delete_connection_name),
+      require("deck").alias_action("replace_char", actions.dbfp.rename_connection_string_name),
+      require("deck").alias_action("edit_line_end", actions.dbfp.rename_connection_string_name),
+      require("deck").alias_action("edit_line_start", actions.dbfp.rename_connection_name),
+      require("deck").alias_action("insert_above", actions.dbfp.add_queryfile_name),
+      actions.dbfp.queryfiles({
+        get_opts = function(item)
+          return { connection = item.data.name }
+        end,
+      }),
+      actions.dbfp.delete_connection(),
       actions.dbfp.add_connection(),
       actions.dbfp.set_active_connection(),
-      -- actions.rename_connection(),
+      actions.dbfp.rename_connection_string(),
+      actions.dbfp.rename_connection(),
+      actions.dbfp.add_queryfile({
+        get_opts = function(item)
+          return { connection = item.data.name }
+        end,
+      }),
     },
   })
+
+  if type(opts.default_action) == "function" then
+    table.insert(source.actions, {
+      name = custom_action_name,
+      execute = opts.default_action,
+    })
+  end
 
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
 end
 
 --- Deck source fo listing query files for a connection
----@param opts? {connection?: string}
+---@param opts? {connection?: string, select_queryfile?: string}
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.queryfiles(opts)
   opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
+  local set_cursor = nil
 
   local source = utils.resolve_source(opts, {
     name = "dbfp.queryfiles",
@@ -68,7 +111,14 @@ function M.queryfiles(opts)
       local dbfp = require("Beez.dbfp")
       local queryfiles = dbfp.queryfiles:list({ connection = opts.connection })
       if next(queryfiles) == nil then
-        actions.dbfp.add_queryfile(opts.connection, { execute = false }).execute(ctx)
+        actions.dbfp
+          .add_queryfile({
+            get_opts = function(item)
+              return { connection = opts.connection }
+            end,
+            execute = false,
+          })
+          .execute(ctx)
       end
 
       queryfiles = dbfp.queryfiles:list({ connection = opts.connection })
@@ -80,25 +130,55 @@ function M.queryfiles(opts)
         end
       end
 
-      for _, qf in ipairs(queryfiles) do
+      for i, qf in ipairs(queryfiles) do
+        local display_text = { qf.basename }
+        if qf.connection then
+          table.insert(display_text, " ")
+          table.insert(display_text, { qf.connection, "Comment" })
+        end
+        if qf.table then
+          table.insert(display_text, " ")
+          table.insert(display_text, { qf.table, "Comment" })
+        end
         local item = {
-          display_text = {
-            qf.basename,
-            " ",
-            { qf.dirname, "Comment" },
-          },
+          display_text = display_text,
           data = {
             qf = qf,
             filename = qf.path.filename,
           },
         }
         ctx.item(item)
+        if opts.select_queryfile and opts.select_queryfile == qf.basename then
+          set_cursor = i
+        end
       end
       ctx.done()
     end,
+    events = {
+      BufWinEnter = function(ctx, _)
+        if set_cursor then
+          ctx.set_cursor(set_cursor)
+        end
+      end,
+    },
     actions = {
-      require("deck").alias_action("default", "dbfp.open_queryfile"),
+      require("deck").alias_action("default", actions.dbfp.open_queryfile_name),
+      require("deck").alias_action("prev_default", actions.dbfp.connections_name),
+      require("deck").alias_action("replace_char", actions.dbfp.rename_queryfile_name),
+      require("deck").alias_action("edit_line_start", actions.dbfp.rename_queryfile_name),
+      require("deck").alias_action("edit_line_end", actions.dbfp.queryfile_set_connection_name),
+      require("deck").alias_action("open_keep", actions.dbfp.add_queryfile_name),
+      require("deck").alias_action("insert_above", actions.dbfp.queryfile_set_table_name),
+      require("deck").alias_action("delete", actions.dbfp.queryfile_delete_name),
+      require("deck").alias_action("alt_default", actions.dbfp.queries_name),
       actions.dbfp.open_queryfile(),
+      actions.dbfp.connections({ prompt = false }),
+      actions.dbfp.rename_queryfile(),
+      actions.dbfp.add_queryfile(),
+      actions.dbfp.queryfile_set_connection(),
+      actions.dbfp.queryfile_set_table(),
+      actions.dbfp.queryfile_delete(),
+      actions.dbfp.queries(),
     },
   })
 
@@ -116,7 +196,13 @@ function M.queries(opts)
     name = "dbfp.queries",
     execute = function(ctx)
       local dbfp = require("Beez.dbfp")
-      local queryfiles = dbfp.queryfiles:list()
+      local queryfiles = {}
+      if opts.queryfile then
+        queryfiles = { dbfp.queryfiles:get(opts.queryfile) }
+      else
+        queryfiles = dbfp.queryfiles:list()
+      end
+
       if next(queryfiles) == nil then
         ctx.done()
         return vim.notify("No query files found...", vim.log.levels.WARN)
@@ -157,10 +243,26 @@ function M.queries(opts)
       },
     },
     actions = {
-      require("deck").alias_action("default", "dbfp.execute_query"),
-      require("deck").alias_action("open_keep", "dbfp.open_queryfile"),
+      require("deck").alias_action("default", actions.dbfp.execute_query_name),
+      require("deck").alias_action("open_keep", actions.dbfp.open_queryfile_name),
+      require("deck").alias_action("prev_default", actions.dbfp.queryfiles_name),
       actions.dbfp.execute_query(),
-      actions.dbfp.open_queryfile(),
+      actions.dbfp.open_queryfile({
+        get_opts = function(item)
+          local search = nil
+          if item.data.q.comment then
+            search = item.data.q.paragraph[2]
+          else
+            search = item.data.q.paragraph[1]
+          end
+          return { search = search }
+        end,
+      }),
+      actions.dbfp.queryfiles({
+        get_opts = function(item)
+          return { select_queryfile = item.data.qf.basename, prompt = false }
+        end,
+      }),
     },
   })
 

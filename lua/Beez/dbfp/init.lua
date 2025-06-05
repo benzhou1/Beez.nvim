@@ -124,13 +124,20 @@ end
 
 --- Opens a query file in a floating window
 ---@param path string?
----@param opts table?
+---@param opts {search?: string}?
 function M.open_query_file(path, opts)
   opts = opts or {}
   path = path or M.path
   local float = get_float()
   float:show(path)
   M.path = path
+
+  vim.schedule(function()
+    if opts.search then
+      -- vim.fn.search(opts.search, "c")
+      vim.fn.search("\\V" .. opts.search, "c")
+    end
+  end)
 end
 
 --- Execute query from selection
@@ -234,6 +241,21 @@ function M.focus_dbout(opts)
       end
     end
   end)
+end
+
+--- Deletes a connection by name
+---@param name string
+function M.delete_connection(name)
+  M.cons:delete(name)
+  M.queryfiles:remove_connection(name)
+end
+
+--- Renames a connection name
+---@param name string
+---@param new_name string
+function M.rename_connection(name, new_name)
+  M.cons:rename(name, new_name)
+  M.queryfiles:rename_connection(name, new_name)
 end
 
 return M

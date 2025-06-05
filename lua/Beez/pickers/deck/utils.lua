@@ -53,6 +53,9 @@ function M.resolve_specifier(opts, ...)
   if opts.pattern ~= nil and opts.pattern ~= "" then
     specifier.query = opts.pattern .. "  "
   end
+  if opts.prompt ~= nil then
+    specifier.start_prompt = opts.prompt
+  end
   -- Disable snacks image previewer in favor of neo-img
   specifier.disable_previewers = { "snacks_image" }
   specifier = vim.tbl_deep_extend("force", specifier, ... or {})
