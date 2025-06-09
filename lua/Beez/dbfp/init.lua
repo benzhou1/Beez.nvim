@@ -128,6 +128,9 @@ end
 function M.open_query_file(path, opts)
   opts = opts or {}
   path = path or M.path
+  if path == nil and M.qf then
+    path = M.qf.path.filename
+  end
   local float = get_float()
   float:show(path)
   M.path = path
@@ -166,15 +169,31 @@ function M.execute_query(opts)
     )
   end
 
-  local lines = u.nvim.get_visual_selection()
-  vim.cmd("DB g:" .. connection .. " " .. lines:gsub("\n", " "))
+  local text = u.nvim.get_visual_selection()
+  -- Remove the trailing semicolon
+  if text:endswith(";") then
+    text = text:sub(1, -2)
+  end
+
+  local lines = vim.split(text, "\n", { plain = true })
+  -- Remove the comment line
+  if lines[1]:startswith("--") then
+    table.remove(lines, 1)
+  end
+
+  vim.cmd("DB g:" .. connection .. " " .. table.concat(lines, " "))
   M.qf = qf
 end
 
 --- Executes a query string
 ---@param connection string
 ---@param query string
-function M.execute_raw_query(connection, query)
+---@param opts? {qf: Beez.dbfp.queryfile}?
+function M.execute_raw_query(connection, query, opts)
+  opts = opts or {}
+  if opts.qf then
+    M.qf = opts.qf
+  end
   M.init_dadbod({ connection = connection })
   vim.cmd("DB g:" .. connection .. " " .. query)
 end

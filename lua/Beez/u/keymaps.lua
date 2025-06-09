@@ -27,7 +27,7 @@ function M.unset(keymaps)
   for _, km in ipairs(keymaps) do
     local key = km[1]
     local mode = km.mode or "n"
-    vim.keymap.del(mode, key, {
+    pcall(vim.keymap.del, mode, key, {
       buffer = km.buffer,
     })
   end

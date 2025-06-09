@@ -212,7 +212,13 @@ function M.dbfp.execute_query(opts)
     execute = function(ctx)
       local item = ctx.get_action_items()[1]
       local dbfp = require("Beez.dbfp")
-      dbfp.execute_raw_query(item.data.qf.connection, item.data.q.query:gsub("\n", " "))
+      local query = item.data.q.query:gsub("\n", " ")
+      -- Remove trailing semicolon
+      if query:endswith(";") then
+        query = query:sub(1, -2)
+      end
+
+      dbfp.execute_raw_query(item.data.qf.connection, query, { qf = item.data.qf })
       dbfp.focus_dbout()
       ctx:hide()
     end,

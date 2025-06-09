@@ -46,7 +46,6 @@ function M.connections(opts)
           },
         }
         ctx.item(item)
-        print(opts.select_connection)
         if opts.select_connection and opts.select_connection == name then
           set_cursor = i
         end
