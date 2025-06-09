@@ -75,12 +75,13 @@ end
 
 --- Removes a value from a table
 ---@param t table
----@param rv any
+---@param rv any|fun(v: any): boolean
+---@return any?
 function M.remove(t, rv)
   for i, v in ipairs(t) do
-    if rv == v then
+    if (type(rv) == "function" and rv(v)) or rv == v then
       table.remove(t, i)
-      break
+      return v
     end
   end
 end
