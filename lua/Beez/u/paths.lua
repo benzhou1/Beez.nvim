@@ -25,6 +25,9 @@ end
 ---@return string
 function M.name(path)
   local name = M.basename(path)
+  if not name then
+    return name
+  end
   name = name:match("(.+)%..+$") or name
   return name
 end
