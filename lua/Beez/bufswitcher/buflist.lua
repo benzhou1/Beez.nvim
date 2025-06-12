@@ -15,6 +15,7 @@ Buflist = {}
 Buflist.__index = Buflist
 Buflist.autocmd_group = "Beez.bufswitcher.buflist"
 Buflist.ns_group = "Beez.bufswitcher.buflist"
+Buflist.timeoutlen = vim.o.timeoutlen
 
 --- Instantiate a new Buflist
 ---@return Beez.bufswitcher.buflist
@@ -150,8 +151,8 @@ function Buflist:create_autocmds()
   local group = vim.api.nvim_create_augroup(Buflist.autocmd_group, { clear = true })
   local events = require("nui.utils.autocmd").event
 
-  -- Create an autocmd to refresh the buffer list when a buffer is added or removed
-  if self:noneckpain_enabled() then
+  if self:noneckpain_enabled() or self.stay_opened then
+    -- Create an autocmd to refresh the buffer list when a buffer is added or removed
     vim.api.nvim_create_autocmd({ events.BufAdd, events.BufDelete, events.BufEnter }, {
       group = group,
       callback = function(event)
@@ -170,44 +171,44 @@ function Buflist:create_autocmds()
   end
 
   -- Create an autocmd to cleanup buflist when window is closed
-  if self:noneckpain_enabled() then
-    vim.api.nvim_create_autocmd("WinClosed", {
-      group = group,
-      pattern = tostring(self.win),
-      callback = function(event)
-        if event.winid == self.win then
-          self:close()
-        end
-      end,
-    })
-  end
+  vim.api.nvim_create_autocmd("WinClosed", {
+    group = group,
+    pattern = tostring(self.win),
+    callback = function(event)
+      if event.winid == self.win then
+        print("winclosed")
+        self:close()
+      end
+    end,
+  })
 
   -- Unmount the popup when cursor leaves the buffer
-  if not self.stay_opened then
+  if not self.stay_opened and not self:noneckpain_enabled() then
     self.p:on("BufLeave", function()
+      print("bufleave close")
       self:close()
     end)
   end
 
   -- Create automcmd to set and restore timeoutlen on entering and leaving the buflist
   local old_timoutlen = nil
-  vim.api.nvim_create_autocmd("BufEnter", {
-    group = group,
-    buffer = self.buf,
-    callback = function()
-      old_timoutlen = vim.o.timeoutlen
-      vim.opt.timeoutlen = 1
-    end,
-  })
-  vim.api.nvim_create_autocmd("BufLeave", {
-    group = group,
-    buffer = self.buf,
-    callback = function()
-      if old_timoutlen then
-        vim.opt.timeoutlen = old_timoutlen
-      end
-    end,
-  })
+  if self.stay_opened or self:noneckpain_enabled() then
+    vim.api.nvim_create_autocmd("BufEnter", {
+      group = group,
+      buffer = self.buf,
+      callback = function()
+        Buflist.timeoutlen = vim.o.timeoutlen
+        vim.opt.timeoutlen = 1
+      end,
+    })
+    vim.api.nvim_create_autocmd("BufLeave", {
+      group = group,
+      buffer = self.buf,
+      callback = function()
+        vim.opt.timeoutlen = Buflist.timeoutlen
+      end,
+    })
+  end
 end
 
 --- Clean up the autocmds for this buflist
@@ -296,6 +297,7 @@ function Buflist:close()
   elseif self.p then
     self.p:unmount()
     self.p = nil
+    vim.opt.timeoutlen = Buflist.timeoutlen
   end
   self.buf = nil
   self.win = nil
@@ -368,6 +370,8 @@ function Buflist:show(opts)
     self:map_keys()
     self:create_autocmds()
     self:render()
+    -- Temporarily disable timeoutlen to allow for quick key presses
+    vim.opt.timeoutlen = 1
   else
     if opts.focus ~= false then
       focus_buflist()
