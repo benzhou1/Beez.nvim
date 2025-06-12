@@ -15,15 +15,14 @@ local M = { config = {} }
 
 ---@class Beez.bufswitcher.config.win
 ---@field popup? nui_popup_options
----@field close_on_leave? boolean
----@field stay_opened? boolean
 ---@field get_popup_opts? fun(): nui_popup_options
+---@field use_noneckpain? boolean
 
 ---@class Beez.bufswitcher.config.keymaps
 ---@field pick_chars? string
 ---@field index_chars? string[]
 ---@field last_buf_char? string
----@field del_buf_char? string
+---@field del_buf? string
 ---@field quit_char? string
 ---@field pinned_chars? string[]
 
@@ -73,11 +72,11 @@ M.def_config = {
     pinned_chars = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" },
     index_chars = {},
     last_buf_char = nil,
-    del_buf_char = "D",
+    del_buf = "<C-d>",
     quit_char = "<Esc>",
   },
   win = {
-    close_on_leave = true,
+    use_noneckpain = true,
     staty_opened = false,
     get_popup_opts = nil,
     popup = {

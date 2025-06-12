@@ -30,8 +30,14 @@ function M.close()
 end
 
 --- Show the popup
-function M.show()
-  M.bl:show()
+---@param opts? {focus?: boolean}
+function M.show(opts)
+  M.bl:show(opts)
+end
+
+--- Update the buffer list
+function M.update(opts)
+  M.bl:update(opts)
 end
 
 return M

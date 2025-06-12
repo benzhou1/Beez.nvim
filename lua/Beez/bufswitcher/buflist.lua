@@ -8,6 +8,9 @@ local u = require("Beez.u")
 ---@field available_chars table<string, boolean>
 ---@field mapped_keys table<string, boolean>
 ---@field curr_buf integer?
+---@field buf integer?
+---@field win integer?
+---@field stay_opened boolean?
 Buflist = {}
 Buflist.__index = Buflist
 Buflist.autocmd_group = "Beez.bufswitcher.buflist"
@@ -24,6 +27,9 @@ function Buflist:new()
   b.available_chars = {}
   b.mapped_keys = {}
   b.curr_buf = nil
+  b.buf = nil
+  b.win = nil
+  b.stay_opened = false
 
   -- Create a mpa of available chars
   local pick_chars = c.config.keymaps.pick_chars
@@ -72,7 +78,7 @@ function Buflist.def_dirname(buf, filename, display_names)
   return dirname
 end
 
---- Map default keym binds
+--- Map default key binds
 function Buflist:map_keys()
   local keys = {}
 
@@ -84,7 +90,7 @@ function Buflist:map_keys()
       function()
         self:open_buf("#")
       end,
-      buffer = self.p.bufnr,
+      buffer = self.buf,
     })
   end
 
@@ -101,10 +107,27 @@ function Buflist:map_keys()
               self:open_buf(buf.path)
             end
           end,
-          buffer = self.p.bufnr,
+          buffer = self.buf,
         })
       end
     end
+  end
+
+  -- Map to delete buffer
+  if c.config.keymaps.del_buf then
+    table.insert(keys, {
+      c.config.keymaps.del_buf,
+      function()
+        local lineno = vim.api.nvim_win_get_cursor(0)[1]
+        local buf = self.bufs[lineno]
+        vim.api.nvim_buf_set_lines(self.buf, lineno - 1, lineno, false, {})
+        if buf and vim.api.nvim_buf_is_valid(buf.id) then
+          vim.cmd("noautocmd bdelete " .. buf.id)
+          table.remove(self.bufs, lineno)
+        end
+      end,
+      buffer = self.buf,
+    })
   end
 
   u.keymaps.set(keys)
@@ -114,7 +137,7 @@ end
 function Buflist:clear_keys()
   for k, is_buf in pairs(self.mapped_keys) do
     if is_buf then
-      u.keymaps.unset({ k, buffer = self.p.bufnr })
+      u.keymaps.unset({ k, buffer = self.buf })
     else
       u.keymaps.unset({ k })
     end
@@ -125,49 +148,74 @@ end
 --- Create autocmds for the buflist
 function Buflist:create_autocmds()
   local group = vim.api.nvim_create_augroup(Buflist.autocmd_group, { clear = true })
+  local events = require("nui.utils.autocmd").event
 
   -- Create an autocmd to refresh the buffer list when a buffer is added or removed
-  vim.api.nvim_create_autocmd({ "BufAdd", "BufDelete", "BufEnter" }, {
-    group = group,
-    callback = function(event)
-      -- TODO: See if we can change highlight only on bufenter
-      if self:is_open() and event.buf ~= self.p.bufnr and event.file ~= "" then
-        local valid_buf_enter = c.config.autocmds.valid_buf_enter
-        if valid_buf_enter then
-          if not valid_buf_enter(event) then
-            return
+  if self:noneckpain_enabled() then
+    vim.api.nvim_create_autocmd({ events.BufAdd, events.BufDelete, events.BufEnter }, {
+      group = group,
+      callback = function(event)
+        -- TODO: See if we can change highlight only on bufenter
+        if self:is_open() and event.buf ~= self.buf and event.file ~= "" then
+          local valid_buf_enter = c.config.autocmds.valid_buf_enter
+          if valid_buf_enter then
+            if not valid_buf_enter(event) then
+              return
+            end
           end
+          self:update()
         end
-        self:update()
-      end
-    end,
-  })
+      end,
+    })
+  end
 
   -- Create an autocmd to cleanup buflist when window is closed
-  vim.api.nvim_create_autocmd("WinClosed", {
-    group = group,
-    pattern = tostring(self.p.winid),
-    callback = function(event)
-      if event.winid == self.p.winid then
-        self:close()
-      end
-    end,
-  })
+  if self:noneckpain_enabled() then
+    vim.api.nvim_create_autocmd("WinClosed", {
+      group = group,
+      pattern = tostring(self.win),
+      callback = function(event)
+        if event.winid == self.win then
+          self:close()
+        end
+      end,
+    })
+  end
 
-  if c.config.win.close_on_leave and not c.config.win.stay_opened then
-    -- Unmount the popup when cursor leaves the buffer
+  -- Unmount the popup when cursor leaves the buffer
+  if not self.stay_opened then
     self.p:on("BufLeave", function()
       self:close()
     end)
   end
+
+  -- Create automcmd to set and restore timeoutlen on entering and leaving the buflist
+  local old_timoutlen = nil
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = group,
+    buffer = self.buf,
+    callback = function()
+      old_timoutlen = vim.o.timeoutlen
+      vim.opt.timeoutlen = 1
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufLeave", {
+    group = group,
+    buffer = self.buf,
+    callback = function()
+      if old_timoutlen then
+        vim.opt.timeoutlen = old_timoutlen
+      end
+    end,
+  })
 end
 
 --- Clean up the autocmds for this buflist
 function Buflist:clean_autocmds()
   -- Clear the autocmds for this buflist
-  vim.api.nvim_del_augroup_by_name(Buflist.autocmd_group)
+  pcall(vim.api.nvim_del_augroup_by_name, Buflist.autocmd_group)
 
-  if c.config.win.close_on_leave and not c.config.win.stay_opened then
+  if not self.stay_opened and self.p then
     self.p:off("BufLeave")
   end
 end
@@ -214,6 +262,17 @@ end
 --- Is buflist showing
 ---@return boolean
 function Buflist:is_open()
+  if self:noneckpain_enabled() then
+    if
+      not self.buf
+      or not vim.api.nvim_buf_is_valid(self.buf)
+      or not vim.api.nvim_win_is_valid(self.win)
+    then
+      return false
+    end
+    return true
+  end
+
   if not self.p or not self.p.winid or not self.p.bufnr then
     return false
   end
@@ -222,28 +281,76 @@ end
 
 --- Close the buflist
 function Buflist:close()
-  if not self.p then
-    return
-  end
-
-  self.p:unmount()
-  self.p = nil
   self:clean_autocmds()
   for k, is_buf in pairs(self.mapped_keys) do
     if is_buf then
       self.mapped_keys[k] = nil
     end
   end
+
+  if self:noneckpain_enabled() and self.buf then
+    -- If no-neck-pain is enabled, just return to the main window
+    require("plugins.noneckpain").return_to_main_win()
+    -- Clean up the buffer contents
+    vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, {})
+  elseif self.p then
+    self.p:unmount()
+    self.p = nil
+  end
+  self.buf = nil
+  self.win = nil
+end
+
+--- Checks if no-neck-pain is enabled
+---@return boolean
+function Buflist:noneckpain_enabled()
+  if c.config.win.use_noneckpain then
+    local state = require("no-neck-pain.state")
+    local nnp_enabled = state.has_tabs(state) and state.is_active_tab_registered(state)
+    return nnp_enabled
+  end
+  return false
 end
 
 --- Show buflist
-function Buflist:show()
+---@param opts? { focus?: boolean}
+function Buflist:show(opts)
+  opts = opts or {}
   -- Make sure buflist is cleaned up if its not showing
   if not self:is_open() then
     self:close()
   end
-
   self.curr_buf = vim.api.nvim_get_current_buf()
+
+  local function focus_buflist()
+    vim.api.nvim_set_current_win(self.win)
+    for i, b in ipairs(self.bufs) do
+      if b.id == self.curr_buf then
+        vim.api.nvim_win_set_cursor(self.win, { i, 0 })
+        return
+      end
+    end
+  end
+
+  -- If no-neck-pain is enabled, use its buffer instead of float
+  if self:noneckpain_enabled() then
+    if self.buf == nil then
+      self.stay_opened = true
+      local state = require("no-neck-pain.state")
+      self.win = state:get_side_id("left")
+      self.buf = vim.api.nvim_win_get_buf(self.win)
+      self:refresh()
+      self:map_keys()
+      self:create_autocmds()
+      self:render()
+    end
+    if opts.focus ~= false then
+      focus_buflist()
+    end
+    return
+  end
+
+  -- Use float popup
   if not self.p then
     local popup_opts = c.config.win.popup
     if c.config.win.get_popup_opts then
@@ -251,13 +358,20 @@ function Buflist:show()
     end
     assert(popup_opts, "popup_opts must be set in config.win.popup or config.win.get_popup_opts")
     self.p = require("nui.popup")(popup_opts)
+    self.p:mount()
+    self.buf = self.p.bufnr
+    self.win = self.p.winid
+    -- Allows you to dynically change stay opened
+    self.stay_opened = popup_opts.stay_opened or false
+
     self:refresh()
     self:map_keys()
     self:create_autocmds()
     self:render()
-    self.p:mount()
   else
-    vim.api.nvim_set_current_win(self.p.winid)
+    if opts.focus ~= false then
+      focus_buflist()
+    end
   end
 end
 
@@ -265,7 +379,7 @@ end
 ---@param opts? {first_char?: string}
 function Buflist:update(opts)
   opts = opts or {}
-  if not self.p then
+  if not self:is_open() then
     return
   end
 
@@ -279,11 +393,11 @@ end
 --- Open chosen buffer in main window
 ---@param path string
 function Buflist:open_buf(path)
-  if not self.p then
+  if not self.buf then
     return
   end
 
-  if not c.config.win.stay_opened then
+  if not self.stay_opened then
     self:close()
   end
 
@@ -325,7 +439,7 @@ function Buflist:render(opts)
   local keys = {}
   local ns_id = vim.api.nvim_create_namespace(Buflist.ns_group)
   local current_buf_i = 1
-  vim.api.nvim_buf_clear_namespace(self.p.bufnr, ns_id, 0, -1)
+  vim.api.nvim_buf_clear_namespace(self.buf, ns_id, 0, -1)
   self:clear_keys()
 
   for i, b in ipairs(bufs) do
@@ -420,7 +534,7 @@ function Buflist:render(opts)
           function()
             self:open_buf(b.path)
           end,
-          buffer = self.p.bufnr,
+          buffer = self.buf,
         })
         self.mapped_keys[picked_char] = true
       end
@@ -431,7 +545,7 @@ function Buflist:render(opts)
         function()
           self:update()
         end,
-        buffer = self.p.bufnr,
+        buffer = self.buf,
       })
     else
       table.insert(line, " ")
@@ -446,13 +560,13 @@ function Buflist:render(opts)
         table.insert(keys, {
           quit_char,
           function()
-            if c.config.win.stay_opened then
+            if self.stay_opened then
               require("plugins.noneckpain").return_to_main_win()
             else
               self:close()
             end
           end,
-          buffer = self.p.bufnr,
+          buffer = self.buf,
         })
       end
 
@@ -463,14 +577,14 @@ function Buflist:render(opts)
         function()
           self:update({ first_char = first_char })
         end,
-        buffer = self.p.bufnr,
+        buffer = self.buf,
       })
       self.mapped_keys[first_char] = true
     end
   end
 
   -- Clean up the buffer contents
-  vim.api.nvim_buf_set_lines(self.p.bufnr, 0, -1, false, {})
+  vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, {})
   -- Render the new buffer list
   for i, l in ipairs(texts) do
     local line = require("nui.line")()
@@ -481,12 +595,12 @@ function Buflist:render(opts)
         line:append(t)
       end
     end
-    line:render(self.p.bufnr, -1, i, i)
+    line:render(self.buf, -1, i, i)
   end
 
   -- Highlight the current buffer line
-  vim.api.nvim_buf_set_extmark(self.p.bufnr, ns_id, current_buf_i - 1, 0, {
-    end_col = #vim.api.nvim_buf_get_lines(self.p.bufnr, current_buf_i - 1, current_buf_i, false)[1],
+  vim.api.nvim_buf_set_extmark(self.buf, ns_id, current_buf_i - 1, 0, {
+    end_col = #vim.api.nvim_buf_get_lines(self.buf, current_buf_i - 1, current_buf_i, false)[1],
     hl_group = c.config.ui.highlights.curr_buf,
   })
 
