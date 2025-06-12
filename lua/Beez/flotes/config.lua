@@ -7,6 +7,7 @@ local M = {
 ---@class Beez.flotes.float.config
 ---@field quit_action ("close" | "hide")? Action to take when the float is closed. Defaults to "close"
 ---@field del_bufs_on_close boolean? Whether to delete buffers on close. Defaults to true
+---@field close_win_cb fun(win: integer)? Callback to run when the floating window is closed
 ---@field float_opts Beez.ui.float.win.opts Options for the floating window
 
 ---@class Beez.flotes.keymaps.config

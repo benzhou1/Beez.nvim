@@ -189,7 +189,8 @@ function M.go_to_file()
   end
 
   if path ~= nil then
-    vim.cmd("wincmd p")
+    vim.cmd("noautocmd wincmd p")
+    require("plugins.noneckpain").return_to_main_win()
     vim.schedule(function()
       vim.cmd("e " .. path)
       if lineno ~= nil then

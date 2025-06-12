@@ -38,6 +38,7 @@ M.setup = function(opts)
         keymaps.bind_buf_keymaps(bufnr)
       end,
     },
+    close_win_cb = c.config.float.close_win_cb,
   }
 
   -- Initialize float window
