@@ -728,4 +728,11 @@ function M.update(opts)
   M.map(keys)
 end
 
+--- Return a list of opened buffers
+---@param opts? {pinned?: boolean}
+---@return Beez.bufswitcher.buf[]
+function M.list(opts)
+  return M.bl:list(opts)
+end
+
 return M
