@@ -1,3 +1,4 @@
+local u = require("Beez.u")
 local M = { config = {} }
 
 ---@class Beez.bufswitcher.config
@@ -6,6 +7,7 @@ local M = { config = {} }
 ---@field keymaps? Beez.bufswitcher.config.keymaps
 ---@field ui? Beez.bufswitcher.config.ui
 ---@field autocmds? Beez.bufswitcher.config.autocmds
+---@field pins_path? string
 
 ---@class Beez.bufswitcher.config.hooks
 ---@field sort? fun(bufs: Beez.bufswitcher.buf[]): Beez.bufswitcher.buf[]
@@ -21,9 +23,9 @@ local M = { config = {} }
 ---@class Beez.bufswitcher.config.keymaps
 ---@field pick_chars? string
 ---@field index_chars? string[]
----@field last_buf_char? string
 ---@field del_buf? string
----@field quit_char? string
+---@field pin_buf? string
+---@field quit? string
 ---@field pinned_chars? string[]
 
 ---@class Beez.bufswitcher.config.ui
@@ -32,19 +34,19 @@ local M = { config = {} }
 ---@field highlights? Beez.bufswitcher.config.ui.highlights
 
 ---@class Beez.bufswitcher.config.ui.highlights
----@field char_col? string
----@field char_label? string
 ---@field curr_buf? string
 ---@field filename? string
 ---@field dirname? string
+---@field char_label? string
+---@field pin_char? string
 ---@field index_char? string
----@field last_buf_char? string
 
 ---@class Beez.bufswitcher.config.autocmds
 ---@field valid_buf_enter? fun(event: table): boolean
 
 ---@type Beez.bufswitcher.config
 M.def_config = {
+  pins_path = vim.fn.stdpath("data") .. "/Beez/bufswitcher/pins.txt",
   autocmds = {
     valid_buf_enter = nil,
   },
@@ -52,13 +54,12 @@ M.def_config = {
     show_char_col = false,
     show_char_labels = true,
     highlights = {
-      char_col = "Search",
-      char_label = "CurSearch",
       curr_buf = "CursorLine",
       filename = "Normal",
       dirname = "Comment",
+      char_label = "CurSearch",
+      pin_char = "Search",
       index_char = "Comment",
-      last_buf_char = "Comment",
     },
   },
   hooks = {
@@ -71,9 +72,9 @@ M.def_config = {
     pick_chars = "abcdefghijklmnopqrstuvwxyz",
     pinned_chars = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" },
     index_chars = {},
-    last_buf_char = nil,
     del_buf = "<C-d>",
-    quit_char = "<Esc>",
+    pin_buf = "<C-p>",
+    quit = "<Esc>",
   },
   win = {
     use_noneckpain = true,
@@ -101,6 +102,15 @@ function M.init(opts)
   opts = opts or {}
   M.config = M.def_config
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
+
+  local pins_path = u.paths.Path:new(M.config.pins_path)
+  local pins_dir = pins_path:parent()
+  if not pins_path:exists() then
+    if not pins_dir:exists() then
+      pins_dir:mkdir({ parents = true })
+    end
+    pins_path:write("", "w")
+  end
 end
 
 return M

@@ -1,4 +1,3 @@
-local c = require("Beez.bufswitcher.config")
 local u = require("Beez.u")
 
 ---@class Beez.bufswitcher.buf
@@ -12,6 +11,10 @@ local u = require("Beez.u")
 ---@field listed boolean
 ---@field buftype string
 ---@field ft string
+---@field idx integer
+---@field pin_idx integer
+---@field current boolean
+---@field pinned boolean
 Buf = {}
 Buf.__index = Buf
 
@@ -32,6 +35,10 @@ function Buf:new(buf_info)
   b.listed = buf_info.listed
   b.buftype = vim.bo[b.id].buftype
   b.ft = vim.bo[b.id].filetype
+  b.current = false
+  b.pinned = false
+  b.idx = 0
+  b.pin_idx = 0
 
   return b
 end
@@ -47,10 +54,32 @@ function Buf:is_valid_buf()
     and self.name ~= ""
   local is_listed = self.listed == 1
 
-  local valid = is_valid_name
-    and is_valid_buftype
-    and is_listed
+  local valid = is_valid_name and is_valid_buftype and is_listed
   return valid
+end
+
+--- Sets the buffer as pinned
+---@param pin_idx integer
+function Buf:set_pinned(pin_idx)
+  self.pin_idx = pin_idx
+  self.pinned = true
+end
+
+--- Unset the pinned state of the buffer
+function Buf:unset_pinned()
+  self.pin_idx = 1
+  self.pinned = false
+end
+
+--- Sets the buffer as current
+function Buf:set_current()
+  self.current = true
+end
+
+--- Sets the index of the buffer
+---@param idx integer
+function Buf:set_idx(idx)
+  self.idx = idx
 end
 
 return Buf
