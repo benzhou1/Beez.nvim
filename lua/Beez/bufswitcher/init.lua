@@ -13,7 +13,7 @@ local u = require("Beez.u")
 ---@field p? NuiPopup
 ---@field autocmd_group string
 ---@field ns_group string
----@field mapped_keys table<string, boolean>
+---@field mapped_keys table<string, {buffer?: integer, clean?: boolean}>
 ---@field pins_file_path Path
 local M = {
   config = {},
@@ -39,7 +39,15 @@ function M.setup(opts)
   M.bl = Buflist:new()
   M.timeoutlen = vim.o.timeoutlen
   M.pins_file_path = u.paths.Path:new(M.config.pins_path)
-  M.pinned_paths = M.pins_file_path:readlines()
+  M.pinned_paths = {}
+
+  local pinned_paths = M.pins_file_path:readlines()
+  -- Filter out empty lines
+  for _, l in ipairs(pinned_paths) do
+    if l ~= "" then
+      table.insert(M.pinned_paths, l)
+    end
+  end
 
   -- Create a map of available chars
   local pick_chars = c.config.keymaps.pick_chars
@@ -168,6 +176,18 @@ end
 
 --- Map keys to the buffer list
 local function map_keys()
+  -- Map to enter to select
+  M.map({
+    "<CR>",
+    function()
+      local lineno = vim.api.nvim_win_get_cursor(0)[1]
+      local bidx = M.displayed_bufs[lineno]
+      local buf = M.bl:get({ idx = bidx })
+      M.open_buf(buf)
+    end,
+    buffer = M.buf,
+  })
+
   -- Map to delete buffer
   local del_key = c.config.keymaps.del_buf
   if del_key then
@@ -201,6 +221,7 @@ local function map_keys()
         local buf = M.bl:get({ idx = bidx })
         if buf then
           M.toggle_pin(buf)
+          M.update({ set_cursor = lineno })
         end
       end,
       buffer = M.buf,
@@ -210,11 +231,9 @@ end
 
 --- Clear keys for the buffer list
 function M.clear_keys()
-  for k, is_buf in pairs(M.mapped_keys) do
-    if is_buf then
-      u.keymaps.unset({ k, buffer = M.buf })
-    else
-      u.keymaps.unset({ k })
+  for k, kd in pairs(M.mapped_keys) do
+    if kd.clean then
+      u.keymaps.unset({ k, buffer = kd.buffer })
     end
   end
   M.mapped_keys = {}
@@ -228,7 +247,6 @@ function M.toggle_pin(buf)
   else
     M.pin(buf)
   end
-  M.update()
 end
 
 --- Pin a buffer
@@ -241,7 +259,7 @@ function M.pin(buf)
   buf:set_pinned(#M.pinned_paths + 1)
   table.insert(M.pinned_paths, buf.path)
   -- Save the pins to file
-  M.pins_file_path:write(buf.path, "a")
+  M.pins_file_path:write(buf.path .. "\n", "a")
 end
 
 --- Unpin a buffer
@@ -261,9 +279,18 @@ end
 
 --- Map keys for the buffer list
 ---@param key_def table
-function M.map(key_def)
+---@param opts? {clean?: boolean}
+function M.map(key_def, opts)
+  opts = opts or {}
   if type(key_def[1]) == "string" then
     key_def = { key_def }
+  end
+
+  for _, k in ipairs(key_def) do
+    M.mapped_keys[k[1]] = {
+      buffer = k.buffer,
+      clean = opts.clean,
+    }
   end
   u.keymaps.set(key_def)
 end
@@ -311,12 +338,7 @@ end
 --- Close the popup
 function M.close()
   clean_autocmds()
-  -- Remove the buffer mapped keys since we are closing the popup anyways
-  for k, is_buf in pairs(M.mapped_keys) do
-    if is_buf then
-      M.mapped_keys[k] = nil
-    end
-  end
+  M.clear_keys()
 
   -- If no-neck-pain is enabled
   -- Just clean up the buffer and return to main window since we dont want to close nnp
@@ -349,10 +371,10 @@ function M.show(opts)
   --- Focus the buflist
   local function focus_buflist()
     vim.api.nvim_set_current_win(M.win)
-    for i, b in ipairs(M.bl:list()) do
+    for i, bidx in ipairs(M.displayed_bufs) do
+      local buf = M.bl:get({ idx = bidx })
       -- Move cursor to the current buffer
-      -- if b.id == M.curr_buf then
-      if b.current then
+      if buf and buf.id == M.curr_buf then
         vim.api.nvim_win_set_cursor(M.win, { i, 0 })
         return
       end
@@ -407,7 +429,7 @@ function M.show(opts)
 end
 
 --- Update the buffer list
----@param opts? {first_char?: string}
+---@param opts? {first_char?: string, set_cursor?: integer}
 function M.update(opts)
   opts = opts or {}
   if not M.is_open() then
@@ -446,7 +468,6 @@ function M.update(opts)
   local filenames = {}
   local display_names = {}
   local picked_chars = {}
-  local keys = {}
   local ns_id = vim.api.nvim_create_namespace(M.ns_group)
   local current_buf_i = 1
   local line_idx = 1
@@ -592,18 +613,17 @@ function M.update(opts)
 
     -- Add unique keymap for each buffer
     if picked_char ~= nil then
-      table.insert(keys, {
+      M.map({
         picked_char,
         function()
           M.open_buf(b)
         end,
         buffer = M.buf,
-      })
-      M.mapped_keys[picked_char] = true
+      }, { clean = true })
     end
 
     -- Add keymap for go back to showing all buffers
-    table.insert(keys, {
+    M.map({
       "<Esc>",
       function()
         M.update()
@@ -628,7 +648,7 @@ function M.update(opts)
     -- Map quit char to close the buflist
     local quit_key = c.config.keymaps.quit
     if quit_key then
-      table.insert(keys, {
+      M.map({
         quit_key,
         function()
           if M.stay_opened then
@@ -643,14 +663,15 @@ function M.update(opts)
 
     -- Add keymap for the first character of the basename
     local first_char = b.basename:sub(1, 1)
-    table.insert(keys, {
-      first_char,
-      function()
-        M.update({ first_char = first_char })
-      end,
-      buffer = M.buf,
-    })
-    M.mapped_keys[first_char] = true
+    if not M.mapped_keys[first_char] then
+      M.map({
+        first_char,
+        function()
+          M.update({ first_char = first_char })
+        end,
+        buffer = M.buf,
+      })
+    end
   end
 
   --- Renders a buffer on a line
@@ -723,9 +744,10 @@ function M.update(opts)
     hl_group = c.config.ui.highlights.curr_buf,
   })
   -- Set the cursor to the current buffer line
-  vim.api.nvim_win_set_cursor(M.win, { current_buf_i, 0 })
-
-  M.map(keys)
+  if opts.set_cursor ~= nil then
+    current_buf_i = opts.set_cursor
+  end
+  pcall(vim.api.nvim_win_set_cursor, M.win, { current_buf_i, 0 })
 end
 
 --- Return a list of opened buffers
