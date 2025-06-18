@@ -49,8 +49,10 @@ M.open_oil = function(opts)
       name = "open_oil_parent",
       execute = function(ctx)
         local item = ctx.get_action_items()[1]
-        require("oil").open_float(u.paths.dirname(item.data.filename))
         ctx:hide()
+        vim.schedule(function()
+          require("oil").open_float(u.paths.dirname(item.data.filename))
+        end)
       end,
     }
   end
@@ -58,10 +60,12 @@ M.open_oil = function(opts)
     name = opts.keep_open and "open_oil_keep" or "open_oil",
     execute = function(ctx)
       local item = ctx.get_action_items()[1]
-      require("oil").open_float(item.data.filename)
       if not opts.keep_open then
         ctx:hide()
       end
+      vim.schedule(function()
+        require("oil").open_float(item.data.filename)
+      end)
     end,
   }
 end
