@@ -1,29 +1,29 @@
 local u = require("Beez.u")
 local uv = vim.uv
-local Mark = require("Beez.codemarks.mark")
+local Gmark = require("Beez.codemarks.gmark")
 
---- Unique key for the mark
----@param data Beez.codemarks.markdata
+--- Unique key for the global mark
+---@param data Beez.codemarks.gmarkdata
 ---@return string
 local function get_key(data)
   return data.file .. ":" .. data.lineno
 end
 
----@class Beez.codemarks.marks
+---@class Beez.codemarks.gmarks
 ---@field opts table
----@field marks table<string, Beez.codemarks.mark>
-Marks = {}
-Marks.__index = Marks
+---@field marks table<string, Beez.codemarks.gmark>
+Gmarks = {}
+Gmarks.__index = Gmarks
 
----@class codemarks.marks.opts
+---@class codemarks.gmarks.opts
 ---@field marks_file string
 
 --- Creates a new instance of Marks
----@param opts codemarks.marks.opts
----@return Beez.codemarks.marks
-function Marks:new(opts)
+---@param opts codemarks.gmarks.opts
+---@return Beez.codemarks.gmarks
+function Gmarks:new(opts)
   local c = {}
-  setmetatable(c, Marks)
+  setmetatable(c, Gmarks)
   c.opts = opts
 
   -- load marks file
@@ -31,7 +31,7 @@ function Marks:new(opts)
   local file = io.open(opts.marks_file, "r")
   if file then
     for line in file:lines() do
-      local mark = Mark.from_line(line)
+      local mark = Gmark.from_line(line)
       c.marks[get_key(mark.data)] = mark
     end
     file:close()
@@ -42,17 +42,17 @@ function Marks:new(opts)
 end
 
 --- Returns a mark based on data
----@param data Beez.codemarks.markdata
----@return Beez.codemarks.mark?
-function Marks:get(data)
+---@param data Beez.codemarks.gmarkdata
+---@return Beez.codemarks.gmark?
+function Gmarks:get(data)
   local key = get_key(data)
   return self.marks[key]
 end
 
 --- Filter marks based on options
----@param opts? {file: string?}
----@return table<Beez.codemarks.mark>
-function Marks:list(opts)
+---@param opts {file: string?, root: string?}
+---@return table<Beez.codemarks.gmark>
+function Gmarks:list(opts)
   opts = opts or {}
   local marks = {}
   for _, mark in pairs(self.marks) do
@@ -60,42 +60,35 @@ function Marks:list(opts)
       if mark.file == opts.file then
         table.insert(marks, mark)
       end
-    else
-      table.insert(marks, mark)
+    end
+    if opts.root then
+      if mark.root == opts.root then
+        table.insert(marks, mark)
+      end
     end
   end
   return marks
 end
 
---- Toggle mark on current line
-function Marks:toggle()
-  local file_path = vim.api.nvim_buf_get_name(0)
-  local pos = vim.api.nvim_win_get_cursor(0)
-  ---@type Beez.codemarks.markdata
-  local data = {
-    file = file_path,
-    lineno = pos[1],
-  }
-  local key = get_key(data)
-  if self.marks[key] then
-    self:del(data)
-  else
-    self:add()
-  end
-end
-
 --- Add a mark
-function Marks:add()
+---@param desc string Describe the mark
+function Gmarks:add(desc)
   local file_path = vim.api.nvim_buf_get_name(0)
   local pos = vim.api.nvim_win_get_cursor(0)
-  ---@type Beez.codemarks.markdata
+  local root = u.root.get_name({ buf = vim.api.nvim_get_current_buf() })
+  local line = vim.api.nvim_get_current_line()
+  ---@type Beez.codemarks.gmarkdata
   local data = {
+    desc = desc,
+    root = root,
     file = file_path,
     lineno = pos[1],
+    line = line,
   }
-  local mark = Mark:new(data)
+  local mark = Gmark:new(data)
   local key = get_key(data)
   if self.marks[key] then
+    vim.notify("Mark already exists...", vim.log.levels.WARN)
     return
   end
 
@@ -109,9 +102,34 @@ function Marks:add()
   })
 end
 
+--- Updates the data of a mark
+---@param data Beez.codemarks.gmarkdata
+---@param updates {desc: string?}
+---@param cb function?
+function Gmarks:update(data, updates, cb)
+  local mark = self:get(data)
+  local updated = false
+  if mark ~= nil then
+    if updates.desc ~= nil then
+      mark:update_desc(updates.desc)
+      updated = true
+    end
+    if updated then
+      self:save({
+        cb = function()
+          vim.notify("Updated mark...", vim.log.levels.INFO)
+          if cb ~= nil then
+            cb()
+          end
+        end,
+      })
+    end
+  end
+end
+
 --- Delete a mark
----@param data Beez.codemarks.markdata
-function Marks:del(data)
+---@param data Beez.codemarks.gmarkdata
+function Gmarks:del(data)
   local key = get_key(data)
   if self.marks[key] then
     self.marks[key] = nil
@@ -125,7 +143,7 @@ end
 
 --- Save marks to file
 ---@param opts {cb: function?}?
-function Marks:save(opts)
+function Gmarks:save(opts)
   opts = opts or {}
   local lines = ""
   for _, mark in pairs(self.marks) do
@@ -154,4 +172,4 @@ function Marks:save(opts)
   end)
 end
 
-return Marks
+return Gmarks

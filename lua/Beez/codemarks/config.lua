@@ -1,12 +1,12 @@
 local M = {}
 
 ---@class Beez.codemarks.config
----@field marks_file string? The path to the marks file
+---@field marks_dir string? The path to the marks file
 ---@field auto_update_out_of_sync_marks boolean? Whether to automatically update marks that are out of sync in the current buffer
 
 ---@type Beez.codemarks.config
 M.def_config = {
-  marks_file = vim.fn.stdpath("data") .. "/codemarks/codemarks.txt",
+  marks_dir = vim.fn.stdpath("data") .. "/codemarks",
   auto_update_out_of_sync_marks = false,
 }
 

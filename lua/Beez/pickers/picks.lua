@@ -747,6 +747,17 @@ function M.codemarks()
   }
 end
 
+function M.marks()
+  return {
+    deck = {
+      run = function(opts)
+        local source, specifier = deck_pickers.codemarks.sources.find_marks(opts)
+        require("deck").start(source, specifier)
+      end,
+    },
+  }
+end
+
 function M.scratches()
   return {
     snacks = {

@@ -1,41 +1,64 @@
+local Gmarks = require("Beez.codemarks.gmarks")
 local Marks = require("Beez.codemarks.marks")
 local c = require("Beez.codemarks.config")
 local u = require("Beez.u")
+
+---@class Beez.codemarks
+---@field gm Beez.codemarks
+---@field config Beez.codemarks.config
+---@field marks_file Path
+---@field gmarks_file Path
+---@field gmarks Beez.codemarks.gmarks
 local M = {}
 
 --- Setup the plugin
 ---@param opts Beez.codemarks.config
 function M.setup(opts)
   c.init(opts)
-  local marks_file = u.paths.Path:new(opts.marks_file)
-  local parent = marks_file:parent()
-
+  local marks_dir = u.paths.Path:new(opts.marks_dir)
+  M.gmarks_file = marks_dir:joinpath("codemarks.txt")
+  M.marks_file = marks_dir:joinpath("marks.txt")
   -- Marks sure the parent exists
-  if not parent:exists() then
-    parent:mkdir()
+  if not marks_dir:exists() then
+    marks_dir:mkdir()
   end
+
   -- Marks sure the marks file exists
-  if not marks_file:exists() then
-    marks_file:write("", "w")
+  if not M.gmarks_file:exists() then
+    M.gmarks_file:write("", "w")
+  end
+  if not M.marks_file:exists() then
+    M.marks_file:write("", "w")
   end
 
   -- Load the marks file
-  M.marks = Marks:new({ marks_file = c.config.marks_file })
+  M.gmarks = Gmarks:new({ marks_file = M.gmarks_file.filename })
+  M.marks = Marks:new({ marks_file = M.marks_file.filename })
 end
 
 --- Edits the raw marks file
 function M.edit_marks()
-  vim.cmd("edit " .. c.config.marks_file)
+  vim.cmd("edit " .. M.marks_file.filename)
+end
+
+--- Edits the raw global marks file
+function M.edit_gmarks()
+  vim.cmd("edit " .. M.gmarks_file.filename)
 end
 
 --- Add a new code mark
-function M.add()
+function M.add_global()
   vim.ui.input({ prompt = "Describe the mark" }, function(res)
     if res == nil then
       return
     end
-    M.marks:add(res)
+    M.gmarks:add(res)
   end)
+end
+
+--- Add a new mark
+function M.toggle()
+  M.marks:toggle()
 end
 
 --- Picker for codemarks
@@ -51,11 +74,19 @@ function M.find_picker(opts)
   require("Beez.pickers").pick("codemarks", opts)
 end
 
+--- Picker for codemarks
+---@param opts Beez.pick.opts?
+function M.find_marks_picker(opts)
+  local def_type = "deck"
+  opts = vim.tbl_deep_extend("keep", opts or {}, { type = def_type })
+  require("Beez.pickers").pick("marks", opts)
+end
+
 --- Checks current file for any outdated marks
 ---@param filename string
 ---@param lineno integer
 function M.check_for_outdated_marks(filename, lineno)
-  local marks = M.marks:list({ file = filename })
+  local marks = M.gmarks:list({ file = filename })
   -- Filter out reads from files that arent marked
   if marks == {} then
     return
@@ -92,7 +123,7 @@ function M.check_for_outdated_marks(filename, lineno)
 
   -- Save if any marks were updated
   if save then
-    M.marks:save()
+    M.gmarks:save()
   end
 
   -- Restore the cursor position after updating marks
