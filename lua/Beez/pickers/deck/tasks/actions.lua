@@ -72,7 +72,7 @@ M.edit_tasks = function(opts)
       local pos = vim.api.nvim_win_get_cursor(0)
       for _, item in ipairs(ctx.get_rendered_items()) do
         local line = item.data.task:line()
-        line = u.strs.trim(line)
+        line = line:trim()
         parent = item.data.task.parent
         table.insert(lines, line)
         items[item.data.task.id] = item.data.task
@@ -114,7 +114,7 @@ M.edit_tasks = function(opts)
               local t = tasks.Task:new(line)
               local exist_t = items[t.id]
               if exist_t == nil then
-                t.text = u.strs.trim(t.text)
+                t.text = t.text:trim()
                 tl:insert(parent, t)
                 require_save = true
               else

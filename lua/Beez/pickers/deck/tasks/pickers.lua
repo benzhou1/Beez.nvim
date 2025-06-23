@@ -26,7 +26,7 @@ function M.show(opts)
       for _, t in ipairs(t.children) do
         if tasks.should_show_task(t, { show_done = actions.toggles.show_done }) then
           local display_text = t:line({ show_fields = false, show_hyphen = false })
-          display_text = u.strs.trim(display_text)
+          display_text = display_text:trim()
           local item = {
             display_text = display_text,
             data = { id = t.id, task = t },

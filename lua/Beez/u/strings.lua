@@ -84,33 +84,18 @@ function M.escape_pattern(text)
   return text:gsub("([^%w])", "%%%1")
 end
 
---- Trims trailing whitespace from a string
----@param s string
----@return string
-function M.trimr(s)
-  local ts = (s:gsub("(.-)%s*$", "%1"))
-  return ts
-end
-
---- Trims leading whitespace from a string
----@param s string
----@return string
-function M.trim(s)
-  ---@diagnostic disable-next-line: redundant-return-value
-  return string.gsub(s, "^%s+", "")
-end
-
 --- Trims leading whitespace from a string
 ---@return string
 function string:trim()
   ---@diagnostic disable-next-line: redundant-return-value
-  return string.gsub(self, "^%s+", "")
+  local s, _ = string.gsub(self, "^%s+", "")
+  return s
 end
 
 --- Trims trailing whitespace from a string
 ---@return string
-function string:trimr(s)
-  local ts = (self:gsub("(.-)%s*$", "%1"))
+function string:trimr()
+  local ts, _ = self:gsub("(.-)%s*$", "%1")
   return ts
 end
 

@@ -238,7 +238,7 @@ function M.Task:new(line, opts)
       t.fields[k] = v
     end
   end
-  t.text = u.strs.trimr(t.text:gsub(match_fields, ""))
+  t.text = t.text:gsub(match_fields, ""):trimr()
 
   t.id = t.fields.id
   if t.id == nil then
