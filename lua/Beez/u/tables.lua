@@ -97,4 +97,17 @@ function M.len(t)
   return count
 end
 
+--- Slices a table
+---@param tbl table
+---@param first integer
+---@param last? integer
+---@return table
+function M.slice(tbl, first, last)
+  local sliced = {}
+  for i = first, last or #tbl do
+    sliced[#sliced + 1] = tbl[i]
+  end
+  return sliced
+end
+
 return M
