@@ -12,6 +12,7 @@ M.json = require("Beez.u.dkjson")
 M.root = require("Beez.u.root")
 M.lazy = require("Beez.u.lazy")
 M.keymaps = require("Beez.u.keymaps")
+M.snip = require("Beez.u.snippets")
 
 --- Setup u
 ---@param opts table?
