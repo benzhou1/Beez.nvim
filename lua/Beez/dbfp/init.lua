@@ -8,10 +8,12 @@ local u = require("Beez.u")
 ---@field qf Beez.dbfp.queryfile?
 ---@field float Beez.ui.float?
 ---@field path string?
+---@field query string?
 local M = {
   float = nil,
   qf = nil,
   path = nil,
+  query = nil,
 }
 
 --- Setup dbfp plugin
@@ -181,7 +183,9 @@ function M.execute_query(opts)
     table.remove(lines, 1)
   end
 
-  vim.cmd("DB g:" .. connection .. " " .. table.concat(lines, " "))
+  M.query = lines[1]
+  local query = table.concat(lines, " ")
+  vim.cmd("DB g:" .. connection .. " " .. query)
   M.qf = qf
 end
 
@@ -195,6 +199,7 @@ function M.execute_raw_query(connection, query, opts)
     M.qf = opts.qf
   end
   M.init_dadbod({ connection = connection })
+  M.query = query
   vim.cmd("DB g:" .. connection .. " " .. query)
 end
 

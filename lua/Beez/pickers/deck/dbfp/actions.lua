@@ -160,7 +160,7 @@ function M.dbfp.add_queryfile(opts)
     ---@param ctx deck.Context
     execute = function(ctx)
       local dbfp = require("Beez.dbfp")
-      local item = ctx.get_action_items()[1]
+      local item = ctx.get_action_items and ctx.get_action_items()[1]
       local add_opts = opts.get_opts and opts.get_opts(item) or {}
 
       vim.ui.input({ prompt = "Query file name: " }, function(name)
