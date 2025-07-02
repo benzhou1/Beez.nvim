@@ -149,18 +149,15 @@ end
 ---@param opts table?
 function M.execute_query(opts)
   opts = opts or {}
-  local qf = M.qf
   local connection = nil
-  if not qf then
-    local buf = opts.buf or vim.api.nvim_get_current_buf()
-    local filepath = vim.api.nvim_buf_get_name(buf)
-    qf = M.queryfiles:get(filepath)
-  end
+  local buf = opts.buf or vim.api.nvim_get_current_buf()
+  M.path = vim.api.nvim_buf_get_name(buf)
+  M.qf = M.queryfiles:get(M.path)
 
-  if qf == nil then
+  if M.qf == nil then
     connection = M.cons:get_active()
   else
-    connection = qf.connection
+    connection = M.qf.connection
   end
 
   -- Need to prompt user to select a connection if not set
@@ -186,7 +183,6 @@ function M.execute_query(opts)
   M.query = lines[1]
   local query = table.concat(lines, " ")
   vim.cmd("DB g:" .. connection .. " " .. query)
-  M.qf = qf
 end
 
 --- Executes a query string
