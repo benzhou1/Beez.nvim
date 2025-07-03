@@ -731,32 +731,38 @@ function M.spelling()
   }
 end
 
-function M.codemarks()
+function M.codemarks_global_marks()
   return {
-    snacks = {
-      run = function(opts)
-        snack_pickers.codemarks.marks(opts)
-      end,
-    },
     deck = {
       run = function(opts)
-        local source, specifier = deck_pickers.codemarks.sources.find(opts)
-        require("deck").start(source, specifier)
+        deck_pickers.codemarks.global_marks(opts)
       end,
     },
   }
 end
+M["codemarks.global_marks"] = M.codemarks_global_marks
 
-function M.marks()
+function M.codemarks_marks()
   return {
     deck = {
       run = function(opts)
-        local source, specifier = deck_pickers.codemarks.sources.find_marks(opts)
-        require("deck").start(source, specifier)
+        deck_pickers.codemarks.marks(opts)
       end,
     },
   }
 end
+M["codemarks.marks"] = M.codemarks_marks
+
+function M.codemarks_stacks()
+  return {
+    deck = {
+      run = function(opts)
+        deck_pickers.codemarks.stacks(opts)
+      end,
+    },
+  }
+end
+M["codemarks.stacks"] = M.codemarks_stacks
 
 function M.scratches()
   return {

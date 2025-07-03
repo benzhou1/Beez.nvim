@@ -82,14 +82,12 @@ function M.pf_match_middle_of_line(p, end_pattern, opts)
 
   local end_match = match:match(end_pattern)
   local start = ""
-  print("end_match =", vim.inspect(end_match))
   if end_match then
     -- Remove the end match from the postfix match, leaving just the start of of the line
     start = match:gsub("(.*)" .. end_match:gsub("([^%w])", "%%%1") .. "$", "%1")
     match = end_match
   end
 
-  print("match =", vim.inspect(match))
   if opts.slice then
     match = M.pf_match_space_delimited(match, { slice = opts.slice })
   end

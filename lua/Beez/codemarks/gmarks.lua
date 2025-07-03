@@ -10,8 +10,9 @@ local function get_key(data)
 end
 
 ---@class Beez.codemarks.gmarks
----@field opts table
----@field marks table<string, Beez.codemarks.gmark>
+---@field marks Beez.codemarks.gmark[]
+---@field keys table<string, boolean>
+---@field file_to_marks table<string, Beez.codemarks.gmark[]>
 Gmarks = {}
 Gmarks.__index = Gmarks
 
@@ -19,94 +20,74 @@ Gmarks.__index = Gmarks
 ---@field marks_file string
 
 --- Creates a new instance of Marks
----@param opts codemarks.gmarks.opts
+---@param data Beez.codemarks.gmarkdata[]
 ---@return Beez.codemarks.gmarks
-function Gmarks:new(opts)
+function Gmarks:new(data)
   local c = {}
   setmetatable(c, Gmarks)
-  c.opts = opts
-
   -- load marks file
   c.marks = {}
-  local file = io.open(opts.marks_file, "r")
-  if file then
-    for line in file:lines() do
-      local mark = Gmark.from_line(line)
-      c.marks[get_key(mark.data)] = mark
-    end
-    file:close()
-  else
-    error("Could not open file: " .. opts.marks_file)
+  c.keys = {}
+  c.file_to_marks = {}
+  for _, d in ipairs(data) do
+    local mark = Gmark:new(d)
+    table.insert(c.marks, mark)
+    local key = get_key(d)
+    c.keys[key] = true
+    c.file_to_marks[d.file] = c.file_to_marks[d.file] or {}
+    table.insert(c.file_to_marks[d.file], mark)
   end
   return c
 end
 
---- Returns a mark based on data
----@param data Beez.codemarks.gmarkdata
----@return Beez.codemarks.gmark?
-function Gmarks:get(data)
-  local key = get_key(data)
-  return self.marks[key]
-end
-
 --- Filter marks based on options
----@param opts {file: string?, root: string?}
----@return table<Beez.codemarks.gmark>
+---@param opts? {file?: string}
+---@return Beez.codemarks.gmark[]
 function Gmarks:list(opts)
   opts = opts or {}
-  local marks = {}
-  for _, mark in pairs(self.marks) do
-    if opts.file then
-      if mark.file == opts.file then
-        table.insert(marks, mark)
-      end
-    end
-    if opts.root then
-      if mark.root == opts.root then
-        table.insert(marks, mark)
-      end
-    end
+  local gmarks = {}
+  if opts.file then
+    local marks = self.file_to_marks[opts.file]
+    return marks or {}
   end
-  return marks
+  for _, gmark in pairs(self.marks) do
+    table.insert(gmarks, gmark)
+  end
+  return gmarks
 end
 
---- Add a mark
+--- Add a global mark
 ---@param desc string Describe the mark
 function Gmarks:add(desc)
   local file_path = vim.api.nvim_buf_get_name(0)
   local pos = vim.api.nvim_win_get_cursor(0)
-  local root = u.root.get_name({ buf = vim.api.nvim_get_current_buf() })
   local line = vim.api.nvim_get_current_line()
   ---@type Beez.codemarks.gmarkdata
   local data = {
     desc = desc,
-    root = root,
     file = file_path,
     lineno = pos[1],
     line = line,
   }
   local mark = Gmark:new(data)
   local key = get_key(data)
-  if self.marks[key] then
+  if self.keys[key] then
     vim.notify("Mark already exists...", vim.log.levels.WARN)
     return
   end
 
-  self.marks[key] = mark
-  self:save({
-    mode = "a",
-    lines = mark:serialize() .. "\n",
-    cb = function()
-      vim.notify("Mark created...", vim.log.levels.INFO)
-    end,
-  })
+  table.insert(self.marks, mark)
+  self.keys[key] = true
+  self.file_to_marks[data.file] = self.file_to_marks[data.file] or {}
+  table.insert(self.file_to_marks[data.file], mark)
+  vim.notify("Added mark: " .. desc, vim.log.levels.INFO)
 end
 
 --- Updates the data of a mark
 ---@param data Beez.codemarks.gmarkdata
 ---@param updates {desc: string?}
 ---@param cb function?
-function Gmarks:update(data, updates, cb)
+function Gmarks:update(data, updates)
   local mark = self:get(data)
   local updated = false
   if mark ~= nil then
@@ -141,35 +122,14 @@ function Gmarks:del(data)
   end
 end
 
---- Save marks to file
----@param opts {cb: function?}?
-function Gmarks:save(opts)
-  opts = opts or {}
-  local lines = ""
+--- Serialize the marks to a data table
+--- @return Beez.codemarks.gmarkdata[]
+function Gmarks:serialize()
+  local data = {}
   for _, mark in pairs(self.marks) do
-    lines = lines .. mark:serialize() .. "\n"
+    table.insert(data, mark:serialize())
   end
-
-  uv.fs_open(self.opts.marks_file, "w", 438, function(err, fd)
-    if err then
-      error("Could not open file: " .. self.opts.marks_file)
-      return
-    end
-
-    uv.fs_write(fd, lines, -1, function(ws_err)
-      if ws_err then
-        error("Could not write to file: " .. self.opts.marks_file)
-      end
-      uv.fs_close(fd, function(close_err)
-        if close_err then
-          error("Could not close file: " .. self.opts.marks_file)
-        end
-        if opts.cb ~= nil then
-          opts.cb()
-        end
-      end)
-    end)
-  end)
+  return data
 end
 
 return Gmarks

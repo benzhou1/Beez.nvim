@@ -224,7 +224,6 @@ function M.backlinks(opts)
           "!.git",
         }
         table.insert(cmd, query)
-        print(table.concat(cmd, " "))
         return cmd
       end,
       transform = function(item, text)

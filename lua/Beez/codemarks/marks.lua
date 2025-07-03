@@ -1,5 +1,3 @@
-local u = require("Beez.u")
-local uv = vim.uv
 local Mark = require("Beez.codemarks.mark")
 
 --- Unique key for the mark
@@ -10,52 +8,39 @@ local function get_key(data)
 end
 
 ---@class Beez.codemarks.marks
----@field opts table
----@field marks table<string, Beez.codemarks.mark>
+---@field marks Beez.codemarks.mark[]
+---@field keys table<string, boolean>
+---@field archive Beez.codemarks.mark[]
+---@field history Beez.codemarks.mark[]
 Marks = {}
 Marks.__index = Marks
 
----@class codemarks.marks.opts
----@field marks_file string
-
 --- Creates a new instance of Marks
----@param opts codemarks.marks.opts
+---@param marks Beez.codemarks.markdata[]
 ---@return Beez.codemarks.marks
-function Marks:new(opts)
+function Marks:new(marks)
   local c = {}
   setmetatable(c, Marks)
-  c.opts = opts
-
-  -- load marks file
   c.marks = {}
-  local file = io.open(opts.marks_file, "r")
-  if file then
-    for line in file:lines() do
-      local mark = Mark.from_line(line)
-      c.marks[get_key(mark.data)] = mark
-    end
-    file:close()
-  else
-    error("Could not open file: " .. opts.marks_file)
+  c.keys = {}
+  c.archive = {}
+  c.history = {}
+  for _, m in ipairs(marks) do
+    local mark = Mark:new(m)
+    table.insert(c.marks, mark)
+    local key = get_key(m)
+    c.keys[key] = true
   end
   return c
 end
 
---- Returns a mark based on data
----@param data Beez.codemarks.markdata
----@return Beez.codemarks.mark?
-function Marks:get(data)
-  local key = get_key(data)
-  return self.marks[key]
-end
-
 --- Filter marks based on options
 ---@param opts? {file: string?}
----@return table<Beez.codemarks.mark>
+---@return Beez.codemarks.mark[]
 function Marks:list(opts)
   opts = opts or {}
   local marks = {}
-  for _, mark in pairs(self.marks) do
+  for _, mark in ipairs(self.marks) do
     if opts.file then
       if mark.file == opts.file then
         table.insert(marks, mark)
@@ -67,46 +52,32 @@ function Marks:list(opts)
   return marks
 end
 
---- Toggle mark on current line
-function Marks:toggle()
+--- Add mark on current line
+--- @param opts? {history?: boolean}
+function Marks:add(opts)
+  opts = opts or {}
   local file_path = vim.api.nvim_buf_get_name(0)
   local pos = vim.api.nvim_win_get_cursor(0)
   ---@type Beez.codemarks.markdata
   local data = {
     file = file_path,
     lineno = pos[1],
+    col = pos[2],
   }
   local key = get_key(data)
-  if self.marks[key] then
-    self:del(data)
-  else
-    self:add()
-  end
-end
-
---- Add a mark
-function Marks:add()
-  local file_path = vim.api.nvim_buf_get_name(0)
-  local pos = vim.api.nvim_win_get_cursor(0)
-  ---@type Beez.codemarks.markdata
-  local data = {
-    file = file_path,
-    lineno = pos[1],
-  }
-  local mark = Mark:new(data)
-  local key = get_key(data)
-  if self.marks[key] then
+  if self.keys[key] then
+    vim.notify("Mark already exists at this location", vim.log.levels.WARN)
     return
   end
 
-  self.marks[key] = mark
-  self:save({
-    mode = "a",
-    lines = mark:serialize() .. "\n",
-    cb = function()
-      vim.notify("Mark created...", vim.log.levels.INFO)
-    end,
-  })
+  local mark = Mark:new(data)
+  if opts.history then
+    table.insert(self.history, mark)
+  else
+    table.insert(self.marks, mark)
+    self.keys[key] = true
+    vim.notify("Created mark at: " .. mark.lineno, vim.log.levels.INFO)
+  end
 end
 
 --- Delete a mark
@@ -123,35 +94,49 @@ function Marks:del(data)
   end
 end
 
---- Save marks to file
----@param opts {cb: function?}?
-function Marks:save(opts)
-  opts = opts or {}
-  local lines = ""
+--- Serialize the marks to a table
+---@return Beez.codemarks.markdata[]
+function Marks:serialize()
+  local marks = {}
   for _, mark in pairs(self.marks) do
-    lines = lines .. mark:serialize() .. "\n"
+    table.insert(marks, mark:serialize())
+  end
+  return marks
+end
+
+--- Removes and returns the last mark
+---@return Beez.codemarks.mark?
+function Marks:pop()
+  if #self.marks == 0 then
+    vim.notify("No marks to pop", vim.log.levels.WARN)
+    return
+  end
+  local mark = table.remove(self.marks)
+  local key = get_key(mark:serialize())
+  self.keys[key] = nil
+  self:add({ history = true })
+  table.insert(self.archive, mark)
+  return mark
+end
+
+--- Undo the last pop operation
+function Marks:undo()
+  local archived_mark = table.remove(self.archive)
+  local prev_mark = table.remove(self.history)
+  if archived_mark == nil then
+    return
   end
 
-  uv.fs_open(self.opts.marks_file, "w", 438, function(err, fd)
-    if err then
-      error("Could not open file: " .. self.opts.marks_file)
-      return
-    end
+  local key = get_key(archived_mark:serialize())
+  table.insert(self.marks, archived_mark)
+  self.keys[key] = archived_mark
+  return prev_mark
+end
 
-    uv.fs_write(fd, lines, -1, function(ws_err)
-      if ws_err then
-        error("Could not write to file: " .. self.opts.marks_file)
-      end
-      uv.fs_close(fd, function(close_err)
-        if close_err then
-          error("Could not close file: " .. self.opts.marks_file)
-        end
-        if opts.cb ~= nil then
-          opts.cb()
-        end
-      end)
-    end)
-  end)
+--- Clears all marks
+function Marks:clear()
+  self.marks = {}
+  self.keys = {}
 end
 
 return Marks

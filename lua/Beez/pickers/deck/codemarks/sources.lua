@@ -2,50 +2,43 @@ local actions = require("Beez.pickers.deck.codemarks.actions")
 local utils = require("Beez.pickers.deck.utils")
 local M = {}
 
---- Deck source for codemarks
+--- Deck source for global codemarks
 ---@param opts table
 ---@return deck.Source, deck.StartConfigSpecifier
-function M.find(opts)
+function M.global_marks(opts)
   local u = require("Beez.u")
   opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
   local source = utils.resolve_source(opts, {
-    name = "codemarks",
+    name = "codemarks.global_marks",
     execute = function(ctx)
-      local marks = require("Beez.codemarks").gmarks
-      local filter_marks = {}
+      local cm = require("Beez.codemarks")
+      local gmarks = {}
       local toggles = actions.toggles
       if not toggles.global_codemarks then
-        local root = u.root.get_name({ buf = vim.api.nvim_get_current_buf() })
-        for _, m in pairs(marks:list({ root = root })) do
-          if m.root == root then
-            table.insert(filter_marks, m)
-          end
-        end
-        if #filter_marks == 0 then
-          vim.notify("No marks found, showing all marks...", vim.log.levels.WARN)
-          toggles.global_codemarks = true
-        end
+        gmarks = cm.list_gmarks()
       end
 
       if toggles.global_codemarks then
-        for _, m in pairs(marks.marks) do
-          table.insert(filter_marks, m)
-        end
+        local buf = cm.curr_buf or vim.api.nvim_get_current_buf()
+        local root = u.root.get_name({ buf = buf })
+        gmarks = cm.list_gmarks({ root = root, all_stacks = true })
       end
 
-      for _, m in ipairs(filter_marks) do
+      for _, m in ipairs(gmarks) do
         local item = {
           display_text = {
             { m.desc, "Normal" },
             { " " },
-            { m.root, "Comment" },
           },
           data = {
             filename = m.file,
             lnum = tonumber(m.lineno),
-            data = m.data,
+            data = m:serialize(),
           },
         }
+        if toggles.global_codemarks then
+          table.insert(item.display_text, { m.stack, "Comment" })
+        end
         ctx.item(item)
       end
       ctx.done()
@@ -68,53 +61,32 @@ end
 --- Deck source for marks
 ---@param opts table
 ---@return deck.Source, deck.StartConfigSpecifier
-function M.find_marks(opts)
+function M.marks(opts)
   local u = require("Beez.u")
   opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
   local source = utils.resolve_source(opts, {
-    name = "codemarks",
+    name = "codemarks.marks",
     execute = function(ctx)
-      local marks = require("Beez.codemarks").marks
-      local filter_marks = {}
-      local toggles = actions.toggles
-      if not toggles.global_marks then
-        local filename = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
-        filter_marks = marks:list({ file = filename })
-        if #filter_marks == 0 then
-          vim.notify("No marks found, showing all marks...", vim.log.levels.WARN)
-          toggles.global_marks = true
-        end
-      end
+      local cm = require("Beez.codemarks")
+      local marks = cm.list_marks()
+      marks = u.tables.reverse(marks)
 
-      if toggles.global_marks then
-        filter_marks = marks:list()
-      end
-
-      for _, m in ipairs(filter_marks) do
+      for _, m in ipairs(marks) do
         local line = u.os.read_line_at(m.file, m.lineno)
         local display_text = {
-          { tostring(m.lineno), "Search" },
+          { u.paths.basename(m.file), "Normal" },
           { " " },
-          { line, "Normal" },
+          { tostring(m.lineno), "Search" },
+          { ":" .. m.col, "Normal" },
+          { " " },
+          { line, "Comment" },
         }
-        if toggles.global_marks then
-          local basename = u.paths.basename(m.file)
-          local dirname = u.paths.dirname(m.file)
-          display_text = {
-            { basename, "Normal" },
-            { ":" .. tostring(m.lineno), "Comment" },
-            { " " },
-            { dirname, "Comment" },
-            { " " },
-            { line, "Normal" },
-          }
-        end
         local item = {
           display_text = display_text,
           data = {
             filename = m.file,
             lnum = tonumber(m.lineno),
-            data = m.data,
+            data = m,
           },
         }
         ctx.item(item)
@@ -123,12 +95,64 @@ function M.find_marks(opts)
     end,
     actions = {
       require("deck").alias_action("default", opts.default_action or "open_codemarks"),
-      require("deck").alias_action("toggle1", "toggle_global"),
       require("deck").alias_action("delete", "delete_mark"),
       actions.open_zed({ quit = opts.open_zed.quit }),
-      actions.toggle_global({ mark = true }),
       actions.delete({ mark = true }),
       actions.open({ mark = true }),
+    },
+  })
+
+  local specifier = utils.resolve_specifier(opts)
+  return source, specifier
+end
+
+--- Deck source for codemark stacks
+---@param opts table
+---@return deck.Source, deck.StartConfigSpecifier
+function M.stacks(opts)
+  local u = require("Beez.u")
+  opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
+  local source = utils.resolve_source(opts, {
+    name = "codemarks.stacks",
+    execute = function(ctx)
+      local cm = require("Beez.codemarks")
+      local toggles = actions.toggles
+
+      local stacks
+      if not toggles.global_stacks then
+        local buf = cm.curr_buf or vim.api.nvim_get_current_buf()
+        local root = u.root.get_name({ buf = buf })
+        stacks = cm.stacks:list({ root = root })
+      else
+        stacks = cm.stacks:list()
+      end
+
+      for _, s in ipairs(stacks) do
+        local hl = "Normal"
+        if cm.stacks.curr_stack == s.name then
+          hl = "Search"
+        end
+
+        local display_text = {
+          { tostring(s.name), hl },
+          { " " },
+          { s.root, "Comment" },
+        }
+        local item = {
+          display_text = display_text,
+          data = {
+            stack = s,
+          },
+        }
+        ctx.item(item)
+      end
+      ctx.done()
+    end,
+    actions = {
+      require("deck").alias_action("default", "select_stack"),
+      require("deck").alias_action("toggle1", "toggle_global"),
+      actions.toggle_global({ stacks = true }),
+      actions.select_stack(),
     },
   })
 

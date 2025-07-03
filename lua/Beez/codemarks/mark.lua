@@ -1,9 +1,12 @@
 ---@class Beez.codemarks.markdata
 ---@field file string
 ---@field lineno integer
+---@field col integer
 
 ---@class Beez.codemarks.mark: Beez.codemarks.markdata
----@field data Beez.codemarks.markdata
+---@field file string
+---@field lineno integer
+---@field col integer
 local Mark = {}
 Mark.__index = Mark
 
@@ -13,26 +16,21 @@ Mark.__index = Mark
 function Mark:new(data)
   local c = {}
   setmetatable(c, Mark)
-  c.data = data
-  c.file = c.data.file
-  c.lineno = c.data.lineno
+  c.file = data.file
+  c.lineno = data.lineno
+  c.col = data.col
   return c
 end
 
---- Create a Mark object from a line
----@param line string
----@return Beez.codemarks.mark
-function Mark.from_line(line)
-  ---@type Beez.codemarks.markdata
-  local data = vim.fn.json_decode(line)
-  return Mark:new(data)
-end
-
 --- Serialize the mark
----@return string
+---@return Beez.codemarks.markdata
 function Mark:serialize()
-  local line = vim.fn.json_encode(self.data)
-  return line
+  local data = {
+    file = self.file,
+    lineno = self.lineno,
+    col = self.col,
+  }
+  return data
 end
 
 return Mark

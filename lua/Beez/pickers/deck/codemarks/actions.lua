@@ -1,28 +1,28 @@
-local M = { toggles = { global_codemarks = false, global_marks = false } }
+local M = { toggles = { global_codemarks = false, global_stacks = false } }
 
 M.open_zed = require("Beez.pickers.deck.actions").open_zed
 
 ---@return deck.Action
----@param opts? {mark?: boolean}
+---@param opts? {stacks?: boolean}
 function M.toggle_global(opts)
   opts = opts or {}
   return {
     name = "toggle_global",
     ---@param ctx deck.Context
     execute = function(ctx)
-      if opts.mark then
-        M.toggles.global_marks = not M.toggles.global_marks
-        if M.toggles.global_marks then
-          vim.notify("Showing all marks globally", vim.log.levels.INFO)
+      if opts.stacks then
+        M.toggles.global_stacks = not M.toggles.global_stacks
+        if M.toggles.global_stacks then
+          vim.notify("Showing all stacks", vim.log.levels.INFO)
         else
-          vim.notify("Showing marks for current file only", vim.log.levels.INFO)
+          vim.notify("Showing stacks under current root", vim.log.levels.INFO)
         end
       else
         M.toggles.global_codemarks = not M.toggles.global_codemarks
         if M.toggles.global_codemarks then
-          vim.notify("Showing all codemarks globally", vim.log.levels.INFO)
+          vim.notify("Showing global marks for all stacks under current root", vim.log.levels.INFO)
         else
-          vim.notify("Showing codemarks for current project only", vim.log.levels.INFO)
+          vim.notify("Showing global marks for current stack", vim.log.levels.INFO)
         end
       end
       ctx.execute()
@@ -65,11 +65,24 @@ function M.open(opts)
     execute = function(ctx)
       local item = ctx.get_action_items()[1]
       open_action.execute(ctx)
-      if not opts.mark then
-        vim.schedule(function()
-          require("Beez.codemarks").check_for_outdated_marks(item.data.filename, item.data.lnum)
-        end)
-      end
+      vim.schedule(function()
+        require("Beez.codemarks").check_for_outdated_marks(item.data.filename, item.data.lnum)
+      end)
+    end,
+  }
+end
+
+--- Deck action to set the active stack
+---@return deck.Action
+function M.select_stack()
+  return {
+    name = "select_stack",
+    ---@param ctx deck.Context
+    execute = function(ctx)
+      local cm = require("Beez.codemarks")
+      local item = ctx.get_action_items()[1]
+      cm.stacks:set_active_stack(item.data.stack.name)
+      ctx.hide()
     end,
   }
 end

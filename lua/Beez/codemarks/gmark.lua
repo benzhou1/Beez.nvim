@@ -2,7 +2,6 @@
 ---@field desc string
 ---@field file string
 ---@field lineno integer
----@field root string
 ---@field line string
 
 ---@class Beez.codemarks.gmark: Beez.codemarks.gmarkdata
@@ -10,8 +9,7 @@
 ---@field desc string
 ---@field file string
 ---@field lineno integer
----@field root string
----@field data Beez.codemarks.gmarkdata
+---@field stack string
 local Gmark = {}
 Gmark.__index = Gmark
 
@@ -21,43 +19,36 @@ Gmark.__index = Gmark
 function Gmark:new(data)
   local c = {}
   setmetatable(c, Gmark)
-  c.data = data
-  c.desc = c.data.desc
-  c.file = c.data.file
-  c.lineno = c.data.lineno
-  c.root = c.data.root
-  c.line = c.data.line
+  c.desc = data.desc
+  c.file = data.file
+  c.lineno = data.lineno
+  c.line = data.line
+  c.stack = ""
   return c
 end
 
---- Create a Mark object from a line
----@param line string
----@return Beez.codemarks.gmark
-function Gmark.from_line(line)
-  ---@type Beez.codemarks.gmarkdata
-  local data = vim.fn.json_decode(line)
-  return Gmark:new(data)
-end
-
 --- Serialize the mark
----@return string
+---@return Beez.codemarks.gmarkdata
 function Gmark:serialize()
-  local line = vim.fn.json_encode(self.data)
-  return line
+  local data = {
+    desc = self.desc,
+    file = self.file,
+    lineno = self.lineno,
+    line = self.line,
+  }
+  return data
 end
 
 --- Updates the mark's description
 ---@param desc string
-function Gmark:update_desc(desc)
+function Gmark:set_desc(desc)
   self.desc = desc
-  self.data.desc = desc
 end
 
 --- Updates the mark's line number
 ---@param lineno integer
-function Gmark:update_lineno(lineno)
+function Gmark:set_lineno(lineno)
   self.lineno = lineno
-  self.data.lineno = lineno
 end
 
 return Gmark
