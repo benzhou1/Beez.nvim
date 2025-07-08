@@ -186,7 +186,7 @@ function M.queryfiles(opts)
 end
 
 --- Deck source for dbfp queries
----@param opts table?
+---@param opts? {queryfile?: string, connection?: string}
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.queries(opts)
   opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
@@ -198,6 +198,8 @@ function M.queries(opts)
       local queryfiles = {}
       if opts.queryfile then
         queryfiles = { dbfp.queryfiles:get(opts.queryfile) }
+      elseif opts.connection then
+        queryfiles = dbfp.queryfiles:list({ connection = opts.connection })
       else
         queryfiles = dbfp.queryfiles:list()
       end
