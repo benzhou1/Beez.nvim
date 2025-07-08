@@ -14,6 +14,7 @@ local M = {
   qf = nil,
   path = nil,
   query = nil,
+  last_dbout = nil,
 }
 
 --- Setup dbfp plugin
@@ -30,6 +31,17 @@ function M.setup(opts)
   M.config = c.config
   M.cons = require("Beez.dbfp.connections"):new()
   M.queryfiles = require("Beez.dbfp.queryfiles"):new()
+
+  -- Set filetype for dbout buffers
+  local events = require("nui.utils.autocmd").event
+  vim.api.nvim_create_autocmd({ events.BufRead, events.BufNewFile }, {
+    pattern = { "*.dbout" },
+    callback = function(event)
+      vim.bo.filetype = "dbout"
+      local filename = vim.api.nvim_buf_get_name(event.buf)
+      M.last_dbout = filename
+    end,
+  })
 end
 
 --- Attach dadbod completion to the current buffer based on buf
@@ -124,6 +136,18 @@ local function get_float()
   return M.float
 end
 
+--- Open the last dbout file
+function M.open_last_dbout()
+  if M.last_dbout == nil then
+    return
+  end
+
+  vim.cmd("pedit " .. M.last_dbout)
+  vim.schedule(function()
+    M.focus_dbout()
+  end)
+end
+
 --- Opens a query file in a floating window
 ---@param path string?
 ---@param opts {search?: string}?
@@ -133,6 +157,10 @@ function M.open_query_file(path, opts)
   if path == nil and M.qf then
     path = M.qf.path.filename
   end
+  if path == nil then
+    return
+  end
+
   local float = get_float()
   float:show(path)
   M.path = path
