@@ -67,6 +67,7 @@ function M.open(opts)
       open_action.execute(ctx)
       vim.schedule(function()
         require("Beez.codemarks").check_for_outdated_marks(item.data.filename, item.data.lnum)
+        vim.cmd("normal! zz")
       end)
     end,
   }
