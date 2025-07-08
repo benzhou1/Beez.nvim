@@ -102,6 +102,7 @@ function M.init(opts)
   opts = opts or {}
   M.config = M.def_config
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
+  M.config.pins_path = vim.fn.expand(M.config.pins_path)
 
   local pins_path = u.paths.Path:new(M.config.pins_path)
   local pins_dir = pins_path:parent()
