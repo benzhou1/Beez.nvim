@@ -268,7 +268,7 @@ end
 ---@param bufnr number
 function M.Float:bind_keymaps_to_buf(bufnr)
   -- Default keymaps
-  if self.opts.keymaps.quit ~= false then
+  if self.opts.keymaps.quit ~= nil and self.opts.keymaps.quit ~= false then
     vim.keymap.set("n", tostring(self.opts.keymaps.quit), "<Cmd>q<CR>", { buffer = bufnr })
   end
 
