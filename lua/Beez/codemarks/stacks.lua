@@ -4,12 +4,13 @@ local u = require("Beez.u")
 
 ---@class Beez.codemarks.stacksdata
 ---@field stacks table<string, Beez.codemarks.stackdata>
----@field curr_stack string
+---@field curr_stacks table<string, string>
 
 ---@class Beez.codemarks.stacks
 ---@field opts { stacks_file: string }
 ---@field stacks table<string, Beez.codemarks.stack>
----@field curr_stack string
+---@field curr_stacks table<string, string>
+---@field curr_stack? string
 Stacks = {}
 Stacks.__index = Stacks
 
@@ -22,7 +23,8 @@ function Stacks:new(opts)
 
   s.opts = opts or {}
   s.stacks = {}
-  s.curr_stack = ""
+  s.curr_stacks = {}
+  s.curr_stack = nil
 
   -- load stacks file
   local file = io.open(opts.stacks_file, "r")
@@ -33,7 +35,7 @@ function Stacks:new(opts)
       local stack = Stack:new(d)
       s.stacks[k] = stack
     end
-    s.curr_stack = data.curr_stack or ""
+    s.curr_stacks = data.curr_stacks or {}
     file:close()
   else
     error("Could not open file: " .. opts.stacks_file)
@@ -42,9 +44,10 @@ function Stacks:new(opts)
   return s
 end
 
---- Prompts user to creat a stack if none exists
+--- Prompts user to create a stack if none exists
 function Stacks:prompt_if_no_stacks()
-  if next(self.stacks) == nil or self.curr_stack == "" then
+  local curr_stack = self:current()
+  if next(self.stacks) == nil or curr_stack == nil then
     vim.ui.input({ prompt = "Create your first stack: " }, function(res)
       if res == nil then
         return
@@ -68,7 +71,7 @@ function Stacks:create_stack(name)
     marks = {},
   })
   self.stacks[name] = stack
-  self.curr_stack = name
+  self.curr_stacks[root] = name
   vim.notify("Created stack: " .. name, vim.log.levels.INFO)
   self:save()
 end
@@ -77,7 +80,8 @@ end
 function Stacks:add_global_mark()
   self:prompt_if_no_stacks()
 
-  local stack = self.stacks[self.curr_stack]
+  local stack = self:current()
+  assert(stack, "No active stack found")
   vim.ui.input({ prompt = "Describe the mark: " }, function(res)
     if res == nil then
       return
@@ -91,14 +95,15 @@ end
 function Stacks:add_mark()
   self:prompt_if_no_stacks()
 
-  local stack = self.stacks[self.curr_stack]
+  local stack = self:current()
+  assert(stack, "No active stack found")
   stack.marks:add()
   self:save()
 end
 
 --- Clears all marks for the current stack
 function Stacks:clear_marks()
-  local stack = self.stacks[self.curr_stack]
+  local stack = self:current()
   if stack == nil then
     return
   end
@@ -107,13 +112,27 @@ function Stacks:clear_marks()
   self:save()
 end
 
+--- Gets the current stack
+---@return Beez.codemarks.stack?
+function Stacks:current()
+  if self.curr_stack == nil then
+    local root = u.root.get_name({ buf = vim.api.nvim_get_current_buf() })
+    local curr_stack = self.curr_stacks[root]
+    if curr_stack == nil then
+      return nil
+    end
+    self.curr_stack = self.stacks[curr_stack].name
+  end
+  return self.stacks[self.curr_stack]
+end
+
 --- Returns specific stack or the current one
 ---@param opts? { name: string? }
 ---@return Beez.codemarks.stack?
 function Stacks:get(opts)
   opts = opts or {}
   if opts.name == nil then
-    return self.stacks[self.curr_stack]
+    return self:current()
   end
   return self.stacks[opts.name]
 end
@@ -141,7 +160,7 @@ end
 function Stacks:deserialize(lines)
   local data = vim.fn.json_decode(lines)
   data.stacks = data.stacks or {}
-  data.curr_stack = data.curr_stack or ""
+  data.curr_stacks = data.curr_stacks or {}
   return data
 end
 
@@ -149,7 +168,7 @@ end
 ---@return Beez.codemarks.stacksdata
 function Stacks:serialize()
   local data = {
-    curr_stack = self.curr_stack,
+    curr_stacks = self.curr_stacks,
     stacks = {},
   }
   for _, stack in pairs(self.stacks) do
@@ -172,15 +191,24 @@ end
 
 --- Sets the current active stack
 ---@param name string
-function Stacks:set_active_stack(name)
+---@param opts? { hook: boolean }
+function Stacks:set_active_stack(name, opts)
+  opts = opts or {}
   local stack = self:get({ name = name })
   if stack == nil then
     vim.notify("Stack '" .. name .. "' does not exist", vim.log.levels.WARN)
     return
   end
-  self.curr_stack = name
+  local old_stack = self:current()
+  local root = u.root.get_name({ buf = vim.api.nvim_get_current_buf() })
+  self.curr_stacks[root] = name
   self:save()
   vim.notify("Active stack: " .. name, vim.log.levels.INFO)
+
+  if opts.hook ~= false and c.config.hooks.on_set_active_stack ~= nil then
+    local old_stack_name = old_stack and old_stack.name or ""
+    c.config.hooks.on_set_active_stack(old_stack_name, name)
+  end
 end
 
 return Stacks

@@ -117,6 +117,7 @@ function M.stacks(opts)
     execute = function(ctx)
       local cm = require("Beez.codemarks")
       local toggles = actions.toggles
+      local curr_stack = cm.stacks:current()
 
       local stacks
       if not toggles.global_stacks then
@@ -129,7 +130,7 @@ function M.stacks(opts)
 
       for _, s in ipairs(stacks) do
         local hl = "Normal"
-        if cm.stacks.curr_stack == s.name then
+        if curr_stack ~= nil and curr_stack.name == s.name then
           hl = "Search"
         end
 
@@ -150,9 +151,11 @@ function M.stacks(opts)
     end,
     actions = {
       require("deck").alias_action("default", "select_stack"),
+      require("deck").alias_action("alt_default", "select_stack_hook"),
       require("deck").alias_action("toggle1", "toggle_global"),
       actions.toggle_global({ stacks = true }),
       actions.select_stack(),
+      actions.select_stack_hook(),
     },
   })
 

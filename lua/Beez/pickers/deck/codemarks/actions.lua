@@ -82,8 +82,27 @@ function M.select_stack()
     execute = function(ctx)
       local cm = require("Beez.codemarks")
       local item = ctx.get_action_items()[1]
-      cm.stacks:set_active_stack(item.data.stack.name)
       ctx.hide()
+      vim.schedule(function()
+        cm.stacks:set_active_stack(item.data.stack.name, { hook = false })
+      end)
+    end,
+  }
+end
+
+--- Deck action to set the active stack and run set active statk hook
+---@return deck.Action
+function M.select_stack_hook()
+  return {
+    name = "select_stack_hook",
+    ---@param ctx deck.Context
+    execute = function(ctx)
+      local cm = require("Beez.codemarks")
+      local item = ctx.get_action_items()[1]
+      ctx.hide()
+      vim.schedule(function()
+        cm.stacks:set_active_stack(item.data.stack.name, { hook = true })
+      end)
     end,
   }
 end

@@ -70,7 +70,7 @@ end
 function M.list_gmarks(opts)
   opts = opts or {}
   local gmarks = {}
-  local stacks = { M.stacks:get() }
+  local stacks = { M.stacks:current() }
   if opts.all_stacks == true then
     local all_stacks = M.stacks:list(opts)
     for _, a in ipairs(all_stacks) do
