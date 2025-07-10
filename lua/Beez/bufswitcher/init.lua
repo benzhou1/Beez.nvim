@@ -273,8 +273,13 @@ function M.unpin(buf)
   buf:unset_pinned()
 
   -- Save the pins to file
-  local lines = table.concat(M.pinned_paths, "\n")
-  M.pins_file_path:write(lines, "w")
+  local f = io.open(M.pins_file_path.filename, "w")
+  if f then
+    for _, line in ipairs(M.pinned_paths) do
+      f:write(line, "\n")
+    end
+    f:close()
+  end
 end
 
 --- Map keys for the buffer list
