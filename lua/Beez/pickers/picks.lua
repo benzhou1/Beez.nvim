@@ -370,6 +370,7 @@ end
 function M.goto_def()
   return {
     snacks = {
+      resume = false,
       def_opts = function(opts)
         return vim.tbl_deep_extend("keep", {
           unique_lines = true,
@@ -407,6 +408,7 @@ end
 function M.goto_ref()
   return {
     snacks = {
+      resume = false,
       def_opts = function(opts)
         return vim.tbl_deep_extend("keep", {
           unique_lines = true,

@@ -71,7 +71,9 @@ function M.pick(name, opts)
   pick_opts.cwd = cwd
   pick_opts.root_dir = cwd
 
-  M.state.type = opts.type
+  if pick.resume ~= false then
+    M.state.type = opts.type
+  end
   pick.run(pick_opts)
 end
 
