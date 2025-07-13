@@ -1,3 +1,4 @@
+local u = require("Beez.u")
 local M = { toggles = { global_codemarks = false, global_stacks = false } }
 
 M.open_zed = require("Beez.pickers.deck.actions").open_zed
@@ -84,7 +85,7 @@ function M.select_stack()
       local item = ctx.get_action_items()[1]
       ctx.hide()
       vim.schedule(function()
-        cm.stacks:set_active_stack(item.data.stack.name, { hook = false })
+        cm.stacks.set_active(item.data.stack.name, { hook = false })
       end)
     end,
   }
@@ -101,8 +102,72 @@ function M.select_stack_hook()
       local item = ctx.get_action_items()[1]
       ctx.hide()
       vim.schedule(function()
-        cm.stacks:set_active_stack(item.data.stack.name, { hook = true })
+        cm.stacks.set_active(item.data.stack.name, { hook = true })
       end)
+    end,
+  }
+end
+
+--- Deck generic action to edit global marks
+---@param opts table
+---@return deck.Action
+function M.edit_global_marks(opts)
+  return {
+    name = opts.name,
+    ---@param ctx deck.Context
+    execute = function(ctx)
+      u.deck.edit_list(ctx, {
+        action = opts.action,
+        filetype = "md",
+        get_pos = opts.get_pos,
+        get_feedkey = opts.get_feedkey,
+        get_lines = function(items)
+          local lines = {}
+          for _, item in pairs(items) do
+            local mark = item.data.mark
+            local line = mark.desc .. " [id::" .. item.data.i .. "]"
+            table.insert(lines, line)
+          end
+          return lines
+        end,
+        save = function(items, lines)
+          local cm = require("Beez.codemarks")
+          local save = false
+          for _, l in ipairs(lines) do
+            local desc, id = l:match("^(.-) %[id::(.-)%]$")
+            id = tonumber(id)
+            assert(id ~= nil, "Invalid ID in line: " .. l)
+
+            local item = items[id]
+            if item ~= nil then
+              -- Basically a pop
+              items[id] = nil
+              ---@type Beez.codemarks.gmark
+              local mark = item.data.mark
+              local updates = {}
+
+              -- Check if description has changed
+              if mark.desc ~= desc then
+                updates.desc = desc
+              end
+
+              -- Perform the update without saving
+              if next(updates) ~= nil then
+                save = cm.gmarks.update(mark:serialize(), updates, { save = false }) or save
+              end
+            end
+          end
+
+          -- Remaining items means some marks have been deleted
+          for _, i in pairs(items) do
+            cm.gmarks.del(i.data.mark:serialize(), { save = false })
+            save = true
+          end
+          if save then
+            cm.save()
+          end
+        end,
+      })
     end,
   }
 end

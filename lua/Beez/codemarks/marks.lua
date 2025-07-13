@@ -1,35 +1,30 @@
 local Mark = require("Beez.codemarks.mark")
 
---- Unique key for the mark
----@param data Beez.codemarks.markdata
----@return string
-local function get_key(data)
-  return data.file .. ":" .. data.lineno
-end
-
 ---@class Beez.codemarks.marks
 ---@field marks Beez.codemarks.mark[]
 ---@field keys table<string, boolean>
 ---@field archive Beez.codemarks.mark[]
 ---@field history Beez.codemarks.mark[]
+---@field stack string
 Marks = {}
 Marks.__index = Marks
 
 --- Creates a new instance of Marks
+---@param stack string
 ---@param marks Beez.codemarks.markdata[]
 ---@return Beez.codemarks.marks
-function Marks:new(marks)
+function Marks:new(stack, marks)
   local c = {}
   setmetatable(c, Marks)
   c.marks = {}
   c.keys = {}
   c.archive = {}
   c.history = {}
+  c.stack = stack
   for _, m in ipairs(marks) do
-    local mark = Mark:new(m)
+    local mark = Mark:new(stack, m)
     table.insert(c.marks, mark)
-    local key = get_key(m)
-    c.keys[key] = true
+    c.keys[mark:key()] = true
   end
   return c
 end
@@ -64,13 +59,14 @@ function Marks:add(opts)
     lineno = pos[1],
     col = pos[2],
   }
-  local key = get_key(data)
+
+  local mark = Mark:new(self.stack, data)
+  local key = mark:key()
   if self.keys[key] then
     vim.notify("Mark already exists at this location", vim.log.levels.WARN)
     return
   end
 
-  local mark = Mark:new(data)
   if opts.history then
     table.insert(self.history, mark)
   else
@@ -83,7 +79,7 @@ end
 --- Delete a mark
 ---@param data Beez.codemarks.markdata
 function Marks:del(data)
-  local key = get_key(data)
+  local key = Mark.key_from_data(data)
   if self.marks[key] then
     self.marks[key] = nil
     self:save({
@@ -112,7 +108,7 @@ function Marks:pop()
     return
   end
   local mark = table.remove(self.marks)
-  local key = get_key(mark:serialize())
+  local key = mark:key()
   self.keys[key] = nil
   self:add({ history = true })
   table.insert(self.archive, mark)
@@ -127,7 +123,7 @@ function Marks:undo()
     return
   end
 
-  local key = get_key(archived_mark:serialize())
+  local key = archived_mark:key()
   table.insert(self.marks, archived_mark)
   self.keys[key] = archived_mark
   return prev_mark

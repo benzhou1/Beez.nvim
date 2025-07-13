@@ -24,8 +24,8 @@ function Stack:new(data)
 
   s.name = data.stack
   s.root = data.root
-  s.gmarks = Gmarks:new(data.gmarks)
-  s.marks = Marks:new(data.marks)
+  s.gmarks = Gmarks:new(data.stack, data.gmarks)
+  s.marks = Marks:new(data.stack, data.marks)
 
   return s
 end

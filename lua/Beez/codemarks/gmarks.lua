@@ -1,18 +1,9 @@
-local u = require("Beez.u")
-local uv = vim.uv
 local Gmark = require("Beez.codemarks.gmark")
-
---- Unique key for the global mark
----@param data Beez.codemarks.gmarkdata
----@return string
-local function get_key(data)
-  return data.file .. ":" .. data.lineno
-end
+local u = require("Beez.u")
 
 ---@class Beez.codemarks.gmarks
----@field marks Beez.codemarks.gmark[]
----@field keys table<string, boolean>
----@field file_to_marks table<string, Beez.codemarks.gmark[]>
+---@field marks table<string, Beez.codemarks.gmark>
+---@field stack string
 Gmarks = {}
 Gmarks.__index = Gmarks
 
@@ -20,24 +11,30 @@ Gmarks.__index = Gmarks
 ---@field marks_file string
 
 --- Creates a new instance of Marks
+---@param stack string
 ---@param data Beez.codemarks.gmarkdata[]
 ---@return Beez.codemarks.gmarks
-function Gmarks:new(data)
+function Gmarks:new(stack, data)
   local c = {}
   setmetatable(c, Gmarks)
   -- load marks file
   c.marks = {}
-  c.keys = {}
-  c.file_to_marks = {}
+  c.stack = stack
   for _, d in ipairs(data) do
-    local mark = Gmark:new(d)
+    local mark = Gmark:new(stack, d)
     table.insert(c.marks, mark)
-    local key = get_key(d)
-    c.keys[key] = true
-    c.file_to_marks[d.file] = c.file_to_marks[d.file] or {}
-    table.insert(c.file_to_marks[d.file], mark)
+    local key = mark:key()
+    c.marks[key] = mark
   end
   return c
+end
+
+--- Gets a specific mark by its data
+---@param data Beez.codemarks.gmarkdataout
+---@return Beez.codemarks.gmark?
+function Gmarks:get(data)
+  local key = Gmark.key_from_data(data)
+  return self.marks[key]
 end
 
 --- Filter marks based on options
@@ -46,13 +43,19 @@ end
 function Gmarks:list(opts)
   opts = opts or {}
   local gmarks = {}
-  if opts.file then
-    local marks = self.file_to_marks[opts.file]
-    return marks or {}
-  end
   for _, gmark in pairs(self.marks) do
-    table.insert(gmarks, gmark)
+    if opts.file then
+      if gmark.file == opts.file then
+        table.insert(gmarks, gmark)
+      end
+    else
+      table.insert(gmarks, gmark)
+    end
   end
+
+  table.sort(gmarks, function(a, b)
+    return a.desc < b.desc
+  end)
   return gmarks
 end
 
@@ -69,57 +72,44 @@ function Gmarks:add(desc)
     lineno = pos[1],
     line = line,
   }
-  local mark = Gmark:new(data)
-  local key = get_key(data)
-  if self.keys[key] then
+  local mark = Gmark:new(self.stack, data)
+  local key = mark:key()
+  if self.marks[key] then
     vim.notify("Mark already exists...", vim.log.levels.WARN)
     return
   end
 
-  table.insert(self.marks, mark)
-  self.keys[key] = true
-  self.file_to_marks[data.file] = self.file_to_marks[data.file] or {}
-  table.insert(self.file_to_marks[data.file], mark)
+  self.marks[key] = mark
   vim.notify("Added mark: " .. desc, vim.log.levels.INFO)
 end
 
 --- Updates the data of a mark
----@param data Beez.codemarks.gmarkdata
----@param updates {desc: string?}
----@param cb function?
+---@param data Beez.codemarks.gmarkdataout
+---@param updates {desc?: string, lineno?: integer}
+---@return boolean
 function Gmarks:update(data, updates)
-  local mark = self:get(data)
   local updated = false
-  if mark ~= nil then
-    if updates.desc ~= nil then
-      mark:update_desc(updates.desc)
-      updated = true
-    end
-    if updated then
-      self:save({
-        cb = function()
-          vim.notify("Updated mark...", vim.log.levels.INFO)
-          if cb ~= nil then
-            cb()
-          end
-        end,
-      })
-    end
+  local gmark = self:get(data)
+  if gmark == nil then
+    return false
   end
+
+  if updates.desc ~= nil and gmark.desc ~= updates.desc then
+    gmark:update(updates)
+    updated = true
+  end
+  return updated
 end
 
 --- Delete a mark
----@param data Beez.codemarks.gmarkdata
+---@param data Beez.codemarks.gmarkdataout
 function Gmarks:del(data)
-  local key = get_key(data)
-  if self.marks[key] then
-    self.marks[key] = nil
-    self:save({
-      cb = function()
-        vim.notify("Mark deleted...", vim.log.levels.INFO)
-      end,
-    })
+  local gmark = self:get(data)
+  if gmark == nil then
+    return
   end
+  local key = gmark:key()
+  self.marks[key] = nil
 end
 
 --- Serialize the marks to a data table
