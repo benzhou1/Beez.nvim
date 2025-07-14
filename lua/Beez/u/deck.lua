@@ -104,9 +104,9 @@ function M.edit_list(ctx, opts)
   -- Move the cursor to specific position and then feed a key corresponding to the action
   if opts.action == "insert" then
     feedkey = "i"
-  elseif opts.action == "insert_line_above" then
+  elseif opts.action == "insert_above" then
     feedkey = "O"
-  elseif opts.action == "insert_line_below" then
+  elseif opts.action == "insert_below" then
     feedkey = "o"
   elseif opts.action == "insert_start" then
     feedkey = "I"
@@ -147,6 +147,8 @@ end
 ---@field write? Beez.u.deck.edit_actions_opts.opts
 ---@field delete_char? Beez.u.deck.edit_actions_opts.opts
 ---@field replace_char? Beez.u.deck.edit_actions_opts.opts
+---@field insert_above? Beez.u.deck.edit_actions_opts.opts
+---@field insert_below? Beez.u.deck.edit_actions_opts.opts
 
 --- Convienence function for returning a set of deck actions for editing lines
 ---@param opts Beez.u.deck.edit_actions_opts
@@ -160,6 +162,8 @@ function M.edit_actions(opts)
     write = {},
     delete_char = {},
     replace_char = {},
+    insert_above = {},
+    insert_below = {},
   })
   local deck = require("deck")
   local actions = {}
@@ -226,7 +230,26 @@ function M.edit_actions(opts)
       { name = replace_char_name, action = "replace_char" },
       opts.replace_char.edit_opts or {}
     )
-    print("edit_opts = ", vim.inspect(edit_opts))
+    table.insert(actions, opts.edit_line(edit_opts))
+  end
+  if not opts.insert_above.disable then
+    local insert_above_name = opts.insert_above.action_name or opts.prefix .. "_insert_above"
+    table.insert(actions, deck.alias_action("insert_above", insert_above_name))
+    local edit_opts = vim.tbl_deep_extend(
+      "keep",
+      { name = insert_above_name, action = "insert_above" },
+      opts.insert_above.edit_opts or {}
+    )
+    table.insert(actions, opts.edit_line(edit_opts))
+  end
+  if not opts.insert_below.disable then
+    local insert_below_name = opts.insert_below.action_name or opts.prefix .. "_insert_below"
+    table.insert(actions, deck.alias_action("open_keep", insert_below_name))
+    local edit_opts = vim.tbl_deep_extend(
+      "keep",
+      { name = insert_below_name, action = "insert_below" },
+      opts.insert_below.edit_opts or {}
+    )
     table.insert(actions, opts.edit_line(edit_opts))
   end
   return actions

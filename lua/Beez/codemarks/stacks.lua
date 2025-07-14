@@ -67,7 +67,9 @@ end
 
 --- Creates a new stack with the given name
 ---@param name string
-function Stacks:create_stack(name)
+---@param opts? {save?: boolean, set_active?: boolean}
+function Stacks:create_stack(name, opts)
+  opts = opts or {}
   if self.stacks[name] then
     return
   end
@@ -78,10 +80,18 @@ function Stacks:create_stack(name)
     gmarks = {},
     marks = {},
   })
+
   self.stacks[name] = stack
-  self.curr_stacks[root] = name
+
+  if opts.set_active ~= false then
+    self.curr_stacks[root] = name
+    self.curr_stack = name
+  end
+
   vim.notify("Created stack: " .. name, vim.log.levels.INFO)
-  self:save()
+  if opts.save ~= false then
+    self:save()
+  end
 end
 
 --- Adds a new global mark to the current stack
@@ -118,6 +128,60 @@ function Stacks:clear_marks()
 
   stack.marks:clear()
   self:save()
+end
+
+--- Updates the stack with the given data
+---@param data Beez.codemarks.stackdata
+---@param updates {name?: string}
+---@param opts? {save?: boolean}
+---@return boolean
+function Stacks:update_stack(data, updates, opts)
+  opts = opts or {}
+  local stack = self:get({ name = data.stack })
+  if stack == nil then
+    return false
+  end
+
+  local updated = stack:update(updates)
+  if updated then
+    if opts.save ~= false then
+      self:save()
+    end
+    if updates.name then
+      -- Need to update to the new stackname
+      if self.curr_stack == data.stack then
+        self.curr_stack = updates.name
+      end
+      local root = get_root()
+      if self.curr_stacks[root] == data.stack then
+        self.curr_stacks[root] = updates.name
+      end
+      self.stacks[updates.name] = stack
+      self.stacks[data.stack] = nil
+    end
+  end
+  return updated
+end
+
+--- Deletes a stack
+---@param data Beez.codemarks.stackdata
+---@param opts? { save?: boolean }
+function Stacks:del_stack(data, opts)
+  opts = opts or {}
+  local stack = self:get({ name = data.stack })
+  if stack == nil then
+    return
+  end
+
+  if self.curr_stack == stack.name then
+    vim.notify("Cannot delete the current active stack: " .. stack.name, vim.log.levels.WARN)
+    return
+  end
+
+  self.stacks[stack.name] = nil
+  if opts.save ~= false then
+    self:save()
+  end
 end
 
 --- Returns specific stack or the current one

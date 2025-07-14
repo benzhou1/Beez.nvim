@@ -30,6 +30,18 @@ function Stack:new(data)
   return s
 end
 
+--- Updates the stack
+---@param updates {name?: string}
+---@return boolean
+function Stack:update(updates)
+  local updated = false
+  if updates.name ~= nil and updates.name ~= self.name then
+    self.name = updates.name
+    updated = true
+  end
+  return updated
+end
+
 --- Serialize the stack into a stack data table
 ---@return Beez.codemarks.stackdata
 function Stack:serialize()

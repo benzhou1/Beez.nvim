@@ -34,14 +34,21 @@ function M.stacks.edit_file()
   vim.cmd("edit " .. M.stacks_file.filename)
 end
 
---- Creates a new stack with the given name
+--- Prompts to create a new stack
 function M.stacks.add()
   vim.ui.input({ prompt = "Give your new stack a name: " }, function(res)
     if res == nil then
       return
     end
-    M.stacks:create_stack(res)
+    M.stacks.create_stack(res)
   end)
+end
+
+--- Creates a new stack with the given name
+---@param name string
+---@param opts? {save?: boolean, set_active?: boolean}
+function M.stacks.create_stack(name, opts)
+  M._stacks:create_stack(name, opts)
 end
 
 --- Sets the active stack
@@ -65,6 +72,29 @@ end
 function M.stacks.list(opts)
   opts = opts or {}
   return M._stacks:list(opts)
+end
+
+--- Updates the stack with the given data
+---@param data Beez.codemarks.stackdata
+---@param updates {name?: string}
+---@param opts? {save?: boolean}
+---@return boolean
+function M.stacks.update(data, updates, opts)
+  local updated = M._stacks:update_stack(data, updates, opts)
+  return updated
+end
+
+--- Deletes a stack
+---@param data Beez.codemarks.stackdata
+---@param opts? {save?: boolean}
+function M.stacks.del(data, opts)
+  opts = opts or {}
+  local stack = M._stacks:get({ name = data.stack })
+  if stack == nil then
+    return
+  end
+
+  M._stacks:del_stack(data, opts)
 end
 
 --- Navigates to the last mark location in the stack and remove the mark

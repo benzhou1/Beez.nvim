@@ -64,6 +64,8 @@ function M.global_marks(opts)
             end,
           },
         },
+        insert_above = { disable = true },
+        insert_below = { disable = true },
       })
     ),
   })
@@ -136,7 +138,7 @@ function M.stacks(opts)
         stacks = cm.stacks.list()
       end
 
-      for _, s in ipairs(stacks) do
+      for i, s in ipairs(stacks) do
         local hl = "Normal"
         if curr_stack ~= nil and curr_stack.name == s.name then
           hl = "Search"
@@ -151,20 +153,39 @@ function M.stacks(opts)
           display_text = display_text,
           data = {
             stack = s,
+            i = i,
           },
         }
         ctx.item(item)
       end
       ctx.done()
     end,
-    actions = {
-      require("deck").alias_action("default", "select_stack"),
-      require("deck").alias_action("alt_default", "select_stack_hook"),
-      require("deck").alias_action("toggle1", "toggle_global"),
-      actions.toggle_global({ stacks = true }),
-      actions.select_stack(),
-      actions.select_stack_hook(),
-    },
+    actions = u.tables.extend(
+      {
+        require("deck").alias_action("default", "select_stack"),
+        require("deck").alias_action("alt_default", "select_stack_hook"),
+        require("deck").alias_action("toggle1", "toggle_global"),
+        actions.toggle_global({ stacks = true }),
+        actions.select_stack(),
+        actions.select_stack_hook(),
+      },
+      u.deck.edit_actions({
+        prefix = "edit_marks",
+        edit_line = actions.edit_stacks,
+        edit_line_end = {
+          ---@diagnostic disable-next-line: missing-fields
+          edit_opts = {
+            get_pos = function(item, pos)
+              local offset = item.data.stack.name:len()
+              return { pos[1], offset }
+            end,
+            get_feedkey = function(feedkey)
+              return "i"
+            end,
+          },
+        },
+      })
+    ),
   })
 
   local specifier = utils.resolve_specifier(opts)

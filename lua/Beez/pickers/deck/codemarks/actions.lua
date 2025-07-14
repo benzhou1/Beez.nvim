@@ -33,29 +33,6 @@ end
 
 ---@return deck.Action
 ---@param opts? {mark?: boolean}
-function M.delete(opts)
-  opts = opts or {}
-  return {
-    name = "delete_mark",
-    execute = function(ctx)
-      if opts.mark then
-        local marks = require("Beez.codemarks").marks
-        for _, item in ipairs(ctx.get_action_items()) do
-          marks:del(item.data.data)
-        end
-      else
-        local marks = require("Beez.codemarks").gmarks
-        for _, item in ipairs(ctx.get_action_items()) do
-          marks:del(item.data.data)
-        end
-      end
-      ctx.execute()
-    end,
-  }
-end
-
----@return deck.Action
----@param opts? {mark?: boolean}
 function M.open(opts)
   opts = opts or {}
   local open_action = require("deck.builtin.action").open
@@ -104,6 +81,74 @@ function M.select_stack_hook()
       vim.schedule(function()
         cm.stacks.set_active(item.data.stack.name, { hook = true })
       end)
+    end,
+  }
+end
+
+--- Deck generic action to edit stacks
+---@param opts table
+---@return deck.Action
+function M.edit_stacks(opts)
+  return {
+    name = opts.name,
+    ---@param ctx deck.Context
+    execute = function(ctx)
+      u.deck.edit_list(ctx, {
+        action = opts.action,
+        filetype = "md",
+        get_pos = opts.get_pos,
+        get_feedkey = opts.get_feedkey,
+        get_lines = function(items)
+          local lines = {}
+          for _, item in pairs(items) do
+            local stack = item.data.stack
+            local line = stack.name .. " [id::" .. item.data.i .. "]"
+            table.insert(lines, line)
+          end
+          return lines
+        end,
+        save = function(items, lines)
+          local cm = require("Beez.codemarks")
+          local save = false
+          for _, l in ipairs(lines) do
+            local name, id = l:match("^(.-) %[id::(.-)%]$")
+            id = tonumber(id)
+
+            local item = items[id]
+            if item ~= nil then
+              assert(id ~= nil, "Invalid ID in line: " .. l)
+              -- Basically a pop
+              items[id] = nil
+              ---@type Beez.codemarks.stack
+              local stack = item.data.stack
+              local updates = {}
+
+              -- Check if name has changed
+              if stack.name ~= name then
+                updates.name = name
+              end
+
+              -- Perform the update without saving
+              if next(updates) ~= nil then
+                save = cm.stacks.update(stack:serialize(), updates, { save = false }) or save
+              end
+            -- This means new stack is created
+            else
+              cm.stacks.create_stack(l, { save = false, set_active = false })
+              save = true
+            end
+          end
+
+          -- Remaining items means some stacks have been deleted
+          for _, i in pairs(items) do
+            cm.stacks.del(i.data.stack:serialize(), { save = false })
+            save = true
+          end
+          if save then
+            cm.save()
+          end
+        end,
+      })
     end,
   }
 end
