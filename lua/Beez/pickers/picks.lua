@@ -744,6 +744,17 @@ function M.codemarks_global_marks()
 end
 M["codemarks.global_marks"] = M.codemarks_global_marks
 
+function M.codemarks_global_marks_update_line()
+  return {
+    deck = {
+      run = function(opts)
+        deck_pickers.codemarks.update_global_marks_line(opts)
+      end,
+    },
+  }
+end
+M["codemarks.global_marks_update_line"] = M.codemarks_global_marks_update_line
+
 function M.codemarks_marks()
   return {
     deck = {

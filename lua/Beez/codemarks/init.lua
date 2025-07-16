@@ -188,7 +188,7 @@ end
 
 --- Update a global mark
 ---@param data Beez.codemarks.gmarkdataout
----@param updates {desc?: string, lineno?: integer}
+---@param updates {desc?: string, lineno?: integer, line?: string}
 ---@param opts? {save?: boolean}
 function M.gmarks.update(data, updates, opts)
   opts = opts or {}
@@ -228,6 +228,16 @@ function M.gmarks.pick(opts)
   opts = vim.tbl_deep_extend("keep", opts or {}, { type = def_type })
   M.curr_buf = vim.api.nvim_get_current_buf()
   require("Beez.pickers").pick("codemarks.global_marks", opts)
+end
+
+--- Picker for choosing a global mark to update to the current line
+---@param opts Beez.pick.opts?
+function M.gmarks.pick_update_line(opts)
+  opts = opts or {}
+  local def_type = opts.type or "deck"
+  opts = vim.tbl_deep_extend("keep", opts or {}, { type = def_type })
+  M.curr_buf = vim.api.nvim_get_current_buf()
+  require("Beez.pickers").pick("codemarks.global_marks_update_line", opts)
 end
 
 --- Toggles a new mark

@@ -58,7 +58,7 @@ function Gmark:serialize()
 end
 
 --- Updates the marks data
----@param updates {desc?: string, lineno?: integer}
+---@param updates {desc?: string, lineno?: integer, line?: string}
 ---@return boolean
 function Gmark:update(updates)
   local updated = false
@@ -68,6 +68,10 @@ function Gmark:update(updates)
   end
   if updates.lineno ~= nil then
     self.lineno = updates.lineno
+    updated = true
+  end
+  if updates.line ~= nil then
+    self.line = updates.line
     updated = true
   end
   return updated

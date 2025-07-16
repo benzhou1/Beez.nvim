@@ -43,6 +43,7 @@ function M.global_marks(opts)
       ctx.done()
     end,
     actions = u.tables.extend(
+      opts.actions or {},
       {
         require("deck").alias_action("default", "open_codemarks"),
         require("deck").alias_action("toggle1", "toggle_global"),

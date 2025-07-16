@@ -225,4 +225,23 @@ function M.edit_global_marks(opts)
   }
 end
 
+--- Deck action to update a global mark line
+---@param line string
+---@param opts? table
+---@return deck.Action
+function M.update_gmark_line(line, opts)
+  return {
+    name = "update_gmark_line",
+    ---@param ctx deck.Context
+    execute = function(ctx)
+      local item = ctx.get_action_items()[1]
+      local mark = item.data.mark
+      local cm = require("Beez.codemarks")
+      cm.gmarks.update(mark:serialize(), { line = line })
+      vim.notify("Updated line for global mark: " .. mark.desc, vim.log.levels.INFO)
+      ctx.hide()
+    end,
+  }
+end
+
 return M

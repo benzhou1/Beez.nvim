@@ -84,7 +84,7 @@ end
 
 --- Updates the data of a mark
 ---@param data Beez.codemarks.gmarkdataout
----@param updates {desc?: string, lineno?: integer}
+---@param updates {desc?: string, lineno?: integer, line?: string}
 ---@return boolean
 function Gmarks:update(data, updates)
   local updated = false
