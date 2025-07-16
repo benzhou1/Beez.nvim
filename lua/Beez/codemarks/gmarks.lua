@@ -22,7 +22,6 @@ function Gmarks:new(stack, data)
   c.stack = stack
   for _, d in ipairs(data) do
     local mark = Gmark:new(stack, d)
-    table.insert(c.marks, mark)
     local key = mark:key()
     c.marks[key] = mark
   end
@@ -94,9 +93,13 @@ function Gmarks:update(data, updates)
     return false
   end
 
-  if updates.desc ~= nil and gmark.desc ~= updates.desc then
-    gmark:update(updates)
-    updated = true
+  local old_key = gmark:key()
+  updated = gmark:update(updates)
+  local new_key = gmark:key()
+  -- lineno is updated, so we need to update the key
+  if updates.lineno ~= nil and updated and old_key ~= new_key then
+    self.marks[new_key] = gmark
+    self.marks[old_key] = nil
   end
   return updated
 end

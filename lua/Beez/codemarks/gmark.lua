@@ -59,13 +59,18 @@ end
 
 --- Updates the marks data
 ---@param updates {desc?: string, lineno?: integer}
+---@return boolean
 function Gmark:update(updates)
+  local updated = false
   if updates.desc ~= nil then
     self.desc = updates.desc
+    updated = true
   end
   if updates.lineno ~= nil then
     self.lineno = updates.lineno
+    updated = true
   end
+  return updated
 end
 
 return Gmark

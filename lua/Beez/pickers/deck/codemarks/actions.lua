@@ -42,11 +42,19 @@ function M.open(opts)
     ---@param ctx deck.Context
     execute = function(ctx)
       local item = ctx.get_action_items()[1]
+      local cm = require("Beez.codemarks")
+
       open_action.execute(ctx)
-      vim.schedule(function()
-        require("Beez.codemarks").check_for_outdated_marks(item.data.filename, item.data.lnum)
-        vim.cmd("normal! zz")
-      end)
+      if not opts.mark then
+        vim.schedule(function()
+          cm.check_for_outdated_marks(item.data.filename)
+          -- Line number was updated
+          if item.data.lnum ~= item.data.mark.lineno then
+            vim.api.nvim_win_set_cursor(0, { item.data.mark.lineno, 0 })
+          end
+          vim.cmd("normal! zz")
+        end)
+      end
     end,
   }
 end

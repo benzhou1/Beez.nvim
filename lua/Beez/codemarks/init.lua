@@ -9,6 +9,17 @@ local u = require("Beez.u")
 ---@field _stacks Beez.codemarks.stacks
 local M = { stacks = {}, gmarks = {}, marks = {} }
 
+--- Setup autocmds for the plugin
+local function init_autocmds()
+  -- Autocmd to check for outdated marks when a file is written
+  vim.api.nvim_create_autocmd("BufWritePost", {
+    pattern = "*",
+    callback = function(event)
+      M.check_for_outdated_marks(event.file)
+    end,
+  })
+end
+
 --- Setup the plugin
 ---@param opts Beez.codemarks.config
 function M.setup(opts)
@@ -27,6 +38,8 @@ function M.setup(opts)
 
   -- Load the stacks file
   M._stacks = Stacks:new({ stacks_file = M.stacks_file.filename })
+  -- Setup autocmds
+  init_autocmds()
 end
 
 --- Edits the stacks file
@@ -257,16 +270,15 @@ end
 
 --- Checks current file for any outdated marks
 ---@param filename string
----@param lineno integer
-function M.check_for_outdated_marks(filename, lineno)
+function M.check_for_outdated_marks(filename)
   local stacks = M.stacks:list()
-  -- Filter out reads from files that arent marked
   if stacks == {} then
     return
   end
 
   local save = false
   for _, s in ipairs(stacks) do
+    -- Filter out reads from files that arent marked
     local gmarks = s.gmarks:list({ file = filename })
     for _, m in ipairs(gmarks) do
       local line = u.os.read_line_at(m.file, m.lineno)
@@ -288,9 +300,9 @@ function M.check_for_outdated_marks(filename, lineno)
           end
 
           if choice == 1 then
-            m:update({ linno = new_lineno })
+            M.gmarks.update(m:serialize(), { lineno = new_lineno }, { save = false })
             save = true
-            vim.notify("Updated mark [" .. m.desc .. "] to lineno: " .. m.lineno, vim.log.levels.INFO)
+            vim.notify("Updated mark [" .. m.desc .. "] to lineno: " .. new_lineno, vim.log.levels.INFO)
           end
         end
       end
@@ -301,9 +313,6 @@ function M.check_for_outdated_marks(filename, lineno)
   if save then
     M._stacks:save()
   end
-
-  -- Restore the cursor position after updating marks
-  pcall(vim.api.nvim_win_set_cursor, 0, { lineno, 0 })
 end
 
 --- Save to stacks file
