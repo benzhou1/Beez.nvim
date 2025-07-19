@@ -70,7 +70,7 @@ M.edit_tasks = function(opts)
       local curr_item = ctx.get_cursor_item()
       local buf_offset = 6 -- 1 for hyphen, 1 for space, 3 for state, 1 for space
       local pos = vim.api.nvim_win_get_cursor(0)
-      for _, item in ipairs(ctx.get_rendered_items()) do
+      for item in ctx.iter_rendered_items() do
         local line = item.data.task:line()
         line = line:trim()
         parent = item.data.task.parent
