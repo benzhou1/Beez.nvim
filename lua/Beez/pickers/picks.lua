@@ -714,6 +714,13 @@ function M.grep_help()
         require("fzf-lua.providers.helptags").helptags(opts)
       end,
     },
+    deck = {
+      run = function(opts)
+        local source, specifier = deck_pickers.sources.help_grep(opts)
+        local ctx = require("deck").start(source, specifier)
+        ctx.set_preview_mode(true)
+      end,
+    }
   }
 end
 

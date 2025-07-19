@@ -595,4 +595,14 @@ function M.git_status(opts)
   return git_status, specifier
 end
 
+--- Grep help deck source and specifier
+---@param opts table
+---@return deck.Source, deck.StartConfigSpecifier
+function M.help_grep(opts)
+  opts = utils.resolve_opts(opts, { is_grep = true, filename_first = false })
+  local source = utils.resolve_source(opts, require("deck.builtin.source.helpgrep")(opts.source_opts))
+  local specifier = utils.resolve_specifier(opts)
+  return source, specifier
+end
+
 return M
