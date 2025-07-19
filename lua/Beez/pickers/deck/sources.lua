@@ -252,14 +252,13 @@ end
 ---@param opts table
 ---@ruturn deck.Source, deck.StartConfigSpecifier
 function M.files_recent(opts)
-  opts = utils.resolve_opts(opts)
+  opts = utils.resolve_opts(opts, { source_opts = { limit = 100 } })
   local source = require("deck.builtin.source.recent_files")(opts.source_opts)
 
   local _actions = {
-    require("deck").alias_action("default", opts.default_action or "open"),
+    require("deck").alias_action("default", "open"),
     require("deck").alias_action("delete", "remove_recent"),
     actions.remove_recent,
-    actions.open_zed({ quit = opts.open_zed.quit }),
   }
   source = utils.resolve_source(opts, source)
   source.actions = _actions
