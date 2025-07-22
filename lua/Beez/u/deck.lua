@@ -18,10 +18,11 @@ function M.edit_list(ctx, opts)
   -- Get lines for buffer from callback
   local lines
   local items = {}
-  local curr_items = ctx:get_items()
   local curr_item = ctx:get_cursor_item()
-  for i, c in ipairs(curr_items) do
+  local i = 1
+  for c in ctx.iter_items() do
     items[i] = c
+    i = i + 1
   end
 
   if opts.get_lines ~= nil then
