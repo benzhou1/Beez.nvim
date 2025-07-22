@@ -15,11 +15,12 @@ function M.global_marks(opts)
       local gmarks = {}
       local toggles = actions.toggles
       if not toggles.global_codemarks then
-        gmarks = cm.gmarks.list()
+        local root = u.root.get_name({ buf = cm.curr_buf })
+        gmarks = cm.gmarks.list({ root = root })
       end
 
       if toggles.global_codemarks then
-        gmarks = cm.gmarks.list({ root = true, all_stacks = true })
+        gmarks = cm.gmarks.list()
       end
 
       for i, m in ipairs(gmarks) do
@@ -36,7 +37,7 @@ function M.global_marks(opts)
           },
         }
         if toggles.global_codemarks then
-          table.insert(item.display_text, { m.stack, "Comment" })
+          table.insert(item.display_text, { m.root, "Comment" })
         end
         ctx.item(item)
       end
@@ -114,79 +115,6 @@ function M.marks(opts)
       actions.open_zed({ quit = opts.open_zed.quit }),
       actions.open({ mark = true }),
     },
-  })
-
-  local specifier = utils.resolve_specifier(opts)
-  return source, specifier
-end
-
---- Deck source for codemark stacks
----@param opts table
----@return deck.Source, deck.StartConfigSpecifier
-function M.stacks(opts)
-  opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
-  local source = utils.resolve_source(opts, {
-    name = "codemarks.stacks",
-    execute = function(ctx)
-      local cm = require("Beez.codemarks")
-      local toggles = actions.toggles
-      local curr_stack = cm.stacks.get()
-
-      local stacks
-      if not toggles.global_stacks then
-        stacks = cm.stacks.list({ root = true })
-      else
-        stacks = cm.stacks.list()
-      end
-
-      for i, s in ipairs(stacks) do
-        local hl = "Normal"
-        if curr_stack ~= nil and curr_stack.name == s.name then
-          hl = "Search"
-        end
-
-        local display_text = {
-          { tostring(s.name), hl },
-          { " " },
-          { s.root, "Comment" },
-        }
-        local item = {
-          display_text = display_text,
-          data = {
-            stack = s,
-            i = i,
-          },
-        }
-        ctx.item(item)
-      end
-      ctx.done()
-    end,
-    actions = u.tables.extend(
-      {
-        require("deck").alias_action("default", "select_stack"),
-        require("deck").alias_action("alt_default", "select_stack_hook"),
-        require("deck").alias_action("toggle1", "toggle_global"),
-        actions.toggle_global({ stacks = true }),
-        actions.select_stack(),
-        actions.select_stack_hook(),
-      },
-      u.deck.edit_actions({
-        prefix = "edit_marks",
-        edit_line = actions.edit_stacks,
-        edit_line_end = {
-          ---@diagnostic disable-next-line: missing-fields
-          edit_opts = {
-            get_pos = function(item, pos)
-              local offset = item.data.stack.name:len()
-              return { pos[1], offset }
-            end,
-            get_feedkey = function(feedkey)
-              return "i"
-            end,
-          },
-        },
-      })
-    ),
   })
 
   local specifier = utils.resolve_specifier(opts)

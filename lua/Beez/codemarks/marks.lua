@@ -1,28 +1,26 @@
 local Mark = require("Beez.codemarks.mark")
+local c = require("Beez.codemarks.config")
 
 ---@class Beez.codemarks.marks
 ---@field marks Beez.codemarks.mark[]
 ---@field keys table<string, boolean>
 ---@field archive Beez.codemarks.mark[]
 ---@field history Beez.codemarks.mark[]
----@field stack string
 Marks = {}
 Marks.__index = Marks
 
 --- Creates a new instance of Marks
----@param stack string
 ---@param marks Beez.codemarks.markdata[]
 ---@return Beez.codemarks.marks
-function Marks:new(stack, marks)
+function Marks:new(marks)
   local c = {}
   setmetatable(c, Marks)
   c.marks = {}
   c.keys = {}
   c.archive = {}
   c.history = {}
-  c.stack = stack
   for _, m in ipairs(marks) do
-    local mark = Mark:new(stack, m)
+    local mark = Mark:new(m)
     table.insert(c.marks, mark)
     c.keys[mark:key()] = true
   end
@@ -30,13 +28,17 @@ function Marks:new(stack, marks)
 end
 
 --- Filter marks based on options
----@param opts? {file: string?}
+---@param opts? {file: string?, root: string?}
 ---@return Beez.codemarks.mark[]
 function Marks:list(opts)
   opts = opts or {}
   local marks = {}
   for _, mark in ipairs(self.marks) do
-    if opts.file then
+    if opts.root then
+      if mark.root == opts.root then
+        table.insert(marks, mark)
+      end
+    elseif opts.file then
       if mark.file == opts.file then
         table.insert(marks, mark)
       end
@@ -53,14 +55,16 @@ function Marks:add(opts)
   opts = opts or {}
   local file_path = vim.api.nvim_buf_get_name(0)
   local pos = vim.api.nvim_win_get_cursor(0)
+  local root = c.config.get_root()
   ---@type Beez.codemarks.markdata
   local data = {
     file = file_path,
     lineno = pos[1],
     col = pos[2],
+    root = root,
   }
 
-  local mark = Mark:new(self.stack, data)
+  local mark = Mark:new(data)
   local key = mark:key()
   if self.keys[key] then
     vim.notify("Mark already exists at this location", vim.log.levels.WARN)
@@ -82,11 +86,7 @@ function Marks:del(data)
   local key = Mark.key_from_data(data)
   if self.marks[key] then
     self.marks[key] = nil
-    self:save({
-      cb = function()
-        vim.notify("Mark deleted...", vim.log.levels.INFO)
-      end,
-    })
+    self.keys[key] = nil
   end
 end
 

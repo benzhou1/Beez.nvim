@@ -1,9 +1,8 @@
 local Gmark = require("Beez.codemarks.gmark")
-local u = require("Beez.u")
+local c = require("Beez.codemarks.config")
 
 ---@class Beez.codemarks.gmarks
 ---@field marks table<string, Beez.codemarks.gmark>
----@field stack string
 Gmarks = {}
 Gmarks.__index = Gmarks
 
@@ -11,17 +10,15 @@ Gmarks.__index = Gmarks
 ---@field marks_file string
 
 --- Creates a new instance of Marks
----@param stack string
 ---@param data Beez.codemarks.gmarkdata[]
 ---@return Beez.codemarks.gmarks
-function Gmarks:new(stack, data)
+function Gmarks:new(data)
   local c = {}
   setmetatable(c, Gmarks)
   -- load marks file
   c.marks = {}
-  c.stack = stack
   for _, d in ipairs(data) do
-    local mark = Gmark:new(stack, d)
+    local mark = Gmark:new(d)
     local key = mark:key()
     c.marks[key] = mark
   end
@@ -29,7 +26,7 @@ function Gmarks:new(stack, data)
 end
 
 --- Gets a specific mark by its data
----@param data Beez.codemarks.gmarkdataout
+---@param data Beez.codemarks.gmarkdata
 ---@return Beez.codemarks.gmark?
 function Gmarks:get(data)
   local key = Gmark.key_from_data(data)
@@ -37,13 +34,17 @@ function Gmarks:get(data)
 end
 
 --- Filter marks based on options
----@param opts? {file?: string}
+---@param opts? {file?: string, root?: string}
 ---@return Beez.codemarks.gmark[]
 function Gmarks:list(opts)
   opts = opts or {}
   local gmarks = {}
   for _, gmark in pairs(self.marks) do
-    if opts.file then
+    if opts.root then
+      if gmark.root == opts.root then
+        table.insert(gmarks, gmark)
+      end
+    elseif opts.file then
       if gmark.file == opts.file then
         table.insert(gmarks, gmark)
       end
@@ -64,14 +65,16 @@ function Gmarks:add(desc)
   local file_path = vim.api.nvim_buf_get_name(0)
   local pos = vim.api.nvim_win_get_cursor(0)
   local line = vim.api.nvim_get_current_line()
+  local root = c.config.get_root()
   ---@type Beez.codemarks.gmarkdata
   local data = {
     desc = desc,
     file = file_path,
     lineno = pos[1],
     line = line,
+    root = root,
   }
-  local mark = Gmark:new(self.stack, data)
+  local mark = Gmark:new(data)
   local key = mark:key()
   if self.marks[key] then
     vim.notify("Mark already exists...", vim.log.levels.WARN)
@@ -83,7 +86,7 @@ function Gmarks:add(desc)
 end
 
 --- Updates the data of a mark
----@param data Beez.codemarks.gmarkdataout
+---@param data Beez.codemarks.gmarkdata
 ---@param updates {desc?: string, lineno?: integer, line?: string}
 ---@return boolean
 function Gmarks:update(data, updates)
@@ -105,7 +108,7 @@ function Gmarks:update(data, updates)
 end
 
 --- Delete a mark
----@param data Beez.codemarks.gmarkdataout
+---@param data Beez.codemarks.gmarkdata
 function Gmarks:del(data)
   local gmark = self:get(data)
   if gmark == nil then
