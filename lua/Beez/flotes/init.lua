@@ -63,7 +63,9 @@ function M.show(opts)
   end
 
   -- Save currently opened note
-  M.states.note = note_path
+  if note_path ~= nil then
+    M.states.note = note_path
+  end
   if c.config.open_in_float then
     M.states.float:show(note_path)
   else
@@ -112,7 +114,11 @@ end
 --- Toggles the focus between floating window
 function M.toggle_focus()
   if M.states.float ~= nil then
-    M.states.float:toggle_focus()
+    if M.states.float:is_showing() then
+      M.states.float:toggle_focus()
+    else
+      M.show()
+    end
   else
     M.show()
   end
