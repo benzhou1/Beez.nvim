@@ -92,6 +92,46 @@ M.open_external = function(opts)
   }
 end
 
+-- Find files under a directory
+M.find_files = function(opts)
+  opts = opts or {}
+  return {
+    require("deck").alias_action("find_files", opts.name),
+    {
+      name = opts.name,
+      execute = function(ctx)
+        local item = ctx.get_action_items()[1]
+        local path = item.data.filename
+        if not opts.dir then
+          path = u.paths.dirname(item.data.filename)
+        end
+        ctx:hide()
+        require("Beez.pickers").pick("find_files", { cwd = path, type = "deck" })
+      end,
+    },
+  }
+end
+
+-- Grep files under a directory
+M.grep_files = function(opts)
+  opts = opts or {}
+  return {
+    require("deck").alias_action("grep_files", opts.name),
+    {
+      name = opts.name,
+      execute = function(ctx)
+        local item = ctx.get_action_items()[1]
+        local path = item.data.filename
+        if not opts.dir then
+          path = u.paths.dirname(item.data.filename)
+        end
+        ctx:hide()
+        require("Beez.pickers").pick("grep", { cwd = path, type = "deck" })
+      end,
+    },
+  }
+end
+
 -- Open item in zed
 M.open_zed = function(opts)
   opts = opts or {}

@@ -474,6 +474,11 @@ function M.dirs_recent(opts)
   table.insert(source.actions, actions.remove_recent)
   table.insert(source.actions, actions.open_external({ quit = opts.open_external.quit }))
   table.insert(source.actions, actions.open_external({ parent = true, quit = opts.open_external.quit }))
+  source.actions = u.tables.extend(
+    source.actions,
+    actions.find_files({ name = "find_files_under_dir", dir = true }),
+    actions.grep_files({ name = "grep_files_under_dir", dir = true })
+  )
   source = utils.resolve_source(opts, source)
 
   local specifier = utils.resolve_specifier(opts)

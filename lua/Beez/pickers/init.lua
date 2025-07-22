@@ -10,7 +10,7 @@ local M = {
 ---@field cwd? boolean|string
 ---@field pick_opts? table
 
----@alias Beez.pick.name "smart"|"resume"|"files"|"git_files"|"grep"|"grep_string"|"grep_curbuf"|"grep_curbuf_ripgrep"|"grep_curbuf_live_grep"|"grep_curbuf_live_grep_ripgrep"|"lsp_definitions"|"lsp_references"|"lsp_implementations"|"lsp_type_definitions"|"lsp_symbols"|"lsp_workspace_symbols"|"codemarks.global_marks"|"codemarks.global_marks_update_line"|"codemarks.marks"|"codemarks.stacks"|"scratches"|"notes.find"|"notes.grep"|"notes.find_templates"|"dbfp.connections"|"dbfp.queries"|"notes.backlinks"
+---@alias Beez.pick.name "smart"|"resume"|"find_files"|"git_files"|"grep"|"grep_string"|"grep_curbuf"|"grep_curbuf_ripgrep"|"grep_curbuf_live_grep"|"grep_curbuf_live_grep_ripgrep"|"lsp_definitions"|"lsp_references"|"lsp_implementations"|"lsp_type_definitions"|"lsp_symbols"|"lsp_workspace_symbols"|"codemarks.global_marks"|"codemarks.global_marks_update_line"|"codemarks.marks"|"codemarks.stacks"|"scratches"|"notes.find"|"notes.grep"|"notes.find_templates"|"dbfp.connections"|"dbfp.queries"|"notes.backlinks"
 
 --- Pick a picker
 ---@param name Beez.pick.name
