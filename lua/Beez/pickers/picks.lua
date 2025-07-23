@@ -151,7 +151,8 @@ function M.find_buffers()
     },
     deck = {
       run = function(opts)
-        require("deck").start(deck_pickers.sources.buffers(opts))
+        local source, specifier = deck_pickers.sources.buffers(opts)
+        require("deck").start(source, specifier)
       end,
     },
   }

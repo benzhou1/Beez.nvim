@@ -56,6 +56,9 @@ function M.resolve_specifier(opts, ...)
   if opts.prompt ~= nil then
     specifier.start_prompt = opts.prompt
   end
+  if opts.keymaps_hook ~= nil then
+    specifier.keymaps_hook = opts.keymaps_hook
+  end
   -- Disable snacks image previewer in favor of neo-img
   specifier.disable_previewers = { "snacks_image" }
   specifier = vim.tbl_deep_extend("force", specifier, ... or {})
