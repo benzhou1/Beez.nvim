@@ -219,8 +219,8 @@ function M.dbfp.execute_query(opts)
       end
 
       dbfp.execute_raw_query(item.data.qf.connection, query, { qf = item.data.qf })
-      dbfp.focus_dbout()
       ctx:hide()
+      dbfp.focus_dbout()
     end,
   }
 end
