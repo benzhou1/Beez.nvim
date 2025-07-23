@@ -721,7 +721,7 @@ function M.grep_help()
         local ctx = require("deck").start(source, specifier)
         ctx.set_preview_mode(true)
       end,
-    }
+    },
   }
 end
 
@@ -867,6 +867,14 @@ M["dbfp.queryfiles"] = function()
   return {
     deck = {
       run = dbfp_pickers.queryfiles,
+    },
+  }
+end
+
+M["jump_list"] = function()
+  return {
+    deck = {
+      run = deck_pickers.jump_list,
     },
   }
 end

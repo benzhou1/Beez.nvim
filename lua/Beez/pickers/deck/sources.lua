@@ -610,4 +610,52 @@ function M.help_grep(opts)
   return source, specifier
 end
 
+--- Deck source for jump list
+---@param opts table
+---@return deck.Source, deck.StartConfigSpecifier
+function M.jump_list(opts)
+  opts = utils.resolve_opts(opts, { filename_first = false })
+  local source = utils.resolve_source(opts, {
+    name = "jump_list",
+    execute = function(ctx)
+      local jl = vim.fn.getjumplist()
+      local list = u.tables.reverse(jl[1])
+      local curr_idx = math.max(#list - jl[2], 1)
+
+      for i, j in ipairs(list) do
+        local filepath = vim.api.nvim_buf_get_name(j.bufnr)
+        local filename = u.paths.basename(filepath)
+        local line = u.os.read_line_at(filepath, j.lnum)
+        local current = i == curr_idx
+        local hl = "Normal"
+        if current then
+          hl = "Search"
+        end
+        local item = {
+          display_text = {
+            { filename, hl },
+            { ":", "Normal" },
+            { tostring(j.lnum), "Normal" },
+            { " " },
+            { line, "Comment" },
+          },
+          data = {
+            current = current,
+            filename = filepath,
+            lnum = j.lnum,
+          },
+        }
+        ctx.item(item)
+      end
+      ctx.done()
+    end,
+
+    actions = {
+      require("deck").alias_action("default", "open"),
+    },
+  })
+  local specifier = utils.resolve_specifier(opts)
+  return source, specifier
+end
+
 return M

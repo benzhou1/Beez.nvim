@@ -123,4 +123,19 @@ function M.git.log(opts)
   require("deck").start(source)
 end
 
+--- Deck picker for jump list
+---@param opts table
+function M.jump_list(opts)
+  opts = opts or {}
+  local source, specifier = sources.jump_list(opts)
+  local ctx = require("deck").start(source, specifier)
+  local i = 1
+  for j in ctx.iter_items() do
+    if j.data.current then
+      ctx.set_cursor(i)
+    end
+    i = i + 1
+  end
+end
+
 return M
