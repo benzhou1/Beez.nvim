@@ -433,6 +433,11 @@ function M.show(opts)
   end
 end
 
+--- Refresh buffer list
+function M.refresh(opts)
+  M.bl:refresh(opts)
+end
+
 --- Update the buffer list
 ---@param opts? {first_char?: string, set_cursor?: integer}
 function M.update(opts)
