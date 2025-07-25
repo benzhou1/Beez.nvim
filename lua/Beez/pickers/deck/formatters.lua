@@ -26,15 +26,15 @@ M.filename_first = {
       if item.data.lnum then
         item.display_text = {
           { basename, "SnacksPickerFile" },
-          { ":" },
+          { ":", "String" },
           { tostring(item.data.lnum), "Comment" },
-          { " " },
+          { " ", "String" },
           { dirname, "SnacksPickerDir" },
         }
       else
         item.display_text = {
           { basename, "SnacksPickerFile" },
-          { " " },
+          { " ", "String" },
           { dirname, "Comment" },
         }
       end
@@ -54,9 +54,9 @@ M.grep = {
     local match = text:match(":%d+:%d+:(.*)$")
     item.display_text = {
       { filename, "Comment" },
-      { " " },
+      { " ", "String" },
       { "(" .. lnum .. ":" .. col .. "): ", "Comment" },
-      { " " },
+      { " ", "String" },
     }
     local start_idx, end_idx = string.find(string.lower(match), string.lower(item.data.query))
     if start_idx ~= nil then
@@ -64,14 +64,14 @@ M.grep = {
       local query_match = string.sub(match, start_idx, end_idx)
       local after_match = string.sub(match, end_idx + 1)
       ---@diagnostic disable-next-line: param-type-mismatch
-      table.insert(item.display_text, { before_match, "Normal" })
+      table.insert(item.display_text, { before_match, "String" })
       ---@diagnostic disable-next-line: param-type-mismatch
       table.insert(item.display_text, { query_match, "Search" })
       ---@diagnostic disable-next-line: param-type-mismatch
-      table.insert(item.display_text, { after_match, "Normal" })
+      table.insert(item.display_text, { after_match, "String" })
     else
       ---@diagnostic disable-next-line: param-type-mismatch
-      table.insert(item.display_text, { match, "Normal" })
+      table.insert(item.display_text, { match, "String" })
     end
     item.data.filename = Path:new(root_dir):joinpath(filename).filename
     item.data.lnum = lnum
@@ -167,19 +167,19 @@ M.ctags = {
       item.display_text = {}
       if workspace then
         table.insert(item.display_text, { parsed.parentname .. "/" .. parsed.basename, "Comment" })
-        table.insert(item.display_text, { " " })
+        table.insert(item.display_text, { " ", "String" })
       end
 
       if parsed.symbol_center ~= nil then
-        table.insert(item.display_text, { parsed.symbol_before, "Normal" })
+        table.insert(item.display_text, { parsed.symbol_before, "String" })
         table.insert(item.display_text, { parsed.symbol_center, "Search" })
-        table.insert(item.display_text, { parsed.symbol_after, "Normal" })
+        table.insert(item.display_text, { parsed.symbol_after, "String" })
       else
-        table.insert(item.display_text, { parsed.symbol, "Normal" })
+        table.insert(item.display_text, { parsed.symbol, "String" })
       end
-      table.insert(item.display_text, { " " })
+      table.insert(item.display_text, { " ", "String" })
 
-      local hl = "Normal"
+      local hl = "String"
       if not workspace then
         hl = "Comment"
       end

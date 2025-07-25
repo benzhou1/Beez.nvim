@@ -26,8 +26,8 @@ function M.global_marks(opts)
       for i, m in ipairs(gmarks) do
         local item = {
           display_text = {
-            { m.desc, "Normal" },
-            { " " },
+            { m.desc, "String" },
+            { " ", "String" },
           },
           data = {
             filename = m.file,
@@ -91,11 +91,11 @@ function M.marks(opts)
       for _, m in ipairs(marks) do
         local line = u.os.read_line_at(m.file, m.lineno)
         local display_text = {
-          { u.paths.basename(m.file), "Normal" },
-          { " " },
+          { u.paths.basename(m.file), "String" },
+          { " ", "String" },
           { tostring(m.lineno), "Search" },
-          { ":" .. m.col, "Normal" },
-          { " " },
+          { ":" .. m.col, "String" },
+          { " ", "String" },
           { line, "Comment" },
         }
         local item = {

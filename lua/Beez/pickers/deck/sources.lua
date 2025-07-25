@@ -188,7 +188,7 @@ function M.buffers(opts)
     },
   })
 
-  local specifier = utils.resolve_specifier(opts, { start_prompt = false })
+  local specifier = utils.resolve_specifier(opts, { start_prompt = true })
   return buf_source, specifier
 end
 
@@ -360,11 +360,11 @@ function M.grep_buffer(opts)
           local before_match = string.sub(match, 1, start_idx - 1)
           local query_match = string.sub(match, start_idx, end_idx)
           local after_match = string.sub(match, end_idx + 1)
-          table.insert(item.display_text, { before_match, "Normal" })
+          table.insert(item.display_text, { before_match, "String" })
           table.insert(item.display_text, { query_match, "Search" })
-          table.insert(item.display_text, { after_match, "Normal" })
+          table.insert(item.display_text, { after_match, "String" })
         else
-          table.insert(item.display_text, { match, "Normal" })
+          table.insert(item.display_text, { match, "String" })
         end
       end,
     }))
@@ -627,16 +627,16 @@ function M.jump_list(opts)
         local filename = u.paths.basename(filepath)
         local line = u.os.read_line_at(filepath, j.lnum)
         local current = i == curr_idx
-        local hl = "Normal"
+        local hl = "String"
         if current then
           hl = "Search"
         end
         local item = {
           display_text = {
             { filename, hl },
-            { ":", "Normal" },
-            { tostring(j.lnum), "Normal" },
-            { " " },
+            { ":", "String" },
+            { tostring(j.lnum), "String" },
+            { " ", "String" },
             { line, "Comment" },
           },
           data = {

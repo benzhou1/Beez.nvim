@@ -72,8 +72,8 @@ function M.notes(opts)
       table.insert(parts, { item.title, "SnacksPickerFile" })
       if ctx.finder.filter.search ~= "" then
         if item.title ~= item.gtext then
-          table.insert(parts, { " " })
-          table.insert(parts, { item.gtext, "Normal" })
+          table.insert(parts, { " ", "String" })
+          table.insert(parts, { item.gtext, "String" })
         end
       end
       return parts

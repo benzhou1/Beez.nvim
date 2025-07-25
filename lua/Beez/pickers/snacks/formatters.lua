@@ -45,10 +45,10 @@ function M.grep()
     local ret = {}
     Snacks.picker.highlight.format(item, line, ret)
     if spaces > 0 then
-      table.insert(ret, { " " })
-      table.insert(ret, { string.rep(" ", spaces) })
+      table.insert(ret, { " ", "String" })
+      table.insert(ret, { string.rep(" ", spaces), "String" })
     else
-      table.insert(ret, { "...  " })
+      table.insert(ret, { "...  ", "String" })
     end
     vim.list_extend(ret, filename_parts)
     return ret
@@ -79,12 +79,12 @@ function M.grep_notes()
     end
 
     local ret = {}
-    table.insert(ret, { gtext, "Normal" })
+    table.insert(ret, { gtext, "String" })
     if spaces > 0 then
-      table.insert(ret, { " " })
-      table.insert(ret, { string.rep(" ", spaces) })
+      table.insert(ret, { " ", "String" })
+      table.insert(ret, { string.rep(" ", spaces), "String" })
     else
-      table.insert(ret, { "...  " })
+      table.insert(ret, { "...  ", "String" })
     end
     if item.title ~= gtext then
       table.insert(ret, { item.title, "SnacksPickerFile" })

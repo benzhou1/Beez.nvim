@@ -53,7 +53,7 @@ function M.files(opts)
             item.data.filename = file_path
           end
           item.display_text = {
-            { string.sub(item.data.title, 2), "Normal" },
+            { string.sub(item.data.title, 2), "String" },
           }
           ctx.item(item)
         end,
@@ -173,11 +173,11 @@ function M.grep(opts)
           local before_match = string.sub(match, 1, start_idx - 1)
           local query_match = string.sub(match, start_idx, end_idx)
           local after_match = string.sub(match, end_idx + 1)
-          table.insert(item.display_text, { before_match, "Normal" })
+          table.insert(item.display_text, { before_match, "String" })
           table.insert(item.display_text, { query_match, "Search" })
-          table.insert(item.display_text, { after_match, "Normal" })
+          table.insert(item.display_text, { after_match, "String" })
         else
-          table.insert(item.display_text, { match, "Normal" })
+          table.insert(item.display_text, { match, "String" })
         end
         item.data.filename = file_path
         item.data.lnum = lnum
@@ -244,11 +244,11 @@ function M.backlinks(opts)
           local before_match = string.sub(match, 1, start_idx - 1)
           local query_match = string.sub(match, start_idx, end_idx)
           local after_match = string.sub(match, end_idx + 1)
-          table.insert(item.display_text, { before_match, "Normal" })
+          table.insert(item.display_text, { before_match, "String" })
           table.insert(item.display_text, { query_match, "Search" })
-          table.insert(item.display_text, { after_match, "Normal" })
+          table.insert(item.display_text, { after_match, "String" })
         else
-          table.insert(item.display_text, { match, "Normal" })
+          table.insert(item.display_text, { match, "String" })
         end
         item.data.filename = file_path
         item.data.lnum = lnum

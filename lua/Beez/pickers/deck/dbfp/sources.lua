@@ -213,8 +213,8 @@ function M.queries(opts)
         for _, q in ipairs(qf.queries) do
           local item = {
             display_text = {
-              q.comment,
-              " ",
+              { q.comment, "String" },
+              { " ", "String" },
               { qf.basename, "Comment" },
             },
             data = {
