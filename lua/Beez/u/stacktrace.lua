@@ -180,12 +180,19 @@ end
 function M.go_to_file()
   local line = vim.fn.getline(".")
   local path, lineno
-  path, lineno = match_lua_path(line)
-  if path == nil or lineno == nil then
-    path, lineno = match_python_path(line)
-  end
-  if path == nil or lineno == nil then
-    path, lineno = match_path(line)
+  local i = 1
+  while lineno == nil and i < 3 do
+    path, lineno = match_lua_path(line)
+    if path == nil or lineno == nil then
+      path, lineno = match_python_path(line)
+    end
+    if path == nil or lineno == nil then
+      path, lineno = match_path(line)
+    end
+    if lineno ~= nil then
+      break
+    end
+    line = line .. vim.fn.getline(vim.fn.line(".") + 1)
   end
 
   if path ~= nil then
@@ -198,7 +205,7 @@ function M.go_to_file()
       end
     end)
   else
-    require("snacks.notify").notify("No path found on current line...", { level = "warn" })
+    vim.notify("No path found on current line...", vim.log.levels.WARN)
   end
 end
 
