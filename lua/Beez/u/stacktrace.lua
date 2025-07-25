@@ -193,6 +193,7 @@ function M.go_to_file()
       break
     end
     line = line .. vim.fn.getline(vim.fn.line(".") + 1)
+    i = i + 1
   end
 
   if path ~= nil then
