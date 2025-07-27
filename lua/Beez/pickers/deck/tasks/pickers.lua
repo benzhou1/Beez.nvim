@@ -23,7 +23,7 @@ function M.show(opts)
 
       local idx = 1
       ---@diagnostic disable-next-line: redefined-local
-      for _, t in ipairs(t.children) do
+      for _, t in ipairs(t:list_children()) do
         if tasks.should_show_task(t, { show_done = actions.toggles.show_done }) then
           local display_text = t:line({ show_fields = false, show_hyphen = false })
           display_text = display_text:trim()

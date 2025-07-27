@@ -32,7 +32,7 @@ M.task_states = {
     sort = 2,
     desc = "todo",
     key = "<space>",
-    defualt = true,
+    default = true,
   },
   ["/"] = {
     recurse_children = false,
@@ -304,9 +304,34 @@ function M.Task:line(opts)
   return line
 end
 
+--- Retuurns list of children sorted by priority
+---@return Beez.flotes.task[]
+function M.Task:list_children()
+  local children = {}
+  for _, c in ipairs(self.children) do
+    if c.type == "task" then
+      table.insert(children, c)
+    end
+  end
+  table.sort(children, function(a, b)
+    local a_priority = self.opts.priorities[a.fields.priority]
+    local b_priority = self.opts.priorities[b.fields.priority]
+    if a_priority and b_priority then
+      if a_priority.sort == b_priority.sort then
+        return a.text < b.text
+      end
+      return a_priority.sort > b_priority.sort
+    end
+
+    return a.text > b.text
+  end)
+  return children
+end
+
 --- Return iterator for all children recursively
 ---@return function
-function M.Task:iter_children()
+function M.Task:iter_children(opts)
+  opts = opts or {}
   local children = {}
   local idx = 0
   for _, c in ipairs(self.children) do
