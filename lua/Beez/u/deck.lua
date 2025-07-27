@@ -20,8 +20,8 @@ function M.edit_list(ctx, opts)
   local items = {}
   local curr_item = ctx:get_cursor_item()
   local i = 1
-  for c in ctx.iter_items() do
-    items[i] = c
+  for c in ctx.iter_rendered_items() do
+    items[c.data.i] = c
     i = i + 1
   end
 
