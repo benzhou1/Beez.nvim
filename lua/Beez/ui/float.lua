@@ -317,15 +317,21 @@ function M.Float:unfocus()
   vim.api.nvim_set_current_win(self.prev_win_id)
 end
 
+--- Checks whether the flotes windiow is focused
+---@return boolean
+function M.Float:is_focused()
+  local current_win_id = vim.api.nvim_get_current_win()
+  local float_is_focused = current_win_id == self.win_id
+  return float_is_focused
+end
+
 --- Toggle focus on float
 function M.Float:toggle_focus()
   if not self:_check_win_valid() then
     return self:show()
   end
 
-  local current_win_id = vim.api.nvim_get_current_win()
-  local float_is_focused = current_win_id == self.win_id
-  if float_is_focused then
+  if self:is_focused() then
     self:unfocus()
   else
     self:focus()

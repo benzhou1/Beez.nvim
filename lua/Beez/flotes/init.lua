@@ -114,8 +114,8 @@ end
 --- Toggles the focus between floating window
 function M.toggle_focus()
   if M.states.float ~= nil then
-    if M.states.float:is_showing() then
-      M.states.float:toggle_focus()
+    if M.states.float:is_showing() and M.states.float:is_focused() then
+      M.states.float:toggle_hidden()
     else
       M.show()
     end
