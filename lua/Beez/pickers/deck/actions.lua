@@ -4,7 +4,11 @@ local M = {}
 --- Toggle cwd
 M.toggle_cwd = {
   name = "toggle_cwd",
+  resolve = function(ctx)
+    return true
+  end,
   execute = function(ctx)
+    print("here")
     local config = ctx.get_config()
     if config.toggles.cwd == nil then
       config.toggles.cwd = true
