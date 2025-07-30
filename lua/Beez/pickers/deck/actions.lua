@@ -8,7 +8,6 @@ M.toggle_cwd = {
     return true
   end,
   execute = function(ctx)
-    print("here")
     local config = ctx.get_config()
     if config.toggles.cwd == nil then
       config.toggles.cwd = true

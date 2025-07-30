@@ -74,6 +74,9 @@ function M.resolve_source(opts, ...)
   if opts.buf_flags then
     table.insert(source.decorators, decorators.buf_flags)
   end
+  if opts.buf_recent then
+    table.insert(source.decorators, decorators.buf_recent)
+  end
   source = vim.tbl_deep_extend("force", opts.source_opts, source, ...)
   return source
 end

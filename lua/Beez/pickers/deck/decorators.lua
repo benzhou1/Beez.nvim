@@ -41,7 +41,7 @@ M.buf_flags = {
             table.insert(dec, {
               col = 0,
               virt_text = { { "📌 " } },
-              epheremal = true,
+              ephemeral = true,
               virt_text_pos = "inline",
             })
             break
@@ -49,6 +49,32 @@ M.buf_flags = {
         end
       end
     end
+    return dec
+  end,
+}
+
+M.buf_recent = {
+  name = "buf_recent",
+  resolve = function(_, item)
+    return item.data.filename and item.data.i and item.data.i < 5
+  end,
+  decorate = function(_, item)
+    local i = item.data.i
+    local sign_text = " "
+    if i == 2 then
+      sign_text = ";"
+    elseif i == 3 then
+      sign_text = "/"
+    elseif i == 4 then
+      sign_text = ","
+    end
+    local dec = {
+      {
+        col = 0,
+        sign_text = sign_text,
+        sign_hl_group = "Comment",
+      },
+    }
     return dec
   end,
 }

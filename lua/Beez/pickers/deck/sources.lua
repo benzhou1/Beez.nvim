@@ -69,7 +69,7 @@ end
 ---@param opts table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.buffers(opts)
-  opts = utils.resolve_opts(opts, { buf_flags = true })
+  opts = utils.resolve_opts(opts, { buf_flags = true, buf_recent = true })
   local buf_source = utils.resolve_source(opts, {
     name = "buffers",
 
@@ -133,7 +133,8 @@ function M.buffers(opts)
         return a_score > b_score
       end)
 
-      for _, item in ipairs(items_list) do
+      for i, item in ipairs(items_list) do
+        item.data.i = i
         ctx.item(item)
       end
       ctx.done()
