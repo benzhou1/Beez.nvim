@@ -1,22 +1,32 @@
-local M = {}
+local M = {
+  toggles = { done_task = false },
+}
 
 --- Open note in flotes window
-M.open_note = {
-  name = "open_note",
-  execute = function(ctx)
-    local f = require("Beez.flotes")
-    local item = ctx.get_action_items()[1]
-    ctx:hide()
-    vim.schedule(function()
-      f.show({ note_path = item.data.filename })
-      vim.schedule(function()
-        if item.data.lnum then
-          vim.fn.cursor(item.data.lnum, item.data.col)
-        end
-      end)
-    end)
-  end,
-}
+---@param opts? table
+---@return deck.Action[]
+function M.open_note(opts)
+  opts = opts or {}
+  return {
+    require("deck").alias_action("default", "open_note"),
+    {
+      name = "open_note",
+      execute = function(ctx)
+        local item = ctx.get_action_items()[1]
+        local f = require("Beez.flotes")
+        ctx:hide()
+        vim.schedule(function()
+          f.show({ note_path = item.data.filename })
+          vim.schedule(function()
+            if item.data.lnum then
+              vim.fn.cursor(item.data.lnum, item.data.col)
+            end
+          end)
+        end)
+      end,
+    },
+  }
+end
 
 --- Create a new note with title
 M.new_note = {
@@ -57,5 +67,27 @@ M.new_note_from_template = {
     end)
   end,
 }
+
+--- Deck action to toggle showing done tasks or not
+---@param opts? table
+---@return deck.Action[]
+function M.toggle_done_task(opts)
+  opts = opts or {}
+  return {
+    require("deck").alias_action("toggle1", "toggle_done_task"),
+    {
+      name = "toggle_done_task",
+      execute = function(ctx)
+        M.toggles.done_task = not M.toggles.done_task
+        if M.toggles.done_task then
+          vim.notify("Showing done tasks...", vim.log.levels.INFO)
+        else
+          vim.notify("Showing only open tasks...", vim.log.levels.INFO)
+        end
+        ctx.execute()
+      end,
+    },
+  }
+end
 
 return M

@@ -2,26 +2,42 @@ local u = require("Beez.u")
 local M = {}
 
 --- Toggle cwd
-M.toggle_cwd = {
-  name = "toggle_cwd",
-  resolve = function(ctx)
-    return true
-  end,
-  execute = function(ctx)
-    local config = ctx.get_config()
-    if config.toggles.cwd == nil then
-      config.toggles.cwd = true
-    else
-      config.toggles.cwd = not config.toggles.cwd
-    end
-    ctx.execute()
-  end,
-}
+function M.toggle_cwd(opts)
+  opts = opts or {}
+  return {
+    require("deck").alias_action("toggle1", "toggle_cwd"),
+    {
+      name = "toggle_cwd",
+      resolve = function(ctx)
+        return true
+      end,
+      execute = function(ctx)
+        local config = ctx.get_config()
+        if config.toggles.cwd == nil then
+          config.toggles.cwd = true
+        else
+          config.toggles.cwd = not config.toggles.cwd
+        end
+        if config.toggles.cwd then
+          vim.notify(
+            "Searching under current working directory...",
+            vim.log.levels.INFO,
+            { title = "Deck" }
+          )
+        else
+          vim.notify("Searching under current file's root...", vim.log.levels.INFO, { title = "Deck" })
+        end
+        ctx.execute()
+      end,
+    },
+  }
+end
 
 --- Remove dir from recent dirs
 M.remove_recent = {
   name = "remove_recent",
   resolve = function(ctx)
+    print("here3")
     local symbols = require("deck.symbols")
     for _, item in ipairs(ctx.get_action_items()) do
       if item[symbols.source].name == "recent_files" then
@@ -31,6 +47,7 @@ M.remove_recent = {
     return false
   end,
   execute = function(ctx)
+    print("here4")
     local symbols = require("deck.symbols")
     for _, item in ipairs(ctx.get_action_items()) do
       if item[symbols.source].name == "recent_files" then

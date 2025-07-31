@@ -42,4 +42,12 @@ function M.backlinks(opts)
   require("deck").start(source, specifier)
 end
 
+--- Deck picker for findling tasks
+---@param opts? table
+function M.tasks(opts)
+  opts = opts or {}
+  local source, specifier = sources.tasks(opts)
+  require("deck").start(source, specifier)
+end
+
 return M

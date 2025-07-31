@@ -1,4 +1,5 @@
 local actions = require("Beez.pickers.deck.flotes.actions")
+local u = require("Beez.u")
 local utils = require("Beez.pickers.deck.utils")
 local M = {}
 
@@ -6,7 +7,6 @@ local M = {}
 ---@param opts? table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.files(opts)
-  local u = require("Beez.u")
   opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
   local source = utils.resolve_source(opts, {
     name = "find_notes",
@@ -67,14 +67,12 @@ function M.files(opts)
         end,
       }))
     end,
-    actions = {
-      require("deck").alias_action("default", "open_note"),
+    actions = u.tables.extend({
       require("deck").alias_action("alt_default", "new_note"),
       require("deck").alias_action("delete", "delete_note"),
-      actions.open_note,
       actions.new_note,
       actions.delete_note,
-    },
+    }, actions.open_note()),
   })
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
@@ -130,7 +128,6 @@ end
 ---@param opts? table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.grep(opts)
-  local u = require("Beez.u")
   local flotes_dir = require("Beez.flotes").config.notes_dir
   opts.cwd = flotes_dir
   opts = utils.resolve_opts(opts or {}, { is_grep = false, filename_first = false })
@@ -185,10 +182,7 @@ function M.grep(opts)
       end,
     }))
   )
-  source.actions = {
-    require("deck").alias_action("default", "open_note"),
-    actions.open_note,
-  }
+  source.actions = u.tables.extend({}, actions.open_note())
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
 end
@@ -197,7 +191,6 @@ end
 ---@param opts? table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.backlinks(opts)
-  local u = require("Beez.u")
   local flotes_dir = require("Beez.flotes").config.notes_dir
   local filepath = vim.api.nvim_buf_get_name(0)
   local filename = u.paths.basename(filepath)
@@ -256,10 +249,93 @@ function M.backlinks(opts)
       end,
     }))
   )
-  source.actions = {
-    require("deck").alias_action("default", "open_note"),
-    actions.open_note,
-  }
+  source.actions = u.tables.extend({}, actions.open_note())
+  local specifier = utils.resolve_specifier(opts)
+  return source, specifier
+end
+
+--- Deck source for flotes tasks
+---@param opts table
+---@return deck.Source, deck.StartConfigSpecifier
+function M.tasks(opts)
+  opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
+
+  local source = utils.resolve_source(opts, {
+    name = "find_tasks",
+    execute = function(ctx)
+      local f = require("Beez.flotes")
+      local IO = require("deck.kit.IO")
+      local System = require("deck.kit.System")
+      local query = ctx.get_query()
+      local root_dir = f.config.notes_dir
+      assert(root_dir ~= nil, "Flotes root directory is not set")
+      local task_states = " /"
+      if actions.toggles.done_task then
+        task_states = " /x"
+      end
+
+      local cmd = {
+        "rg",
+        "--column",
+        "--line-number",
+        "--ignore-case",
+        "--sortr",
+        "modified",
+        "-e",
+        ("- \\[[%s]?\\]"):format(task_states),
+      }
+      local items = {}
+      local done_items = {}
+
+      ctx.on_abort(System.spawn(cmd, {
+        cwd = root_dir,
+        env = {},
+        buffering = System.LineBuffering.new({
+          ignore_empty = true,
+        }),
+        on_stdout = function(text)
+          local item = { data = { query = query } }
+          local filename = text:match("^[^:]+")
+          local lnum = tonumber(text:match(":(%d+):"))
+          local col = tonumber(text:match(":%d+:(%d+):"))
+          local task = text:match(":%d+:%d+:(.*)$")
+          local task_state = task:match("^%s*-%s%[(%s?x?/?)%]")
+          if filename and task then
+            item = {
+              display_text = {
+                { task, "String" },
+              },
+              data = {
+                filename = IO.join(root_dir, filename),
+                lnum = lnum,
+                col = col,
+              },
+            }
+          end
+          if item.display_text ~= nil then
+            if task_state == "/" then
+              ctx.item(item)
+            elseif task_state == "x" then
+              table.insert(done_items, item)
+            else
+              table.insert(items, item)
+            end
+          end
+        end,
+        on_exit = function()
+          for _, item in ipairs(items) do
+            ctx.item(item)
+          end
+          for _, item in ipairs(done_items) do
+            ctx.item(item)
+          end
+          ctx.done()
+        end,
+      }))
+    end,
+    actions = u.tables.extend({}, actions.open_note(), actions.toggle_done_task()),
+  })
+
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
 end

@@ -275,9 +275,7 @@ function M.files(opts)
   opts = utils.resolve_opts(opts)
   local source = require("deck.builtin.source.files")(opts.source_opts)
   source = utils.resolve_source(opts, source)
-  table.insert(source.actions, require("deck").alias_action("toggle1", "toggle_cwd"))
-  table.insert(source.actions, actions.toggle_cwd)
-  table.insert(source.actions, require("deck").alias_action("delete", "delete_file"))
+  source.actions = u.tables.extend(source.actions, actions.toggle_cwd())
 
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
@@ -300,7 +298,9 @@ end
 function M.files_smart(opts)
   opts = vim.tbl_deep_extend("keep", opts or {}, {})
   local buf_source, _ = M.buffers(opts)
+  buf_source.actions = u.tables.extend(buf_source.actions, actions.toggle_cwd())
   local recent_source, _ = M.files_recent(opts)
+  recent_source.actions = u.tables.extend(recent_source.actions, actions.toggle_cwd())
   local files_source, specifier = M.files(opts)
   local sources = { buf_source, recent_source, files_source }
   return sources, specifier
@@ -312,8 +312,7 @@ end
 function M.grep(opts)
   opts = utils.resolve_opts(opts, { is_grep = true, filename_first = false })
   local source = utils.resolve_source(opts, require("deck.builtin.source.grep")(opts.source_opts))
-  table.insert(source.actions, require("deck").alias_action("toggle1", "toggle_cwd"))
-  table.insert(source.actions, actions.toggle_cwd)
+  source.actions = u.tables.extend(source.actions, actions.toggle_cwd())
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
 end
@@ -499,14 +498,13 @@ function M.dirs(opts)
     require("deck").alias_action("default", opts.default_action or "open_oil")
   )
   table.insert(source.actions, require("deck").alias_action("open_keep", "open_oil_keep"))
-  table.insert(source.actions, require("deck").alias_action("toggle1", "toggle_cwd"))
-  table.insert(source.actions, actions.toggle_cwd)
   table.insert(source.actions, actions.open_oil({ keep_open = false }))
   table.insert(source.actions, actions.open_oil({ keep_open = true }))
   table.insert(source.actions, require("deck").alias_action("prev_default", "open_oil_parent"))
   table.insert(source.actions, actions.open_oil({ parent = true }))
   table.insert(source.actions, actions.open_external({ quit = opts.open_external.quit }))
   table.insert(source.actions, actions.open_external({ parent = true, quit = opts.open_external.quit }))
+  source.actions = u.tables.extend(source.actions, actions.toggle_cwd())
 
   local specifier = utils.resolve_specifier(opts)
   return source, specifier

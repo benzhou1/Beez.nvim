@@ -28,7 +28,6 @@ function source:get_completions(ctx, callback)
     return function() end
   end
   local f = require("Beez.flotes")
-  print("ctx = ", vim.inspect(ctx))
   -- ctx (context) contains the current keyword, cursor position, bufnr, etc.
 
   -- You should never filter items based on the keyword, since blink.cmp will

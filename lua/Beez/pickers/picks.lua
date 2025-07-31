@@ -637,7 +637,7 @@ function M.show_tasks()
     },
     deck = {
       run = function(opts)
-        deck_pickers.tasks.show(opts)
+        deck_pickers.flotes.tasks(opts)
       end,
     },
   }
