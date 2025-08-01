@@ -1,5 +1,4 @@
 local actions = require("Beez.pickers.deck.tasks.actions")
-local sources = require("Beez.pickers.deck.tasks.sources")
 local u = require("Beez.u")
 local resolve_opts = require("Beez.pickers.deck.utils").resolve_opts
 local resolve_source = require("Beez.pickers.deck.utils").resolve_source

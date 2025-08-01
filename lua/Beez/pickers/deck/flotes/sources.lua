@@ -269,11 +269,7 @@ function M.tasks(opts)
       local query = ctx.get_query()
       local root_dir = f.config.notes_dir
       assert(root_dir ~= nil, "Flotes root directory is not set")
-      local task_states = " /"
-      if actions.toggles.done_task then
-        task_states = " /x"
-      end
-
+      local task_states = " /x"
       local cmd = {
         "rg",
         "--column",
@@ -284,9 +280,8 @@ function M.tasks(opts)
         "-e",
         ("- \\[[%s]?\\]"):format(task_states),
       }
-      local items = {}
-      local done_items = {}
 
+      local tasks = {}
       ctx.on_abort(System.spawn(cmd, {
         cwd = root_dir,
         env = {},
@@ -294,40 +289,108 @@ function M.tasks(opts)
           ignore_empty = true,
         }),
         on_stdout = function(text)
-          local item = { data = { query = query } }
           local filename = text:match("^[^:]+")
           local lnum = tonumber(text:match(":(%d+):"))
           local col = tonumber(text:match(":%d+:(%d+):"))
           local task = text:match(":%d+:%d+:(.*)$")
           local task_state = task:match("^%s*-%s%[(%s?x?/?)%]")
-          if filename and task then
-            item = {
-              display_text = {
-                { task, "String" },
-              },
-              data = {
-                filename = IO.join(root_dir, filename),
-                lnum = lnum,
-                col = col,
-              },
-            }
+
+          if filename == nil or task == nil then
+            return
           end
-          if item.display_text ~= nil then
-            if task_state == "/" then
-              ctx.item(item)
-            elseif task_state == "x" then
-              table.insert(done_items, item)
-            else
-              table.insert(items, item)
+
+          local tasks_for_file = tasks[filename]
+          local curr_task = {
+            state = task_state,
+            text = task,
+            col = col,
+            data = {
+              query = query,
+              filename = IO.join(root_dir, filename),
+              lnum = lnum,
+              col = col,
+            },
+          }
+          if tasks_for_file == nil then
+            tasks_for_file = { [lnum] = curr_task }
+            tasks[filename] = tasks_for_file
+          else
+            tasks_for_file[lnum] = curr_task
+          end
+
+          -- Found a child task
+          if col > 1 then
+            local curr_lnum = lnum
+            -- Search for parent task, by checking for previous line
+            while true do
+              local parent = tasks_for_file[curr_lnum - 1]
+              curr_lnum = curr_lnum - 1
+              -- Found potential parent task
+              if parent ~= nil then
+                -- Found parent task based on column
+                if parent.col < col then
+                  parent.children = parent.children or {}
+                  table.insert(parent.children, curr_task)
+                  break
+                end
+                -- Previous line is not a parent task so just assume this child task is under a non task parent
+              else
+                break
+              end
             end
           end
         end,
         on_exit = function()
-          for _, item in ipairs(items) do
+          local keys = {}
+          local function display_task(task)
+            local item = {
+              display_text = {
+                { task.text, "String" },
+              },
+              data = task.data,
+            }
+            -- Avoid showing item multiple times
+            local key = item.data.filename .. ":" .. item.data.lnum .. ":" .. item.data.col
+            if keys[key] then
+              return
+            end
+
             ctx.item(item)
+            keys[key] = true
+
+            -- Display children tasks if any
+            if task.children ~= nil then
+              for _, child in ipairs(task.children) do
+                display_task(child)
+              end
+            end
           end
-          for _, item in ipairs(done_items) do
-            ctx.item(item)
+
+          -- Display inprogress tasks first
+          for _, tasks_for_file in pairs(tasks) do
+            for _, task in pairs(tasks_for_file) do
+              if task.state == "/" then
+                display_task(task)
+              end
+            end
+          end
+          -- Display open tasks next
+          for _, tasks_for_file in pairs(tasks) do
+            for _, task in pairs(tasks_for_file) do
+              if task.state == " " then
+                display_task(task)
+              end
+            end
+          end
+          -- Display done tasks last if toggled
+          if actions.toggles.done_task then
+            for _, tasks_for_file in pairs(tasks) do
+              for _, task in pairs(tasks_for_file) do
+                if task.state == "x" then
+                  display_task(task)
+                end
+              end
+            end
           end
           ctx.done()
         end,
