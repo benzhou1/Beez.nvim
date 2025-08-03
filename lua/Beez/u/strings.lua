@@ -63,7 +63,7 @@ function M.hash(str)
   return h
 end
 
---- Generates randome string
+--- Generates random string
 ---@param seed number?
 ---@return string
 function M.uuid(seed)
@@ -76,7 +76,7 @@ function M.uuid(seed)
   end)
 end
 
---- Escapes a string for patern matching
+--- Escapes a string for pattern matching
 ---@param text string
 ---@return string
 function M.escape_pattern(text)

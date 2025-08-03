@@ -264,6 +264,7 @@ function M.tasks(opts)
     name = "find_tasks",
     execute = function(ctx)
       local f = require("Beez.flotes")
+      local cmp = require("plugins.checkmate")
       local IO = require("deck.kit.IO")
       local System = require("deck.kit.System")
       local query = ctx.get_query()
@@ -292,8 +293,8 @@ function M.tasks(opts)
           local filename = text:match("^[^:]+")
           local lnum = tonumber(text:match(":(%d+):"))
           local col = tonumber(text:match(":%d+:(%d+):"))
-          local task = text:match(":%d+:%d+:(.*)$")
-          local task_state = task:match("^%s*-%s%[(%s?x?/?)%]")
+          local task_text = text:match(":%d+:%d+:(.*)$")
+          local task_state, task = task_text:match("^%s*-%s%[(%s?x?/?)%]%s(.*)$")
 
           if filename == nil or task == nil then
             return
@@ -301,14 +302,17 @@ function M.tasks(opts)
 
           local tasks_for_file = tasks[filename]
           local curr_task = {
-            state = task_state,
-            text = task,
             col = col,
+            state = task_state,
+            text = task_text,
             data = {
               query = query,
               filename = IO.join(root_dir, filename),
               lnum = lnum,
               col = col,
+              state = task_state,
+              task = task,
+              text = task_text,
             },
           }
           if tasks_for_file == nil then
@@ -343,12 +347,31 @@ function M.tasks(opts)
         on_exit = function()
           local keys = {}
           local function display_task(task)
+            local marker = cmp.md_to_marker(task.state)
+            local marker_hl = "CheckmateUncheckedMarker"
+            if task.state == "x" then
+              marker_hl = "CheckmateCheckedMarker"
+            elseif task.state == "/" then
+              marker_hl = "CheckmateInprogressMarker"
+            end
+
+            local task_hl = "String"
+            if task.state == "x" then
+              task_hl = "CheckmateCheckedMainContent"
+            end
+
             local item = {
               display_text = {
-                { task.text, "String" },
+                { string.rep(" ", task.col), "String" },
+                { "-", "Comment" },
+                { " ", "String" },
+                { marker, marker_hl },
+                { " ", "String" },
+                { task.data.task, task_hl },
               },
               data = task.data,
             }
+
             -- Avoid showing item multiple times
             local key = item.data.filename .. ":" .. item.data.lnum .. ":" .. item.data.col
             if keys[key] then
@@ -360,8 +383,21 @@ function M.tasks(opts)
 
             -- Display children tasks if any
             if task.children ~= nil then
+              -- Same thing display in progress first, then open, then done
               for _, child in ipairs(task.children) do
-                display_task(child)
+                if child.state == "/" then
+                  display_task(child)
+                end
+              end
+              for _, child in ipairs(task.children) do
+                if child.state == " " then
+                  display_task(child)
+                end
+              end
+              for _, child in ipairs(task.children) do
+                if child.state == "x" then
+                  display_task(child)
+                end
               end
             end
           end
@@ -396,7 +432,28 @@ function M.tasks(opts)
         end,
       }))
     end,
-    actions = u.tables.extend({}, actions.open_note(), actions.toggle_done_task()),
+    actions = u.tables.extend(
+      {},
+      actions.open_note(),
+      actions.toggle_done_task(),
+
+      u.deck.edit_actions({
+        prefix = "edit_tasks",
+        edit_line = actions.edit_tasks,
+        edit_line_end = {
+          ---@diagnostic disable-next-line: missing-fields
+          edit_opts = {
+            get_pos = function(item, pos)
+              local offset = u.utf8.len(item.data.text)
+              return { pos[1], offset }
+            end,
+            get_feedkey = function(feedkey)
+              return "i"
+            end,
+          },
+        },
+      })
+    ),
   })
 
   local specifier = utils.resolve_specifier(opts)

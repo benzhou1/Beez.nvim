@@ -8,12 +8,18 @@ local M = {}
 ---@field filename? string
 ---@field get_pos? fun(item: deck.Item, pos: number[]): number[]
 ---@field get_feedkey? fun(feedkey?: string): string
+---@field col_pos_offset? integer
 
 --- Generic function to edit a list of items in a scratch buffer
 ---@param ctx deck.Context
 ---@param opts Beez.u.deck.edit_list_opts
 function M.edit_list(ctx, opts)
+  local u = require("Beez.u")
   local pos = vim.api.nvim_win_get_cursor(0)
+  if opts.col_pos_offset ~= nil then
+    pos[2] = pos[2] + opts.col_pos_offset
+  end
+
   local win = vim.api.nvim_get_current_win()
   -- Get lines for buffer from callback
   local lines
@@ -21,12 +27,21 @@ function M.edit_list(ctx, opts)
   local curr_item = ctx:get_cursor_item()
   local i = 1
   for c in ctx.iter_rendered_items() do
-    items[c.data.i] = c
+    c.data.i = i
+    table.insert(items, c)
     i = i + 1
   end
 
   if opts.get_lines ~= nil then
-    lines = opts.get_lines(items)
+    -- Use sorted list instead of table
+    local sorted_items = {}
+    for _, item in pairs(items) do
+      table.insert(sorted_items, item)
+    end
+    table.sort(sorted_items, function(a, b)
+      return a.data.i < b.data.i
+    end)
+    lines = opts.get_lines(sorted_items)
   else
     lines = {}
     for _, item in pairs(items) do
@@ -34,11 +49,16 @@ function M.edit_list(ctx, opts)
     end
   end
 
+  local filepath = u.paths.Path:new(opts.filename or "deck_scratch")
+  if filepath:exists() then
+    filepath:rm()
+  end
+
   -- Create scratch buffer
-  local buf = vim.api.nvim_create_buf(false, true)
+  local buf = vim.api.nvim_create_buf(true, true)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.api.nvim_buf_set_name(buf, opts.filename or "deck_scratch")
-  vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
+  vim.api.nvim_set_option_value("buftype", "", { buf = buf })
   vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
   vim.api.nvim_set_option_value("modified", false, { buf = buf })
   vim.api.nvim_set_option_value("filetype", opts.filetype or "", { buf = buf })
@@ -58,37 +78,34 @@ function M.edit_list(ctx, opts)
     vim.api.nvim_win_hide(0)
   end, { buffer = buf })
 
-  local autocmds = {}
   local saved = false
   -- Create autocmd for when buffer is saved
-  table.insert(
-    autocmds,
-    vim.api.nvim_create_autocmd("BufWriteCmd", {
-      pattern = ("<buffer=%s>"):format(buf),
-      callback = function()
-        -- No longer allow buffer to be modified until save finishes
-        vim.api.nvim_set_option_value("modified", false, { buf = buf })
+  vim.api.nvim_create_autocmd("BufWriteCmd", {
+    once = true,
+    pattern = ("<buffer=%s>"):format(buf),
+    callback = function()
+      -- No longer allow buffer to be modified until save finishes
+      vim.api.nvim_set_option_value("modified", false, { buf = buf })
 
-        -- Get the new lines from the buffer
-        local new_lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      -- Get the new lines from the buffer
+      local new_lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-        -- Pass new lines to the callback function
-        saved = opts.save(items, new_lines)
-        -- Hide the buffer after saving
-        vim.api.nvim_win_hide(0)
-        -- Show previous deck again
-        ctx.show()
-        ctx.execute()
-      end,
-    })
-  )
+      -- Pass new lines to the callback function
+      saved = opts.save(items, new_lines)
+      -- Hide the buffer after saving
+      vim.api.nvim_win_hide(0)
+      -- Show previous deck again
+      ctx.show()
+      ctx.execute()
+    end,
+  })
   -- Make sure to cleanup autocmds if buffer is deleted or closed
   vim.api.nvim_create_autocmd({ "BufDelete", "WinClosed" }, {
     once = true,
     pattern = ("<buffer=%s>"):format(buf),
     callback = function()
-      for _, autocmd in ipairs(autocmds) do
-        vim.api.nvim_del_autocmd(autocmd)
+      if filepath:exists() then
+        filepath:rm()
       end
       if not saved then
         vim.schedule(function()
@@ -123,6 +140,9 @@ function M.edit_list(ctx, opts)
 
   if opts.get_pos ~= nil then
     new_pos = opts.get_pos(curr_item, new_pos)
+    if opts.col_pos_offset ~= nil then
+      new_pos[2] = new_pos[2] + opts.col_pos_offset
+    end
   end
   vim.api.nvim_win_set_cursor(win, new_pos)
   if opts.get_feedkey ~= nil then
@@ -151,7 +171,7 @@ end
 ---@field insert_above? Beez.u.deck.edit_actions_opts.opts
 ---@field insert_below? Beez.u.deck.edit_actions_opts.opts
 
---- Convienence function for returning a set of deck actions for editing lines
+--- Convenience function for returning a set of deck actions for editing lines
 ---@param opts Beez.u.deck.edit_actions_opts
 ---@return deck.Action[]
 function M.edit_actions(opts)

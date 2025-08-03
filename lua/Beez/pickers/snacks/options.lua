@@ -6,7 +6,7 @@ function M.smart()
     finder = pickers.smart,
     format = "file",
     matcher = {
-      -- Dont sort when empty becaues we already sort it
+      -- Dont sort when empty because we already sort it
       sort_empty = false,
       -- I prefer exact match for file names
       -- fuzzy = false,

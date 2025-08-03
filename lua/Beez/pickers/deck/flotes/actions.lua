@@ -1,3 +1,4 @@
+local u = require("Beez.u")
 local M = {
   toggles = { done_task = false },
 }
@@ -87,6 +88,104 @@ function M.toggle_done_task(opts)
         ctx.execute()
       end,
     },
+  }
+end
+
+--- Deck action to edit tasks in a scratch buffer
+---@param opts table
+---@return deck.Action
+function M.edit_tasks(opts)
+  return {
+    name = opts.name,
+    ---@param ctx deck.Context
+    execute = function(ctx)
+      u.deck.edit_list(ctx, {
+        action = opts.action,
+        filetype = "markdown",
+        filename = "deck_scratch.md",
+        get_pos = opts.get_pos,
+        get_feedkey = opts.get_feedkey,
+        -- Because checkmate converts state into ascii which adds 2 to the column position
+        col_pos_offset = 2,
+        get_lines = function(items)
+          local lines = {}
+          for _, item in ipairs(items) do
+            local line = item.data.text .. " [id::" .. item.data.i .. "]"
+            table.insert(lines, line)
+          end
+          return lines
+        end,
+        save = function(items, lines)
+          local bufs = {}
+          local cmp = require("plugins.checkmate")
+          local f = require("Beez.flotes")
+          local function load_buf(filename)
+            local bufnr = bufs[filename]
+            if bufnr == nil then
+              -- Load the buffer by filename
+              bufnr = vim.fn.bufadd(filename)
+              vim.fn.bufload(bufnr)
+              bufs[filename] = bufnr
+            end
+            return bufnr
+          end
+          local function cleanup_bufs()
+            for filename, bufnr in pairs(bufs) do
+              -- Save the buffer before closing
+              vim.api.nvim_buf_call(bufnr, function()
+                vim.cmd("write")
+              end)
+              -- Close the buffer
+              if vim.api.nvim_buf_is_valid(bufnr) then
+                vim.api.nvim_buf_delete(bufnr, { force = true })
+              end
+            end
+          end
+
+          local new_tasks = {}
+          for _, l in ipairs(lines) do
+            local task, id = l:match("^(.-) %[id::(.-)%]$")
+            if id == nil then
+              if l ~= "" then
+                table.insert(new_tasks, l)
+              end
+            else
+              local state = l:match("%s*-%s%[(.*)%]%s")
+              task = cmp.marker_to_md_task(state, task)
+              id = tonumber(id)
+              local item = items[id]
+              if item ~= nil then
+                -- Basically a pop
+                items[id] = nil
+                -- Task has bee edited
+                if task ~= item.data.text then
+                  local bufnr = load_buf(item.data.filename)
+                  -- Replace the line in the file
+                  vim.api.nvim_buf_set_lines(bufnr, item.data.lnum - 1, item.data.lnum, false, { task })
+                end
+              end
+            end
+          end
+
+          -- Remaining items means some marks have been deleted
+          for _, item in pairs(items) do
+            local bufnr = load_buf(item.data.filename)
+            vim.api.nvim_buf_set_lines(bufnr, item.data.lnum - 1, item.data.lnum, false, {})
+          end
+
+          -- Add new tasks to today journal
+          for _, new_task in ipairs(new_tasks) do
+            print("new_task = ", vim.inspect(new_task))
+            local journal_path = f.journal({ desc = "today", create = true, show = false })
+            local bufnr = load_buf(journal_path)
+            local line_count = vim.api.nvim_buf_line_count(bufnr)
+            new_task = "- [ ] " .. new_task
+            vim.api.nvim_buf_set_lines(bufnr, line_count, line_count, false, { new_task })
+          end
+          cleanup_bufs()
+        end,
+      })
+    end,
   }
 end
 

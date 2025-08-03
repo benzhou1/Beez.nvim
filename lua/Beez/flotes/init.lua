@@ -183,9 +183,11 @@ end
 ---@field direction "next"|"prev"? Get previous or next journal relative to current note
 ---@class Beez.flotes.journalopts
 ---@field create boolean? Create a new journal note if it doesnt exist
+---@field show boolean? Show the journal note after creating or finding it
 
 --- Opens or creates a journal note
 ---@param opts Beez.flotes.journalopts | Beez.flotes.journalfindopts?
+---@return string
 function M.journal(opts)
   opts = opts or { desc = "today" }
   local find_opts = opts
@@ -196,14 +198,19 @@ function M.journal(opts)
 
   if not journal_path:exists() then
     if not opts.create then
-      return
+      return journal_path.filename
     end
     local title = "Journal: " .. utils.dates.to_human_friendly(journal_ts)
     notes.create({ name = journal_name, title = tostring(title), dir = c.config.journal_dir })
-    M.show({ note_path = journal_path.filename })
+    if opts.show ~= false then
+      M.show({ note_path = journal_path.filename })
+    end
   else
-    M.show({ note_path = journal_path.filename })
+    if opts.show ~= false then
+      M.show({ note_path = journal_path.filename })
+    end
   end
+  return journal_path.filename
 end
 
 ---@class Beez.flotes.newnotetemplateopts
