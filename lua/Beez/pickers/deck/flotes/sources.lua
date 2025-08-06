@@ -254,6 +254,119 @@ function M.backlinks(opts)
   return source, specifier
 end
 
+---@class Beez.pickers.deck.flotes.task
+---@field state string
+---@field task_text string
+---@field task_desc string
+---@field tags string[]
+
+--- Sort tasks based on their state and tags
+---@param a table
+---@param b table
+---@return boolean
+local function sort_tasks(a, b)
+  local state_scores = {
+    ["/"] = 10,
+    [" "] = 1,
+    ["x"] = -10,
+  }
+  local tag_scores = {
+    ["bug"] = 3,
+    ["p1"] = 3,
+    ["p2"] = 2,
+    ["p3"] = 1,
+  }
+  ---@type Beez.pickers.deck.flotes.task
+  local at = a.data.task
+  ---@type Beez.pickers.deck.flotes.task
+  local bt = b.data.task
+  local ascore = state_scores[at.state]
+  local bscore = state_scores[bt.state]
+  for _, tag in ipairs(at.tags) do
+    ascore = ascore + (tag_scores[tag] or 0)
+  end
+  for _, tag in ipairs(bt.tags) do
+    bscore = bscore + (tag_scores[tag] or 0)
+  end
+  return ascore > bscore
+end
+
+--- Parse line into a task object
+---@param line string
+---@return Beez.pickers.deck.flotes.task?
+local function parse_task_line(line)
+  local task_text = line:match(":%d+:%d+:(.*)$")
+  if task_text == nil then
+    return nil
+  end
+
+  local task_state, task_desc = task_text:match("^%s*-%s%[(%s?x?/?)%]%s(.*)$")
+  if task_state == nil or task_desc == nil then
+    return nil
+  end
+
+  local tags = {}
+  for tag in task_desc:gmatch("#(%w+)") do
+    table.insert(tags, tag)
+    task_desc = task_desc:gsub(" #" .. tag, "")
+  end
+
+  local task = {
+    state = task_state,
+    task_text = task_text,
+    task_desc = task_desc,
+    tags = tags,
+  }
+  return task
+end
+
+--- Display a task in deck
+---@param item table
+local function display_task(ctx, item, keys)
+  local cmp = require("plugins.checkmate")
+  local task_state = item.data.task.state
+  local marker = cmp.md_to_marker(task_state)
+
+  local task_hl = "String"
+  local marker_hl = "CheckmateUncheckedMarker"
+  if task_state == "x" then
+    marker_hl = "CheckmateCheckedMarker"
+    task_hl = "CheckmateCheckedMainContent"
+  elseif task_state == "/" then
+    marker_hl = "CheckmateInprogressMarker"
+  end
+
+  local deck_item = {
+    display_text = {
+      { string.rep(" ", item.data.col), "String" },
+      { "-", "Comment" },
+      { " ", "String" },
+      { marker, marker_hl },
+      { " ", "String" },
+      { item.data.task.task_desc, task_hl },
+    },
+    filter_text = item.data.task.task_text,
+    data = item.data,
+  }
+
+  -- Avoid showing item multiple times
+  local key = item.data.filename .. ":" .. item.data.lnum .. ":" .. item.data.col
+  if keys[key] then
+    return
+  end
+
+  ctx.item(deck_item)
+  keys[key] = true
+
+  -- Display children tasks if any
+  if item.children ~= nil then
+    table.sort(item.children, sort_tasks)
+    for _, child in ipairs(item.children) do
+      display_task(ctx, child, keys)
+    end
+  end
+end
+
 --- Deck source for flotes tasks
 ---@param opts table
 ---@return deck.Source, deck.StartConfigSpecifier
@@ -264,13 +377,16 @@ function M.tasks(opts)
     name = "find_tasks",
     execute = function(ctx)
       local f = require("Beez.flotes")
-      local cmp = require("plugins.checkmate")
       local IO = require("deck.kit.IO")
       local System = require("deck.kit.System")
       local query = ctx.get_query()
       local root_dir = f.config.notes_dir
       assert(root_dir ~= nil, "Flotes root directory is not set")
-      local task_states = " /x"
+
+      local task_states = " /"
+      if actions.toggles.done_task then
+        task_states = task_states .. "x"
+      end
       local cmd = {
         "rg",
         "--column",
@@ -282,7 +398,7 @@ function M.tasks(opts)
         ("- \\[[%s]?\\]"):format(task_states),
       }
 
-      local tasks = {}
+      local task_list = {}
       ctx.on_abort(System.spawn(cmd, {
         cwd = root_dir,
         env = {},
@@ -293,140 +409,50 @@ function M.tasks(opts)
           local filename = text:match("^[^:]+")
           local lnum = tonumber(text:match(":(%d+):"))
           local col = tonumber(text:match(":%d+:(%d+):"))
-          local task_text = text:match(":%d+:%d+:(.*)$")
-          local task_state, task = task_text:match("^%s*-%s%[(%s?x?/?)%]%s(.*)$")
-
-          if filename == nil or task == nil then
+          local t = parse_task_line(text)
+          if filename == nil or t == nil or lnum == nil then
             return
           end
 
-          local tasks_for_file = tasks[filename]
           local curr_task = {
-            col = col,
-            state = task_state,
-            text = task_text,
             data = {
               query = query,
               filename = IO.join(root_dir, filename),
               lnum = lnum,
               col = col,
-              state = task_state,
-              task = task,
-              text = task_text,
+              task = t,
             },
           }
-          if tasks_for_file == nil then
-            tasks_for_file = { [lnum] = curr_task }
-            tasks[filename] = tasks_for_file
-          else
-            tasks_for_file[lnum] = curr_task
-          end
+          table.insert(task_list, curr_task)
 
           -- Found a child task
           if col > 1 then
             local curr_lnum = lnum
-            -- Search for parent task, by checking for previous line
+            -- Assume parent task is the last task that has a column less than the current task
+            local i = #task_list
             while true do
-              local parent = tasks_for_file[curr_lnum - 1]
-              curr_lnum = curr_lnum - 1
-              -- Found potential parent task
-              if parent ~= nil then
-                -- Found parent task based on column
-                if parent.col < col then
+              if i == 0 then
+                break
+              end
+
+              local parent = task_list[i]
+              if parent.data.filename == curr_task.data.filename and parent.data.lnum < curr_lnum then
+                if parent.data.col < col then
+                  -- Found parent task based on column
                   parent.children = parent.children or {}
                   table.insert(parent.children, curr_task)
                   break
                 end
-                -- Previous line is not a parent task so just assume this child task is under a non task parent
-              else
-                break
               end
+              i = i - 1
             end
           end
         end,
         on_exit = function()
           local keys = {}
-          local function display_task(task)
-            local marker = cmp.md_to_marker(task.state)
-            local marker_hl = "CheckmateUncheckedMarker"
-            if task.state == "x" then
-              marker_hl = "CheckmateCheckedMarker"
-            elseif task.state == "/" then
-              marker_hl = "CheckmateInprogressMarker"
-            end
-
-            local task_hl = "String"
-            if task.state == "x" then
-              task_hl = "CheckmateCheckedMainContent"
-            end
-
-            local item = {
-              display_text = {
-                { string.rep(" ", task.col), "String" },
-                { "-", "Comment" },
-                { " ", "String" },
-                { marker, marker_hl },
-                { " ", "String" },
-                { task.data.task, task_hl },
-              },
-              data = task.data,
-            }
-
-            -- Avoid showing item multiple times
-            local key = item.data.filename .. ":" .. item.data.lnum .. ":" .. item.data.col
-            if keys[key] then
-              return
-            end
-
-            ctx.item(item)
-            keys[key] = true
-
-            -- Display children tasks if any
-            if task.children ~= nil then
-              -- Same thing display in progress first, then open, then done
-              for _, child in ipairs(task.children) do
-                if child.state == "/" then
-                  display_task(child)
-                end
-              end
-              for _, child in ipairs(task.children) do
-                if child.state == " " then
-                  display_task(child)
-                end
-              end
-              for _, child in ipairs(task.children) do
-                if child.state == "x" then
-                  display_task(child)
-                end
-              end
-            end
-          end
-
-          -- Display inprogress tasks first
-          for _, tasks_for_file in pairs(tasks) do
-            for _, task in pairs(tasks_for_file) do
-              if task.state == "/" then
-                display_task(task)
-              end
-            end
-          end
-          -- Display open tasks next
-          for _, tasks_for_file in pairs(tasks) do
-            for _, task in pairs(tasks_for_file) do
-              if task.state == " " then
-                display_task(task)
-              end
-            end
-          end
-          -- Display done tasks last if toggled
-          if actions.toggles.done_task then
-            for _, tasks_for_file in pairs(tasks) do
-              for _, task in pairs(tasks_for_file) do
-                if task.state == "x" then
-                  display_task(task)
-                end
-              end
-            end
+          table.sort(task_list, sort_tasks)
+          for _, item in ipairs(task_list) do
+            display_task(ctx, item, keys)
           end
           ctx.done()
         end,
@@ -454,6 +480,37 @@ function M.tasks(opts)
         },
       })
     ),
+    decorators = {
+      {
+        name = "decorate_tags",
+        resolve = function(_, item)
+          return #item.data.task.tags > 0
+        end,
+        decorate = function(_, item)
+          local virt_texts = {}
+          for _, tag in ipairs(item.data.task.tags) do
+            local hl = "Title"
+            if tag == "p1" or tag == "bug" then
+              hl = "DiagnosticError"
+            elseif tag == "p2" then
+              hl = "DiagnosticOk"
+            elseif tag == "p3" then
+              hl = "DiagnosticInfo"
+            end
+            table.insert(virt_texts, { (" #%s"):format(tag), hl })
+          end
+          local dec = {
+            {
+              col = 0,
+              virt_text = virt_texts,
+              virt_text_pos = "right_align",
+              hl_mode = "combine",
+            },
+          }
+          return dec
+        end,
+      },
+    },
   })
 
   local specifier = utils.resolve_specifier(opts)

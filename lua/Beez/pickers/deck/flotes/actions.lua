@@ -110,7 +110,7 @@ function M.edit_tasks(opts)
         get_lines = function(items)
           local lines = {}
           for _, item in ipairs(items) do
-            local line = item.data.text .. " [id::" .. item.data.i .. "]"
+            local line = item.data.task.task_text .. " [id::" .. item.data.i .. "]"
             table.insert(lines, line)
           end
           return lines
@@ -157,8 +157,8 @@ function M.edit_tasks(opts)
               if item ~= nil then
                 -- Basically a pop
                 items[id] = nil
-                -- Task has bee edited
-                if task ~= item.data.text then
+                -- Task has been edited
+                if task ~= item.data.task.task_text then
                   local bufnr = load_buf(item.data.filename)
                   -- Replace the line in the file
                   vim.api.nvim_buf_set_lines(bufnr, item.data.lnum - 1, item.data.lnum, false, { task })
