@@ -105,8 +105,13 @@ function M.edit_tasks(opts)
         filename = "deck_scratch.md",
         get_pos = opts.get_pos,
         get_feedkey = opts.get_feedkey,
-        -- Because checkmate converts state into ascii which adds 2 to the column position
-        col_pos_offset = 2,
+        col_pos_offset = function(pos, action)
+          -- Because checkmate converts state into ascii which adds 2 to the column position
+          if pos[2] < 3 or action == "insert_end" then
+            return 2
+          end
+          return 1
+        end,
         get_lines = function(items)
           local lines = {}
           for _, item in ipairs(items) do
@@ -175,7 +180,6 @@ function M.edit_tasks(opts)
 
           -- Add new tasks to today journal
           for _, new_task in ipairs(new_tasks) do
-            print("new_task = ", vim.inspect(new_task))
             local journal_path = f.journal({ desc = "today", create = true, show = false })
             local bufnr = load_buf(journal_path)
             local line_count = vim.api.nvim_buf_line_count(bufnr)

@@ -470,7 +470,8 @@ function M.tasks(opts)
           ---@diagnostic disable-next-line: missing-fields
           edit_opts = {
             get_pos = function(item, pos)
-              local offset = u.utf8.len(item.data.text)
+              -- 6 for beginning of task
+              local offset = u.utf8.len(item.data.task.task_desc) + 6
               return { pos[1], offset }
             end,
             get_feedkey = function(feedkey)

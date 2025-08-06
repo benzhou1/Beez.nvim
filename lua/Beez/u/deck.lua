@@ -8,7 +8,7 @@ local M = {}
 ---@field filename? string
 ---@field get_pos? fun(item: deck.Item, pos: number[]): number[]
 ---@field get_feedkey? fun(feedkey?: string): string
----@field col_pos_offset? integer
+---@field col_pos_offset? integer | fun(pos: number[], action: string): integer
 
 --- Generic function to edit a list of items in a scratch buffer
 ---@param ctx deck.Context
@@ -17,7 +17,11 @@ function M.edit_list(ctx, opts)
   local u = require("Beez.u")
   local pos = vim.api.nvim_win_get_cursor(0)
   if opts.col_pos_offset ~= nil then
-    pos[2] = pos[2] + opts.col_pos_offset
+    if type(opts.col_pos_offset) == "function" then
+      pos[2] = pos[2] + opts.col_pos_offset(pos, opts.action)
+    else
+      pos[2] = pos[2] + opts.col_pos_offset
+    end
   end
 
   local win = vim.api.nvim_get_current_win()
@@ -141,7 +145,11 @@ function M.edit_list(ctx, opts)
   if opts.get_pos ~= nil then
     new_pos = opts.get_pos(curr_item, new_pos)
     if opts.col_pos_offset ~= nil then
-      new_pos[2] = new_pos[2] + opts.col_pos_offset
+      if type(opts.col_pos_offset) == "function" then
+        new_pos[2] = new_pos[2] + opts.col_pos_offset(new_pos, opts.action)
+      else
+        new_pos[2] = new_pos[2] + opts.col_pos_offset
+      end
     end
   end
   vim.api.nvim_win_set_cursor(win, new_pos)
