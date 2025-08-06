@@ -47,7 +47,17 @@ end
 function M.tasks(opts)
   opts = opts or {}
   local source, specifier = sources.tasks(opts)
+  specifier.start_prompt = false
   require("deck").start(source, specifier)
 end
+
+--- Deck picker for findling tasks
+---@param opts? table
+function M.find_tasks(opts)
+  opts = opts or {}
+  local source, specifier = sources.tasks(opts)
+  require("deck").start(source, specifier)
+end
+
 
 return M

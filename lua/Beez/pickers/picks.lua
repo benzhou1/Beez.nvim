@@ -630,11 +630,6 @@ end
 
 function M.show_tasks()
   return {
-    snacks = {
-      run = function(opts)
-        snack_pickers.tasks(opts)
-      end,
-    },
     deck = {
       run = function(opts)
         deck_pickers.flotes.tasks(opts)
@@ -647,7 +642,7 @@ function M.find_tasks()
   return {
     deck = {
       run = function(opts)
-        deck_pickers.tasks.find(opts)
+        deck_pickers.flotes.find_tasks(opts)
       end,
     },
   }
