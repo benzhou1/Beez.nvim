@@ -129,7 +129,7 @@ function M.edit_tasks(opts)
             if bufnr == nil then
               -- Load the buffer by filename
               bufnr = vim.fn.bufadd(filename)
-              vim.fn.bufload(bufnr)
+              pcall(vim.fn.bufload, bufnr)
               bufs[filename] = bufnr
             end
             return bufnr
