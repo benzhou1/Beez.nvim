@@ -504,7 +504,8 @@ function M.dirs(opts)
   table.insert(source.actions, actions.open_oil({ parent = true }))
   table.insert(source.actions, actions.open_external({ quit = opts.open_external.quit }))
   table.insert(source.actions, actions.open_external({ parent = true, quit = opts.open_external.quit }))
-  source.actions = u.tables.extend(source.actions, actions.toggle_cwd())
+  source.actions =
+    u.tables.extend(source.actions, actions.toggle_cwd(), actions.find_files(), actions.grep_files())
 
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
@@ -532,41 +533,45 @@ function M.dirs_fasder(opts)
       ctx.done()
     end,
 
-    actions = {
-      require("deck").alias_action("default", opts.default_action or "open_oil"),
-      require("deck").alias_action("alt_default", "open_oil_keep"),
-      require("deck").alias_action("prev_default", "open_oil_parent"),
-      require("deck").alias_action("delete", "remove_fasder"),
-      actions.open_oil({ keep_open = false }),
-      actions.open_oil({ keep_open = true }),
-      actions.open_oil({ parent = true }),
-      actions.open_external({ quit = opts.open_external.quit }),
-      actions.open_external({ parent = true, quit = opts.open_external.quit }),
-      actions.open_zed({ quit = opts.open_zed.quit }),
+    actions = u.tables.extend(
       {
-        name = "remove_fasder",
-        resolve = function(ctx)
-          local symbols = require("deck.symbols")
-          for _, item in ipairs(ctx.get_action_items()) do
-            if item[symbols.source].name == "fasder" then
-              return true
+        require("deck").alias_action("default", opts.default_action or "open_oil"),
+        require("deck").alias_action("alt_default", "open_oil_keep"),
+        require("deck").alias_action("prev_default", "open_oil_parent"),
+        require("deck").alias_action("delete", "remove_fasder"),
+        actions.open_oil({ keep_open = false }),
+        actions.open_oil({ keep_open = true }),
+        actions.open_oil({ parent = true }),
+        actions.open_external({ quit = opts.open_external.quit }),
+        actions.open_external({ parent = true, quit = opts.open_external.quit }),
+        actions.open_zed({ quit = opts.open_zed.quit }),
+        {
+          name = "remove_fasder",
+          resolve = function(ctx)
+            local symbols = require("deck.symbols")
+            for _, item in ipairs(ctx.get_action_items()) do
+              if item[symbols.source].name == "fasder" then
+                return true
+              end
             end
-          end
-          return false
-        end,
-        execute = function(ctx)
-          for _, item in ipairs(ctx.get_action_items()) do
-            local cmd = {
-              "fasder",
-              "-D",
-              item.data.filename,
-            }
-            vim.fn.system(table.concat(cmd, " "))
-          end
-          ctx.execute()
-        end,
+            return false
+          end,
+          execute = function(ctx)
+            for _, item in ipairs(ctx.get_action_items()) do
+              local cmd = {
+                "fasder",
+                "-D",
+                item.data.filename,
+              }
+              vim.fn.system(table.concat(cmd, " "))
+            end
+            ctx.execute()
+          end,
+        },
       },
-    },
+      actions.find_files({ name = "find_files_under_dir", dir = true }),
+      actions.grep_files({ name = "grep_files_under_dir", dir = true })
+    ),
   })
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
