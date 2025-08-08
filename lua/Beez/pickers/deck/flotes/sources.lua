@@ -1,4 +1,5 @@
 local actions = require("Beez.pickers.deck.flotes.actions")
+local decorators = require("Beez.pickers.deck.flotes.decorators")
 local u = require("Beez.u")
 local utils = require("Beez.pickers.deck.utils")
 local M = {}
@@ -146,6 +147,8 @@ function M.grep(opts)
           "--smart-case",
           "--max-columns=500",
           "--max-columns-preview",
+          "--sortr",
+          "path",
           "-g",
           "!.git",
         }
@@ -159,6 +162,12 @@ function M.grep(opts)
         local lnum = tonumber(text:match(":(%d+):"))
         local col = tonumber(text:match(":%d+:(%d+):"))
         local match = text:match(":%d+:%d+:(.*)$")
+        local tags = {}
+        for tag in match:gmatch("#(%w+)") do
+          table.insert(tags, tag)
+          match = match:gsub(" #" .. tag, "")
+        end
+
         item.display_text = {
           { title, "Comment" },
           { " " },
@@ -179,10 +188,12 @@ function M.grep(opts)
         item.data.filename = file_path
         item.data.lnum = lnum
         item.data.col = col
+        item.data.tags = tags
       end,
     }))
   )
   source.actions = u.tables.extend({}, actions.open_note())
+  source.decorators = u.tables.extend(source.decorators or {}, { decorators.hash_tags() })
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
 end
@@ -392,8 +403,6 @@ function M.tasks(opts)
         "--column",
         "--line-number",
         "--ignore-case",
-        "--sortr",
-        "modified",
         "-e",
         ("- \\[[%s]?\\]"):format(task_states),
       }
@@ -416,6 +425,7 @@ function M.tasks(opts)
 
           local curr_task = {
             data = {
+              tags = t.tags,
               query = query,
               filename = IO.join(root_dir, filename),
               lnum = lnum,
@@ -482,35 +492,7 @@ function M.tasks(opts)
       })
     ),
     decorators = {
-      {
-        name = "decorate_tags",
-        resolve = function(_, item)
-          return #item.data.task.tags > 0
-        end,
-        decorate = function(_, item)
-          local virt_texts = {}
-          for _, tag in ipairs(item.data.task.tags) do
-            local hl = "Title"
-            if tag == "p1" or tag == "bug" then
-              hl = "DiagnosticError"
-            elseif tag == "p2" then
-              hl = "DiagnosticOk"
-            elseif tag == "p3" then
-              hl = "DiagnosticInfo"
-            end
-            table.insert(virt_texts, { (" #%s"):format(tag), hl })
-          end
-          local dec = {
-            {
-              col = 0,
-              virt_text = virt_texts,
-              virt_text_pos = "right_align",
-              hl_mode = "combine",
-            },
-          }
-          return dec
-        end,
-      },
+      decorators.hash_tags(),
     },
   })
 
