@@ -91,7 +91,11 @@ end
 --- Close the floating window
 function M.close()
   if M.states.float ~= nil then
-    M.states.float:close()
+    if c.config.open_in_float then
+      M.states.float:close()
+    else
+      vim.cmd("q")
+    end
   end
 end
 
