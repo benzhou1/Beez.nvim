@@ -110,4 +110,63 @@ function M.slice(tbl, first, last)
   return sliced
 end
 
+--- Delete keys from a table
+---@param tbl table
+---@param keys Beez.u.plugin.spec.delkeys[]
+---@return table
+function M.remove_keys(tbl, keys)
+  for _, key in ipairs(keys) do
+    if type(key) == "string" then
+      tbl[key] = nil
+    else
+      -- Keys is a table of keys, drill down into the table
+      local curr_tbl = tbl
+      local _k = nil
+      for _, k in ipairs(key) do
+        if curr_tbl ~= nil then
+          curr_tbl = curr_tbl[k]
+        end
+        _k = k
+      end
+      -- Did we succiessfullly find the key to delete?
+      if curr_tbl ~= nil then
+        curr_tbl[_k] = nil
+      end
+    end
+  end
+  return tbl
+end
+
+--- Pick only keys from a table
+---@param tbl table
+---@param keys Beez.u.plugin.spec.delkeys[]
+---@return table
+function M.pick_keys(tbl, keys)
+  local new_table = {}
+  for _, key in ipairs(keys) do
+    if type(key) == "string" then
+      new_table[key] = tbl[key]
+    else
+      -- Keys is a table of keys, drill down into the table
+      local curr_tbl = tbl
+      local curr_new_tbl = new_table
+      local _k = nil
+      for _, k in ipairs(key) do
+        if curr_tbl ~= nil then
+          curr_tbl = curr_tbl[k]
+          -- Create empty tables as we drill down
+          curr_new_tbl[k] = {}
+          curr_new_tbl = curr_new_tbl[k]
+        end
+        _k = k
+      end
+      -- Did we succiessfullly find the key to pick?
+      if curr_tbl ~= nil then
+        curr_new_tbl[_k] = curr_tbl[_k]
+      end
+    end
+  end
+  return new_table
+end
+
 return M

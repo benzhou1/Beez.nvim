@@ -35,7 +35,7 @@ function M.spec(base, ...)
   ---@type table[]
   local specs = { ... }
 
-  --- New opts fuction that merges all opts
+  --- New opts function that merges all opts
   local function opts()
     local merged_opts = base.opts or {}
     -- Handle if base opts is a function
@@ -52,9 +52,7 @@ function M.spec(base, ...)
         -- opts can return del keys table to remove keys from previous opts
         local new_opts, del_keys = spec.opts(merged_opts)
         if del_keys then
-          for _, dk in ipairs(del_keys) do
-            del_table_keys(merged_opts, dk)
-          end
+          del_table_keys(merged_opts, del_keys)
         end
         merged_opts = vim.tbl_deep_extend("force", merged_opts, new_opts)
       end
@@ -72,7 +70,7 @@ function M.spec(base, ...)
   end
 
   if has_config then
-    --- New config fuction that merges all the configs
+    --- New config function that merges all the configs
     config = function(_, opts)
       local config_opts = {}
       for _, spec in ipairs(specs) do
@@ -108,9 +106,7 @@ function M.spec(base, ...)
         -- opts can return del keys table to remove keys from previous keys
         local new_keys, del_keys = spec.keys(merged_keys)
         if del_keys then
-          for _, dk in ipairs(del_keys) do
-            del_table_keys(merged_keys, dk)
-          end
+          del_table_keys(merged_keys, del_keys)
         end
         for _, k in pairs(new_keys) do
           table.insert(merged_keys, k)
