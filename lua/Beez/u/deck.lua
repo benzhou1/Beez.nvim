@@ -101,6 +101,11 @@ function M.edit_list(ctx, opts)
       -- Show previous deck again
       ctx.show()
       ctx.execute()
+
+      -- Try to cleanup scratch file
+      if filepath:exists() then
+        filepath:rm()
+      end
     end,
   })
   -- Make sure to cleanup autocmds if buffer is deleted or closed
@@ -108,9 +113,11 @@ function M.edit_list(ctx, opts)
     once = true,
     pattern = ("<buffer=%s>"):format(buf),
     callback = function()
+      -- Try to cleanup scratch file
       if filepath:exists() then
         filepath:rm()
       end
+
       if not saved then
         vim.schedule(function()
           ctx.show()
