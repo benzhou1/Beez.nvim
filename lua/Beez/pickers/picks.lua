@@ -30,6 +30,7 @@ end
 function M.smart()
   return {
     snacks = {
+      resume = false,
       def_opts = snacks_def_opts,
       run = function(opts)
         opts = vim.tbl_deep_extend("keep", opts, snack_pickers.options.smart)
@@ -37,6 +38,7 @@ function M.smart()
       end,
     },
     deck = {
+      resume = false,
       run = function(opts)
         require("deck").start(deck_pickers.sources.files_smart(opts))
       end,
@@ -371,7 +373,6 @@ end
 function M.goto_def()
   return {
     snacks = {
-      resume = false,
       def_opts = function(opts)
         return vim.tbl_deep_extend("keep", {
           unique_lines = true,
@@ -409,7 +410,6 @@ end
 function M.goto_ref()
   return {
     snacks = {
-      resume = false,
       def_opts = function(opts)
         return vim.tbl_deep_extend("keep", {
           unique_lines = true,
