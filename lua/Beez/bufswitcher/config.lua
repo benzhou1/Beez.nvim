@@ -1,116 +1,64 @@
+local hl = require("Beez.bufswitcher.highlights")
 local u = require("Beez.u")
-local M = { config = {} }
+
+local M = {}
 
 ---@class Beez.bufswitcher.config
----@field hooks? Beez.bufswitcher.config.hooks
----@field win? Beez.bufswitcher.config.win
----@field keymaps? Beez.bufswitcher.config.keymaps
----@field ui? Beez.bufswitcher.config.ui
----@field autocmds? Beez.bufswitcher.config.autocmds
----@field pins_path? string
-
----@class Beez.bufswitcher.config.hooks
----@field sort? fun(bufs: Beez.bufswitcher.buf[]): Beez.bufswitcher.buf[]
----@field get_char? fun(name: string, chars: table<string, boolean>): string?
----@field get_dirname? fun(buf: Beez.bufswitcher.buf, filename: string, dirnames: table<string, boolean>): string
----@field get_filename? fun(buf: Beez.bufswitcher.buf, filenames: table<string, boolean>): string
-
----@class Beez.bufswitcher.config.win
----@field popup? nui_popup_options
----@field get_popup_opts? fun(): nui_popup_options
----@field use_noneckpain? boolean
-
----@class Beez.bufswitcher.config.keymaps
----@field pick_chars? string
----@field index_chars? string[]
----@field del_buf? string
----@field pin_buf? string
----@field quit? string
----@field pinned_chars? string[]
-
----@class Beez.bufswitcher.config.ui
----@field show_char_col? boolean
----@field show_char_labels? boolean
----@field highlights? Beez.bufswitcher.config.ui.highlights
-
----@class Beez.bufswitcher.config.ui.highlights
----@field curr_buf? string
----@field filename? string
----@field dirname? string
----@field char_label? string
----@field pin_char? string
----@field index_char? string
-
----@class Beez.bufswitcher.config.autocmds
----@field valid_buf_enter? fun(event: table): boolean
+---@field data_dir? string Path to the directory where data is persisted
+---@field hook_session_name? fun(): string Function to determine the session name
+---@field hook_buf_is_valid? fun(bufnr: integer): boolean Function to determine if a buffer is valid and shuuld be added to the list
+---@field hook_buf_sort? fun(bufs: Beez.bufswitcher.buf[]): Beez.bufswitcher.buf[] Function to sort buffers after every addition/removal
+---@field hook_buf_label? fun(buf:Beez.bufswitcher.buf, i: integer, bufs: Beez.bufswitcher.buf[]): string Returns a label to assign to current buffer
+---@field hook_buf_name? fun(buf:Beez.bufswitcher.buf, i: integer, bufs: Beez.bufswitcher.buf[], unique_names: table<string, boolean>): string, string[][] Returns a name to be displayed with highlight groups
+---@field hook_buf_list? fun(bufs: Beez.bufswitcher.buf[]): Beez.bufswitcher.buf Returns a list of buffers to be displayed
+---@field hook_ui_refresh? fun(bufs: Beez.bufswitcher.buf[]) Function to refresh the UI, will override default view render
+---@field ui_separator_hl? string Highlight group for the separator between buffers and pinned ones
+---@field ui_curr_buf_hl? string Highlight group for the current buffer
+---@field ui_name_hl? string Highlight group for the buffer name
+---@field ui_dir_hl? string Highlight group for the buffer dir
+---@field ui_recent_label_hl? string Highlight group for recent buffer labels
+---@field ui_pin_label_hl? string Highlight group for pinned buffer characters
+---@field pinned_labels? string[] List of characters to use for pinned buffers
+---@field recent_labels? string[] List of characters to use for recent buffers
+---@field cycle_pinned_wrap? boolean Whether to wrap around when cycling through pinned buffers
 
 ---@type Beez.bufswitcher.config
 M.def_config = {
-  pins_path = vim.fn.stdpath("data") .. "/Beez/bufswitcher/pins.txt",
-  autocmds = {
-    valid_buf_enter = nil,
-  },
-  ui = {
-    show_char_col = false,
-    show_char_labels = true,
-    highlights = {
-      curr_buf = "CursorLine",
-      filename = "Normal",
-      dirname = "Comment",
-      char_label = "CurSearch",
-      pin_char = "Search",
-      index_char = "Comment",
-    },
-  },
-  hooks = {
-    sort = nil,
-    get_char = nil,
-    get_dirname = nil,
-    get_filename = nil,
-  },
-  keymaps = {
-    pick_chars = "abcdefghijklmnopqrstuvwxyz",
-    pinned_chars = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" },
-    index_chars = {},
-    del_buf = "<C-d>",
-    pin_buf = "<C-p>",
-    quit = "<Esc>",
-  },
-  win = {
-    use_noneckpain = true,
-    staty_opened = false,
-    get_popup_opts = nil,
-    popup = {
-      enter = true,
-      focusable = true,
-      position = "100%",
-      relative = "editor",
-      size = {
-        width = "33%",
-        height = "25%",
-      },
-      border = {
-        style = "rounded",
-      },
-    },
-  },
+  data_dir = vim.fs.joinpath(vim.fn.stdpath("data"), "bufswitcher"),
+
+  hook_buf_is_valid = nil,
+  hook_buf_sort = nil,
+  hook_buf_label = nil,
+  hook_buf_name = nil,
+  hook_buf_list = nil,
+  hook_ui_refresh = nil,
+
+  ui_separator_hl = hl.hl.separator,
+  ui_curr_buf_hl = hl.hl.current_buf,
+  ui_name_hl = hl.hl.name,
+  ui_dir_hl = hl.hl.dir,
+  ui_recent_label_hl = hl.hl.recent_label,
+  ui_pin_label_hl = hl.hl.pin_label,
+
+  pinned_labels = { "q", "w", "e", "r", "t", "y", "u", "i", "o", "p" },
+  recent_labels = { ";", "/", "," },
+  cycle_pinned_wrap = true,
 }
 
 --- Initialize config
 ---@param opts Beez.bufswitcher.config?
 function M.init(opts)
   opts = opts or {}
+  ---@type Beez.bufswitcher.config
   M.config = M.def_config
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
-  M.config.pins_path = vim.fn.expand(M.config.pins_path)
+  M.config.data_dir = vim.fn.expand(M.config.data_dir)
 
-  local pins_path = u.paths.Path:new(M.config.pins_path)
-  local pins_dir = pins_path:parent()
-  if not pins_path:exists() then
-    if not pins_dir:exists() then
-      pins_dir:mkdir({ parents = true })
+  local data_dir = u.paths.Path:new(M.config.data_dir)
+  if not data_dir:exists() then
+    if not data_dir:exists() then
+      data_dir:mkdir({ parents = true })
     end
-    pins_path:write("", "w")
   end
 end
 
