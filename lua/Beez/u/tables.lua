@@ -36,13 +36,25 @@ end
 --- Find an element in the table
 ---@param tbl table
 ---@param f fun(v: any): boolean
----@return any?
+---@return integer, any?
 function M.find(tbl, f)
-  for _, v in pairs(tbl) do
+  for i, v in pairs(tbl) do
     if f(v) then
-      return v
+      return i, v
     end
   end
+  return 0, nil
+end
+
+--- Check if an element exists in the table
+---@param tbl table
+---@param x any
+---@return boolean
+function M.contains(tbl, x)
+  local _, found = M.find(tbl, function(v)
+    return v == x
+  end)
+  return found ~= nil
 end
 
 --- Reverse the order of a table
