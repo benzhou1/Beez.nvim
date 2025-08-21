@@ -2,7 +2,7 @@ local M = {}
 local u = require("Beez.u")
 
 ---@class Beez.codemarks.config
----@field marks_dir string? The path to the marks file
+---@field marks_dir string? Directory where marks are persisted
 ---@field auto_update_out_of_sync_marks boolean? Whether to automatically update marks that are out of sync in the current buffer
 ---@field get_root? fun(): string Function to get the root directory of the project, used to determine the path for marks
 

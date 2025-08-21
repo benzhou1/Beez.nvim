@@ -1,4 +1,5 @@
-local Stacks = require("Beez.codemarks.stacks")
+local Gmarks = require("Beez.codemarks.gmarks")
+local Marks = require("Beez.codemarks.marks")
 local c = require("Beez.codemarks.config")
 local u = require("Beez.u")
 
@@ -12,7 +13,7 @@ local u = require("Beez.u")
 ---@field curr_buf? number
 ---@field _gmarks Beez.codemarks.gmarks
 ---@field _marks Beez.codemarks.marks
-local M = { stacks = {}, gmarks = {}, marks = {} }
+local M = { gmarks = {}, marks = {} }
 
 --- Setup autocmds for the plugin
 local function init_autocmds()
@@ -35,13 +36,13 @@ function M.setup(opts)
     marks_dir:mkdir()
   end
 
-  -- Marks sure the stacks file exists
+  -- Make sure the codemarks file exists
   M.file_path = marks_dir:joinpath("codemarks.json")
   if not M.file_path:exists() then
     M.file_path:write("{}", "w")
   end
 
-  -- load stacks file
+  -- load codemarks file
   local file = io.open(M.file_path.filename, "r")
   if file then
     local lines = file:read("*a")
@@ -58,7 +59,7 @@ function M.setup(opts)
   init_autocmds()
 end
 
---- Edits the stacks file
+--- Edits the codemarks file
 function M.edit_file()
   vim.cmd("edit " .. M.file_path.filename)
 end
@@ -90,9 +91,6 @@ end
 function M.gmarks.update(data, updates, opts)
   opts = opts or {}
   local updated = M._gmarks:update(data, updates)
-  if opts.save ~= false then
-    M._stacks:save()
-  end
   return updated
 end
 
@@ -102,9 +100,6 @@ end
 function M.gmarks.del(data, opts)
   opts = opts or {}
   M._gmarks:del(data)
-  if opts.save ~= false then
-    M._stacks:save()
-  end
 end
 
 --- Picker for global codemarks
@@ -158,7 +153,7 @@ function M.marks.undo()
   end
 end
 
---- Clear all marks in the current stack
+--- Clear all marks
 function M.marks.clear()
   M._marks:clear()
   M.save()
@@ -223,7 +218,7 @@ function M.check_for_outdated_marks(filename)
   end
 end
 
---- Save to stacks file
+--- Persists all marks to a file
 function M.save()
   ---@type Beez.codemarks.data
   local data = {
