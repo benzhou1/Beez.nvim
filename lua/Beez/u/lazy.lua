@@ -105,7 +105,10 @@ function M.spec(base, ...)
       elseif spec.keys then
         -- opts can return del keys table to remove keys from previous keys
         local new_keys, del_keys = spec.keys(merged_keys)
-        if del_keys then
+        -- true means delete all keys
+        if del_keys == true then
+          merged_keys = {}
+        elseif del_keys then
           del_table_keys(merged_keys, del_keys)
         end
         for _, k in pairs(new_keys) do
