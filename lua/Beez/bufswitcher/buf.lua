@@ -1,3 +1,4 @@
+local c = require("Beez.bufswitcher.config")
 local hl = require("Beez.bufswitcher.highlights")
 local u = require("Beez.u")
 
@@ -53,7 +54,7 @@ function Buf:copy()
   local b = Buf:new(self.path)
   b:set_current(self.current)
   b:set_label(self.label[1], self.label[2])
-  b:set_name(self.name[1], self.name[2])
+  b:set_name(self.name)
   b.pinned = self.pinned
   return b
 end
@@ -74,16 +75,19 @@ function Buf:is_valid()
 end
 
 --- Sets the buffer as pinned
-function Buf:pin()
+---@param label string
+function Buf:pin(label)
   if not self:is_valid() then
     return
   end
   self.pinned = true
+  self:set_label(label, c.config.ui_pin_label_hl)
 end
 
 --- Unset the pinned state of the buffer
 function Buf:unpin()
   self.pinned = false
+  self:set_label("", "Normal")
 end
 
 --- Set buf as the current one

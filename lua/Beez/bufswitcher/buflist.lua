@@ -1,34 +1,39 @@
 local Buf = require("Beez.bufswitcher.buf")
-local c = require("Beez.bufswitcher.config")
 local u = require("Beez.u")
 
 ---@class Beez.bufswitcher.data
----@field pinned {filename: string}[]
----@field recents string[]
+---@field pinned {path: string, label: string}[]
 
 ---@class Beez.bufswitcher.buflist
 ---@field bufs Beez.bufswitcher.buf[]
+---@field pinned {path: string, label: string}[]
+---@field dir_path string
+---@field pins_path string
 Buflist = {}
 Buflist.__index = Buflist
 
 --- Instantiate a new Buflist
+---@param dir_path string
 ---@return Beez.bufswitcher.buflist
-function Buflist:new()
+function Buflist:new(dir_path)
   local b = {}
   setmetatable(b, Buflist)
 
+  b.dir_path = dir_path
+  b.pins_path = vim.fs.joinpath(dir_path, "pinned.json")
   b.bufs = {}
-  b.recents = {}
+  b.pinned = {}
   return b
 end
 
 --- Load from persisted data file
----@param path Path
-function Buflist:load(path)
-  if not path:exists() then
+function Buflist:load()
+  if vim.fn.filereadable(self.pins_path) == 0 then
+    vim.fn.writefile({ "{}" }, self.pins_path)
     return
   end
-  local file = io.open(path.filename, "r")
+
+  local file = io.open(self.pins_path, "r")
   local data
   if file then
     local lines = file:read("*a")
@@ -36,55 +41,35 @@ function Buflist:load(path)
     data = vim.fn.json_decode(lines)
     file:close()
   else
-    error("Could not open file: " .. path.filename)
+    error("Could not open file: " .. self.pins_path)
   end
 
   if data ~= nil then
     for _, d in ipairs(data.pinned) do
       -- Load pinned buffers
-      local bufnr = vim.fn.bufnr(d.filename, true)
+      local bufnr = vim.fn.bufnr(d.path, true)
       vim.fn.bufload(bufnr)
       vim.bo[bufnr].buflisted = true
 
-      local buf = Buf:new(d.filename)
+      local buf = Buf:new(d.path)
       if buf:is_valid() then
-        buf:pin()
+        buf:pin(d.label)
         table.insert(self.bufs, buf)
+        table.insert(self.pinned, d)
       end
     end
-    self.recents = data.recents or {}
   end
 end
 
 --- Persist data to a file
----@param path Path
-function Buflist:save(path)
+function Buflist:save()
   ---@type Beez.bufswitcher.data
-  local data = { pinned = {}, recents = self.recents }
-  for _, b in ipairs(self.bufs) do
-    if b.pinned then
-      table.insert(data.pinned, { filename = b.path })
-    end
-  end
-
+  local data = { pinned = self.pinned }
   local json_string = vim.fn.json_encode(data)
-  local file = io.open(path.filename, "w")
-  assert(file, "Could not open file for writing: " .. path.filename)
+  local file = io.open(self.pins_path, "w")
+  assert(file, "Could not open file for writing: " .. self.pins_path)
   file:write(json_string)
   file:close()
-end
-
---- Adds a file path to recent list
----@param path string
-function Buflist:add_recent(path)
-  self:remove_recent(path)
-  table.insert(self.recents, 1, path)
-end
-
---- Remove path from recent list
----@param path string
-function Buflist:remove_recent(path)
-  u.tables.remove(self.recents, path)
 end
 
 --- Add a buffer to the list
@@ -109,9 +94,6 @@ function Buflist:add(bufnr)
     b:set_current(false)
   end
   buf:set_current()
-
-  -- Add to recent list
-  self:add_recent(buf.path)
 end
 
 --- Remove a buffer from the list
@@ -134,6 +116,40 @@ function Buflist:current()
   end
 end
 
+--- Pin a buffer
+---@param label string
+function Buflist:pin(label)
+  local buf = self:current()
+  buf:pin(label)
+
+  -- Override existing pin with same label
+  local removed_pinned = u.tables.remove(self.pinned, function(b)
+    return b.label == label
+  end)
+  if removed_pinned ~= nil then
+    -- Make sure to unpin the existing buffer
+    local _, exist_buf = u.tables.find(self.bufs, function(b)
+      return b.path == removed_pinned.path
+    end)
+    if exist_buf ~= nil then
+      exist_buf:unpin()
+    end
+  end
+  table.insert(self.pinned, {
+    path = buf.path,
+    label = label,
+  })
+end
+
+--- Unpin a buffer
+function Buflist:unpin()
+  local buf = self:current()
+  buf:unpin()
+  u.tables.remove(self.pinned, function(b)
+    return b.path == buf.path
+  end)
+end
+
 --- Find a buffer with specified options
 ---@return integer, Beez.bufswitcher.buf?
 function Buflist:get(bufnr)
@@ -142,42 +158,6 @@ function Buflist:get(bufnr)
     return b.path == filename
   end)
   return i, buf
-end
-
---- Refresh the buffer list
----@param opts? { pins?: table<string, integer>, curr_buf?: integer }
-function Buflist:refresh(opts)
-  opts = opts or {}
-  self.bufs = {}
-  local bufs = {}
-
-  local bufnrs = vim.api.nvim_list_bufs()
-  for _, buf in ipairs(bufnrs) do
-    local info = vim.fn.getbufinfo(buf)[1]
-    local b = Buf:new(info)
-    if b:is_valid_buf() then
-      table.insert(bufs, b)
-    end
-  end
-
-  -- Sort the buffer
-  if c.config.hooks.sort then
-    bufs = c.config.hooks.sort(bufs)
-  else
-    bufs = Buflist.def_sort(bufs)
-  end
-
-  -- Mark buffers as pinned or current
-  for i, b in ipairs(bufs) do
-    b:set_idx(i)
-    if opts.pins and opts.pins[b.path] then
-      b:set_pinned(opts.pins[b.path])
-    end
-    if opts.curr_buf and b.id == opts.curr_buf then
-      b:set_current()
-    end
-    table.insert(self.bufs, b)
-  end
 end
 
 --- Sort buffer list by recency
@@ -198,10 +178,29 @@ local function sort_by_recency(bufs, recent_paths)
   return bufs
 end
 
+--- Sort buffer list by pinned files
+---@param bufs Beez.bufswitcher.buf[]
+---@param pinned_paths {path: string, label: string}[]
+---@return Beez.bufswitcher.buf[]
+local function sort_by_pinned(bufs, pinned_paths)
+  local pinned_files = {}
+  for i, p in ipairs(pinned_paths) do
+    pinned_files[p.path] = #pinned_paths - i
+  end
+
+  table.sort(bufs, function(a, b)
+    local a_recent_idx = pinned_files[a.path] or 0
+    local b_recent_idx = pinned_files[b.path] or 0
+    return a_recent_idx > b_recent_idx
+  end)
+  return bufs
+end
+
 --- List buffers
 ---@param opts? {pinned?: boolean, sort?: "recency"}
 ---@return Beez.bufswitcher.buf[]
 function Buflist:list(opts)
+  local bs = require("Beez.bufswitcher")
   opts = opts or {}
   -- No filters
   if opts == {} then
@@ -221,8 +220,10 @@ function Buflist:list(opts)
     end
   end
 
-  if opts.sort == nil or opts.sort == "recency" then
-    bufs = sort_by_recency(bufs, self.recents)
+  if opts.pinned then
+    bufs = sort_by_pinned(bufs, self.pinned)
+  elseif opts.sort == nil or opts.sort == "recency" then
+    bufs = sort_by_recency(bufs, bs.rl:list())
   end
   return bufs
 end
