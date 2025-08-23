@@ -1,5 +1,6 @@
 local Buflist = require("Beez.bufswitcher.buflist")
 local Recentlist = require("Beez.bufswitcher.recentlist")
+local StackList = require("Beez.bufswitcher.stacklist")
 local c = require("Beez.bufswitcher.config")
 local hl = require("Beez.bufswitcher.highlights")
 local tabline = require("Beez.bufswitcher.tabline")
@@ -12,6 +13,7 @@ local debug = false
 ---@field config Beez.bufswitcher.config
 ---@field bl Beez.bufswitcher.buflist
 ---@field rl Beez.bufswitcher.recentlist
+---@field sl Beez.bufswitcher.stacklist
 ---@field autocmd_group string
 ---@field session string
 ---@field session_path string
@@ -59,7 +61,6 @@ local function setup_autocmds()
   vim.api.nvim_create_autocmd("VimLeavePre", {
     desc = "Beez.bufswitcher.persist",
     callback = function()
-      M.bl:save()
       M.rl:save()
     end,
   })
@@ -79,10 +80,11 @@ function M.setup(opts)
   -- Make sure session directory exists
   vim.fn.mkdir(M.session_path, "p")
 
-  M.bl = Buflist:new(M.session_path)
-  M.bl:load()
+  M.bl = Buflist:new()
   M.rl = Recentlist:new(M.session_path)
+  M.sl = StackList:new(M.session_path)
   M.rl:load()
+  M.sl:load()
 
   setup_autocmds()
   hl.init()
@@ -111,18 +113,13 @@ function M.pick()
   if found_recent ~= nil then
     buf = bufs[recent_i + 1]
     if buf ~= nil then
-      return vim.api.nvim_set_current_buf(buf.id)
+      return vim.cmd.edit(buf.path)
     end
   end
 
-  local found_pinned = u.tables.find(bufs, function(b)
-    return b.label[1] == label
-  end)
+  local found_pinned = M.sl:get_pinned({ label = label })
   if found_pinned ~= nil then
-    buf = bufs[found_pinned]
-    if buf ~= nil then
-      return vim.api.nvim_set_current_buf(buf.id)
-    end
+    return vim.cmd.edit(found_pinned.path)
   end
 end
 
@@ -169,7 +166,7 @@ function M.default_hook_buf_name(b, i, bufs, unique_names)
   local dir_hl = c.config.ui_dir_hl or hl.hl.dir
   local name_hl = c.config.ui_name_hl or hl.hl.name
   if b.current then
-    name_hl = c.config.ui_curr_buf_hl or hl.hl.current_buf
+    name_hl = c.config.ui_curr_buf_hl
   end
 
   -- If basename is unique then we are good
@@ -205,6 +202,7 @@ end
 ---@param bufs Beez.bufswitcher.buf[]
 ---@return Beez.bufswitcher.buf[]
 function M.default_hook_buf_list(bufs)
+  ---@type Beez.bufswitcher.tabline.display_buf[]
   local display_bufs = {}
   local get_name = c.config.hook_buf_name or M.default_hook_buf_name
   local get_label = c.config.hook_buf_recent_label or M.default_hook_buf_recent_label
@@ -216,38 +214,45 @@ function M.default_hook_buf_list(bufs)
       break
     end
 
-    local copy = b:copy()
-    -- Always unpin
-    copy:unpin()
-
-    local name, hls = get_name(copy, i, bufs, unique_names)
+    local name, hls = get_name(b, i, bufs, unique_names)
     unique_names[name] = true
-    copy:set_name(hls)
+    local display_buf = {
+      name = hls,
+      pinned = false,
+      label = { "", "" },
+    }
 
     -- Dont set label on the first, since its always the current buffer
     if i > 1 then
-      local label, label_hl = get_label(copy, i, bufs)
-      copy:set_label(label, label_hl)
+      local label, label_hl = get_label(b, i, bufs)
+      display_buf.label = { label, label_hl }
     end
-    table.insert(display_bufs, copy)
+    table.insert(display_bufs, display_buf)
   end
 
   -- Reset unique names for pinned buffers
   unique_names = {}
   -- Now display all pinned buffers
-  local pinned_bufs = M.bl:list({ pinned = true })
-  for i, b in ipairs(pinned_bufs) do
-    local copy = b:copy()
+  local pinned_bufs = M.sl:list_pinned_buffers()
+  local current_buf = M.bl:current()
+  for _, b in ipairs(pinned_bufs) do
     -- If pinned buffer is current, remove the first buffer so that pinned buffer can be highlighted correctly
-    if copy.current then
+    if current_buf ~= nil and current_buf.path == b.path then
       table.remove(display_bufs, 1)
     end
 
     -- Pinned buffers already has label assigned, no need to calculate it
-    local name, hls = get_name(copy, i, bufs, unique_names)
-    unique_names[name] = true
-    copy:set_name(hls)
-    table.insert(display_bufs, copy)
+    local bufnr = vim.fn.bufnr(b.path)
+    local i, buf = M.bl:get(bufnr)
+    if buf ~= nil then
+      local name, hls = get_name(buf, i, bufs, unique_names)
+      unique_names[name] = true
+      table.insert(display_bufs, {
+        label = { b.label, c.config.ui_pin_label_hl },
+        name = hls,
+        pinned = true,
+      })
+    end
   end
 
   return display_bufs
@@ -302,7 +307,7 @@ end
 ---@return string
 function M.get_tabline()
   local bufs = M.list_ui()
-  return tabline.get(bufs)
+  return tabline.get(M.sl.active or "", bufs)
 end
 
 --- Pin current buffer to specified label
@@ -313,13 +318,13 @@ function M.pin()
     return
   end
 
-  M.bl:pin(label)
+  M.sl:pin(label)
   M.refresh_ui()
 end
 
 --- Unpin a buffer
 function M.unpin()
-  M.bl:unpin()
+  M.sl:unpin()
   M.refresh_ui()
 end
 

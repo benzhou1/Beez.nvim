@@ -5,15 +5,15 @@ local u = require("Beez.u")
 ---@field file_path string
 ---@field enabled boolean
 ---@field paths string[]
-RecentList = {}
-RecentList.__index = RecentList
+Recentlist = {}
+Recentlist.__index = Recentlist
 
 --- Instaniate a new RecentList
 ---@param dir_path string
 ---@return Beez.bufswitcher.recentlist
-function RecentList:new(dir_path)
+function Recentlist:new(dir_path)
   local r = {}
-  setmetatable(r, RecentList)
+  setmetatable(r, Recentlist)
 
   r.file_path = vim.fs.joinpath(dir_path, "recent_paths.txt")
   r.paths = {}
@@ -22,17 +22,17 @@ function RecentList:new(dir_path)
 end
 
 --- Disable recent files tracking
-function RecentList:disable()
+function Recentlist:disable()
   self.enabled = false
 end
 
 --- Enable recent files tracking
-function RecentList:enable()
+function Recentlist:enable()
   self.enabled = true
 end
 
 --- Loads recent paths from file
-function RecentList:load()
+function Recentlist:load()
   if not self.enabled then
     return
   end
@@ -43,7 +43,7 @@ function RecentList:load()
 end
 
 --- Saves recent paths to file up to a configured limit
-function RecentList:save()
+function Recentlist:save()
   if not self.enabled then
     return
   end
@@ -54,7 +54,7 @@ end
 
 --- Adds a file to recent list
 ---@param path string
-function RecentList:add(path)
+function Recentlist:add(path)
   if not self.enabled then
     return
   end
@@ -73,7 +73,7 @@ end
 
 --- Remove a file from recent list
 ---@param path string
-function RecentList:remove(path)
+function Recentlist:remove(path)
   if not self.enabled then
     return
   end
@@ -83,12 +83,12 @@ function RecentList:remove(path)
 end
 
 --- Returns the recent files list
----@param opts {}
+---@param opts? {}
 ---@return string[]
-function RecentList:list(opts)
+function Recentlist:list(opts)
   opts = opts or {}
   local paths = self.paths
   return paths
 end
 
-return RecentList
+return Recentlist

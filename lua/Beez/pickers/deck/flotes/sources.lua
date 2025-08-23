@@ -474,7 +474,7 @@ function M.tasks(opts)
       actions.toggle_done_task(),
 
       u.deck.edit_actions({
-        prefix = "edit_tasks",
+        prefix = "edit_tasks.",
         edit_line = actions.edit_tasks,
         edit_line_end = {
           ---@diagnostic disable-next-line: missing-fields

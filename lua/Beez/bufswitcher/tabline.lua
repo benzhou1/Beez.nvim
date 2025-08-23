@@ -1,31 +1,56 @@
 local c = require("Beez.bufswitcher.config")
 local M = {}
 
+---@class Beez.bufswitcher.tabline.display_buf
+---@field label string[]
+---@field name string[][]
+---@field pinned boolean
+
 --- Generate a tabline for rendering buffers
----@param bufs Beez.bufswitcher.buf[]
+---@param stack string
+---@param bufs Beez.bufswitcher.tabline.display_buf[]
 ---@return string
-function M.get(bufs)
-  local tabline = ""
+function M.get(stack, bufs)
+  local tabline = M.stack(stack)
+  tabline = tabline .. M.hl("󰓩", c.config.ui_buf_sep_hl) .. M.space()
   local pin_start = false
   for _, b in ipairs(bufs) do
     if b.pinned and not pin_start then
       pin_start = true
-      tabline = tabline .. " 📌  "
+      tabline = tabline .. M.hl("", c.config.ui_pin_sep_hl) .. M.space()
     end
-    local buf_tabline = M.buf(b, b.label[1], b.label[2])
-    tabline = tabline .. buf_tabline .. " "
+    local buf_tabline = M.buf(b)
+    tabline = tabline .. buf_tabline .. M.space()
   end
   return tabline
 end
 
---- Generate a tabline for rendering a single buffer
----@param b Beez.bufswitcher.buf
----@param label string
----@param label_hl string
+--- Generate a tabline for rending some text with highlight
+---@param text string
+---@param hl string
 ---@return string
-function M.buf(b, label, label_hl)
-  local label_tabline = M.label(label, label_hl)
-  local buf_tabline = M.name(b.name, label)
+function M.hl(text, hl)
+  local tabline = "%#" .. hl .. "#" .. text
+  return tabline
+end
+
+--- Generate a tabline for rendering stack name along with separator
+---@param stack string
+---@return string
+function M.stack(stack)
+  local tabline = M.hl("", c.config.ui_stack_sep_hl)
+    .. M.space()
+    .. M.hl(stack, c.config.ui_stack_hl)
+    .. M.space()
+  return tabline
+end
+
+--- Generate a tabline for rendering a single buffer
+---@param b Beez.bufswitcher.tabline.display_buf
+---@return string
+function M.buf(b)
+  local label_tabline = M.hl(b.label[1], b.label[2])
+  local buf_tabline = M.name(b.name, b.label[1])
   local tabline = label_tabline .. buf_tabline
   return tabline
 end
@@ -42,21 +67,16 @@ function M.name(name_with_highlights, label)
       name = name:sub(2)
     end
     local hl = n[2] or c.config.ui_name_hl
-    tabline = tabline .. "%#" .. hl .. "#" .. name
+    tabline = tabline .. M.hl(name, hl)
   end
   return tabline
 end
 
---- Generate a tabline to render the label for a buffer
----@param label string
----@param hl string
+--- Generate a tabline to render whitespace
 ---@return string
-function M.label(label, hl)
-  if label == "" then
-    return ""
-  end
-  local tabline = "%#" .. hl .. "#" .. label
-  return tabline
+function M.space()
+  local hl = "Normal"
+  return M.hl(" ", hl)
 end
 
 return M

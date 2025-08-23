@@ -1,5 +1,3 @@
-local c = require("Beez.bufswitcher.config")
-local hl = require("Beez.bufswitcher.highlights")
 local u = require("Beez.u")
 
 ---@class Beez.bufswitcher.buf
@@ -12,21 +10,18 @@ local u = require("Beez.u")
 ---@field buftype string
 ---@field ft string
 ---@field current boolean
----@field pinned boolean
----@field label table<string>
----@field name table<string>
 Buf = {}
 Buf.__index = Buf
 
 --- Instantiates a new buffer object
----@param filename string
+---@param bufnr integer
 ---@return Beez.bufswitcher.buf
-function Buf:new(filename)
+function Buf:new(bufnr)
   local b = {}
   setmetatable(b, Buf)
 
-  b.id = vim.fn.bufnr(filename)
-  b.path = filename
+  b.id = bufnr
+  b.path = vim.api.nvim_buf_get_name(bufnr)
   b.basename = u.paths.basename(b.path)
   b.dirname = u.paths.dirname(b.path)
   b.lastused = 0
@@ -34,9 +29,6 @@ function Buf:new(filename)
   b.buftype = ""
   b.ft = ""
   b.current = vim.api.nvim_get_current_buf() == b.id
-  b.pinned = false
-  b.label = { "", hl.hl.label }
-  b.name = { b.basename, hl.hl.name }
 
   if vim.api.nvim_buf_is_valid(b.id) then
     local buf_info = vim.fn.getbufinfo(b.id)[1]
@@ -48,17 +40,6 @@ function Buf:new(filename)
   return b
 end
 
---- Make a copy
----@return Beez.bufswitcher.buf
-function Buf:copy()
-  local b = Buf:new(self.path)
-  b:set_current(self.current)
-  b:set_label(self.label[1], self.label[2])
-  b:set_name(self.name)
-  b.pinned = self.pinned
-  return b
-end
-
 --- Checks if a buffer is valid
 ---@return boolean
 function Buf:is_valid()
@@ -66,28 +47,10 @@ function Buf:is_valid()
     and vim.api.nvim_buf_is_valid(self.id)
     and self.basename ~= nil
     and self.basename ~= ""
-    and self.name ~= nil
-    and self.name ~= ""
     and self.buftype ~= "nofile"
     and self.listed == 1
 
   return valid
-end
-
---- Sets the buffer as pinned
----@param label string
-function Buf:pin(label)
-  if not self:is_valid() then
-    return
-  end
-  self.pinned = true
-  self:set_label(label, c.config.ui_pin_label_hl)
-end
-
---- Unset the pinned state of the buffer
-function Buf:unpin()
-  self.pinned = false
-  self:set_label("", "Normal")
 end
 
 --- Set buf as the current one
@@ -98,19 +61,6 @@ function Buf:set_current(current)
     return
   end
   self.current = true
-end
-
---- Assign a label to the buf
----@param label string
----@param label_hl? string
-function Buf:set_label(label, label_hl)
-  self.label = { label, label_hl or "Normal" }
-end
-
---- Assign a display name to the buf
----@param name_highlights string[][]
-function Buf:set_name(name_highlights)
-  self.name = name_highlights
 end
 
 return Buf

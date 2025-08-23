@@ -14,7 +14,7 @@ local u = require("Beez.u")
 Stacks = {}
 Stacks.__index = Stacks
 
---- Creats a new Stacks object
+--- Creates a new Stacks object
 ---@param opts { stacks_file: string}
 ---@return Beez.codemarks.stacks
 function Stacks:new(opts)

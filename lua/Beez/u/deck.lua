@@ -205,7 +205,7 @@ function M.edit_actions(opts)
   local actions = {}
 
   if not opts.edit_line_start.disable then
-    local edit_line_start_name = opts.edit_line_start.action_name or opts.prefix .. "_edit_line_start"
+    local edit_line_start_name = opts.edit_line_start.action_name or opts.prefix .. "edit_line_start"
     table.insert(actions, deck.alias_action("edit_line_start", edit_line_start_name))
     local edit_opts = vim.tbl_deep_extend(
       "keep",
@@ -215,7 +215,7 @@ function M.edit_actions(opts)
     table.insert(actions, opts.edit_line(edit_opts))
   end
   if not opts.edit_line_end.disable then
-    local edit_line_end_name = opts.edit_line_end.action_name or opts.prefix .. "_edit_line_end"
+    local edit_line_end_name = opts.edit_line_end.action_name or opts.prefix .. "edit_line_end"
     table.insert(actions, deck.alias_action("edit_line_end", edit_line_end_name))
     local edit_opts = vim.tbl_deep_extend(
       "keep",
@@ -225,14 +225,14 @@ function M.edit_actions(opts)
     table.insert(actions, opts.edit_line(edit_opts))
   end
   if not opts.insert.disable then
-    local insert_name = opts.insert.action_name or opts.prefix .. "_insert"
+    local insert_name = opts.insert.action_name or opts.prefix .. "insert"
     table.insert(actions, deck.alias_action("insert", insert_name))
     local edit_opts =
       vim.tbl_deep_extend("keep", { name = insert_name, action = "insert" }, opts.insert.edit_opts or {})
     table.insert(actions, opts.edit_line(edit_opts))
   end
   if not opts.delete.disable then
-    local delete_name = opts.delete.action_name or opts.prefix .. "_delete"
+    local delete_name = opts.delete.action_name or opts.prefix .. "delete"
     table.insert(actions, deck.alias_action("delete", delete_name))
     local edit_opts = vim.tbl_deep_extend(
       "keep",
@@ -242,14 +242,14 @@ function M.edit_actions(opts)
     table.insert(actions, opts.edit_line(edit_opts))
   end
   if not opts.write.disable then
-    local write_name = opts.write.action_name or opts.prefix .. "_write"
+    local write_name = opts.write.action_name or opts.prefix .. "write"
     table.insert(actions, deck.alias_action("write", write_name))
     local edit_opts =
       vim.tbl_deep_extend("keep", { name = write_name, action = "edit" }, opts.write.edit_opts or {})
     table.insert(actions, opts.edit_line(edit_opts))
   end
   if not opts.delete_char.disable then
-    local delete_char_name = opts.delete_char.action_name or opts.prefix .. "_delete_char"
+    local delete_char_name = opts.delete_char.action_name or opts.prefix .. "delete_char"
     table.insert(actions, deck.alias_action("delete_char", delete_char_name))
     local edit_opts = vim.tbl_deep_extend(
       "keep",
@@ -259,7 +259,7 @@ function M.edit_actions(opts)
     table.insert(actions, opts.edit_line(edit_opts))
   end
   if not opts.replace_char.disable then
-    local replace_char_name = opts.replace_char.action_name or opts.prefix .. "_replace_char"
+    local replace_char_name = opts.replace_char.action_name or opts.prefix .. "replace_char"
     table.insert(actions, deck.alias_action("replace_char", replace_char_name))
     local edit_opts = vim.tbl_deep_extend(
       "keep",
@@ -269,7 +269,7 @@ function M.edit_actions(opts)
     table.insert(actions, opts.edit_line(edit_opts))
   end
   if not opts.insert_above.disable then
-    local insert_above_name = opts.insert_above.action_name or opts.prefix .. "_insert_above"
+    local insert_above_name = opts.insert_above.action_name or opts.prefix .. "insert_above"
     table.insert(actions, deck.alias_action("insert_above", insert_above_name))
     local edit_opts = vim.tbl_deep_extend(
       "keep",
@@ -279,7 +279,7 @@ function M.edit_actions(opts)
     table.insert(actions, opts.edit_line(edit_opts))
   end
   if not opts.insert_below.disable then
-    local insert_below_name = opts.insert_below.action_name or opts.prefix .. "_insert_below"
+    local insert_below_name = opts.insert_below.action_name or opts.prefix .. "insert_below"
     table.insert(actions, deck.alias_action("open_keep", insert_below_name))
     local edit_opts = vim.tbl_deep_extend(
       "keep",

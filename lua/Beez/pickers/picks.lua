@@ -769,17 +769,6 @@ function M.codemarks_marks()
 end
 M["codemarks.marks"] = M.codemarks_marks
 
-function M.codemarks_stacks()
-  return {
-    deck = {
-      run = function(opts)
-        deck_pickers.codemarks.stacks(opts)
-      end,
-    },
-  }
-end
-M["codemarks.stacks"] = M.codemarks_stacks
-
 function M.scratches()
   return {
     snacks = {
@@ -873,5 +862,16 @@ M["jump_list"] = function()
     },
   }
 end
+
+function M.bufswitcher_stacks()
+  return {
+    deck = {
+      run = function(opts)
+        deck_pickers.bufswitcher.stacks(opts)
+      end,
+    },
+  }
+end
+M["bufswitcher.stacks"] = M.bufswitcher_stacks
 
 return M
