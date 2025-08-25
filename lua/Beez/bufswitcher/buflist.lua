@@ -1,10 +1,6 @@
 local Buf = require("Beez.bufswitcher.buf")
 local u = require("Beez.u")
 
----@class Beez.bufswitcher.pinned_buffer
----@field path: string
----@field label: string
-
 ---@class Beez.bufswitcher.buflist
 ---@field bufs Beez.bufswitcher.buf[]
 Buflist = {}

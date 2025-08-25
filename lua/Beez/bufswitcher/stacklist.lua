@@ -173,9 +173,9 @@ function Stacklist:pin(label)
     return
   end
 
-  -- Override existing pin with same label
-  u.tables.remove(stack.pinned, function(b)
-    return b.label == label
+  -- Override existing pin with same label or path
+  stack.pinned = u.tables.filter(stack.pinned, function(b)
+    return b.label ~= label and b.path ~= filepath
   end)
   table.insert(stack.pinned, { path = filepath, label = label })
   self:save()

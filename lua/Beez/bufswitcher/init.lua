@@ -81,7 +81,7 @@ function M.setup(opts)
   vim.fn.mkdir(M.session_path, "p")
 
   M.bl = Buflist:new()
-  M.rl = Recentlist:new(M.session_path)
+  M.rl = Recentlist:new(c.config.data_dir)
   M.sl = StackList:new(M.session_path)
   M.rl:load()
   M.sl:load()
@@ -282,6 +282,13 @@ function M.list()
   local hook_buf_sort = c.config.hook_buf_sort or M.default_hook_buf_sort
   bufs = hook_buf_sort(bufs)
   return bufs
+end
+
+--- Return a list of pinned buffer objects
+---@return Beez.bufswitcher.pinned_buf[]
+function M.list_pinned()
+  local pinned = M.sl:list_pinned_buffers()
+  return pinned
 end
 
 --- Returns a list of buffer objects to be displayed
