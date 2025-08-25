@@ -46,6 +46,21 @@ function M.find(tbl, f)
   return 0, nil
 end
 
+--- Filters out items in a table
+---@param tbl table
+---@param f fun(b: any): boolean
+---@return table
+function M.filter(tbl, f)
+  local new_tbl = {}
+  for _, t in ipairs(tbl) do
+    local keep = f(t)
+    if keep then
+      table.insert(new_tbl, t)
+    end
+  end
+  return new_tbl
+end
+
 --- Check if an element exists in the table
 ---@param tbl table
 ---@param x any
