@@ -874,4 +874,15 @@ function M.bufswitcher_stacks()
 end
 M["bufswitcher.stacks"] = M.bufswitcher_stacks
 
+function M.fff()
+  return {
+    deck = {
+      run = function(opts)
+        local source, specifier = deck_pickers.sources.fff(opts)
+        require("deck").start(source, specifier)
+      end,
+    },
+  }
+end
+
 return M

@@ -3,7 +3,7 @@ local M = {}
 
 -- Just decorator for buffer flags without icons
 M.buf_flags = {
-  name = "buf_flags",
+  name = "custom.buf_flags",
   resolve = function(_, item)
     return item.data.filename
   end,
@@ -32,49 +32,56 @@ M.buf_flags = {
         hl_mode = "combine",
         ephemeral = true,
       })
-      local ok, _ = pcall(require, "bufferline")
-      if ok then
-        local elements = require("bufferline.commands").get_elements()
-        local groups = require("bufferline.groups")
-        for _, e in ipairs(elements.elements) do
-          if e.id == buf and groups._is_pinned(e) then
-            table.insert(dec, {
-              col = 0,
-              virt_text = { { "📌 " } },
-              ephemeral = true,
-              virt_text_pos = "inline",
-            })
-            break
-          end
-        end
+    end
+    return dec
+  end,
+}
+
+M.query = {
+  name = "custom.query",
+  resolve = function(_, item)
+    return item.data.query ~= nil and item.data.query ~= ""
+  end,
+  decorate = function(_, item)
+    local dec = {}
+    local queries = vim.fn.split(item.data.query)
+
+    for _, q in ipairs(queries) do
+      local start_idx, end_idx = string.find(string.lower(item.display_text), string.lower(q))
+      if start_idx ~= nil and end_idx ~= nil then
+        table.insert(dec, {
+          col = start_idx - 1,
+          end_col = end_idx,
+          hl_group = "Search",
+          ephemeral = true,
+          priority = 9999,
+        })
       end
     end
     return dec
   end,
 }
 
-M.buf_recent = {
-  name = "buf_recent",
+M.source = {
+  name = "custom.source",
   resolve = function(_, item)
-    return item.data.filename and item.data.i and item.data.i < 5
+    return item.data.source ~= nil and item.data.source ~= ""
   end,
   decorate = function(_, item)
-    local i = item.data.i
-    local sign_text = " "
-    if i == 2 then
-      sign_text = ";"
-    elseif i == 3 then
-      sign_text = "/"
-    elseif i == 4 then
-      sign_text = ","
-    end
-    local dec = {
-      {
+    local dec = {}
+    local virtual_text = {}
+    table.insert(virtual_text, { " " })
+    table.insert(virtual_text, { item.data.source, "Comment" })
+
+    if virtual_text ~= {} then
+      table.insert(dec, {
         col = 0,
-        sign_text = sign_text,
-        sign_hl_group = "Comment",
-      },
-    }
+        virt_text = virtual_text,
+        virt_text_pos = "right_align",
+        hl_mode = "combine",
+        ephemeral = true,
+      })
+    end
     return dec
   end,
 }

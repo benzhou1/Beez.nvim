@@ -1,4 +1,5 @@
 local actions = require("Beez.pickers.deck.actions")
+local decorators = require("Beez.pickers.deck.decorators")
 local formatters = require("Beez.pickers.deck.formatters")
 local u = require("Beez.u")
 local utils = require("Beez.pickers.deck.utils")
@@ -65,6 +66,32 @@ function M.breakpoints(opts)
   return source, specifier
 end
 
+--- Gets currently opened buffer list
+---@param opts table
+---@return table
+local function buffer_items(opts)
+  opts = opts or {}
+  local bs = require("Beez.bufswitcher")
+  local buffers = bs.list()
+  local items = {}
+  for _, buf in ipairs(buffers) do
+    if buf:is_valid() then
+      local item = {
+        data = {
+          bufnr = buf.id,
+          filename = buf.path,
+          source = "buffer",
+        },
+      }
+      formatters.filename_first.transform(opts)(item)
+      if item.display_text then
+        table.insert(items, item)
+      end
+    end
+  end
+  return items
+end
+
 --- Extended buffer picker from deck
 ---@param opts table
 ---@return deck.Source, deck.StartConfigSpecifier
@@ -74,66 +101,8 @@ function M.buffers(opts)
     name = "buffers",
 
     execute = function(ctx)
-      local buffers = vim.api.nvim_list_bufs()
-      local items = {}
-      for _, buf in ipairs(buffers) do
-        local bufname = vim.api.nvim_buf_get_name(buf)
-        local basename = u.paths.basename(bufname)
-        local acceptable = u.nvim.valid_buf(buf, { current = false })
-        acceptable = acceptable and bufname ~= "" and basename ~= nil and basename ~= ""
-        if acceptable then
-          local filename = bufname
-          local info = vim.fn.getbufinfo(buf)[1]
-          local item = {
-            data = {
-              info = info,
-              bufnr = buf,
-              filename = filename,
-            },
-          }
-          formatters.filename_first.transform(opts)(item)
-          if item.display_text then
-            items[item.data.filename] = item
-          end
-
-          local ok, _ = pcall(require, "bufferline")
-          if ok then
-            local elements = require("bufferline.commands").get_elements()
-            local groups = require("bufferline.groups")
-            for _, e in ipairs(elements.elements) do
-              if e.id == buf then
-                item.data.pinned = groups._is_pinned(e)
-              end
-            end
-          end
-        end
-      end
-
-      -- Use recent file index to sort
-      for i, path in ipairs(require("deck.builtin.source.recent_files").file.contents) do
-        if items[path] then
-          items[path].data.recent = i
-        end
-      end
-      -- Convert back to list to sort
-      local items_list = {}
-      for _, item in pairs(items) do
-        table.insert(items_list, item)
-      end
-      -- Sort by recency
-      table.sort(items_list, function(a, b)
-        local a_score = a.data.recent or 1
-        local b_score = b.data.recent or 1
-        if a.data.pinned then
-          a_score = 9999
-        end
-        if b.data.pinned then
-          b_score = 9999
-        end
-        return a_score > b_score
-      end)
-
-      for i, item in ipairs(items_list) do
+      local items = buffer_items(opts)
+      for i, item in ipairs(items) do
         item.data.i = i
         ctx.item(item)
       end
@@ -143,7 +112,6 @@ function M.buffers(opts)
     actions = {
       require("deck").alias_action("default", "open"),
       require("deck").alias_action("delete", "delete_buf"),
-      require("deck").alias_action("paste", "pin_buf"),
       {
         name = "delete_buf",
         resolve = function(ctx)
@@ -158,29 +126,6 @@ function M.buffers(opts)
           for _, item in ipairs(ctx.get_action_items()) do
             if item.data.bufnr then
               Snacks.bufdelete(item.data.bufnr)
-            end
-          end
-          ctx.execute()
-        end,
-      },
-      {
-        name = "pin_buf",
-        resolve = function(ctx)
-          for _, item in ipairs(ctx.get_action_items()) do
-            if item.data.bufnr then
-              return true
-            end
-          end
-          return false
-        end,
-        execute = function(ctx)
-          local elements = require("bufferline.commands").get_elements()
-          for _, item in ipairs(ctx.get_action_items()) do
-            for _, e in ipairs(elements.elements) do
-              if e.id == item.data.bufnr then
-                ---@diagnostic disable-next-line: redundant-parameter
-                require("bufferline.groups").toggle_pin(e)
-              end
             end
           end
           ctx.execute()
@@ -254,15 +199,29 @@ end
 ---@ruturn deck.Source, deck.StartConfigSpecifier
 function M.files_recent(opts)
   opts = utils.resolve_opts(opts, { source_opts = { limit = 100 } })
-  local source = require("deck.builtin.source.recent_files")(opts.source_opts)
-
-  local _actions = {
-    require("deck").alias_action("default", "open"),
-    require("deck").alias_action("delete", "remove_recent"),
-    actions.remove_recent,
-  }
-  source = utils.resolve_source(opts, source)
-  source.actions = _actions
+  local source = utils.resolve_source(opts, {
+    name = "recent_files",
+    execute = function(ctx)
+      local bs = require("Beez.bufswitcher")
+      local recent_files = bs.rl:list()
+      for _, r in ipairs(recent_files) do
+        local item = {
+          data = {
+            filename = r,
+            source = "recent_files",
+          },
+        }
+        formatters.filename_first.transform(opts)(item)
+        ctx.item(item)
+      end
+      ctx.done()
+    end,
+    actions = {
+      require("deck").alias_action("default", "open"),
+      require("deck").alias_action("delete", "remove_recent"),
+      actions.remove_recent,
+    },
+  })
 
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
@@ -304,6 +263,86 @@ function M.files_smart(opts)
   local files_source, specifier = M.files(opts)
   local sources = { buf_source, recent_source, files_source }
   return sources, specifier
+end
+
+--- Deck source for fff.nvim
+---@param opts table
+---@return deck.Source, deck.StartConfigSpecifier
+function M.fff(opts)
+  opts = utils.resolve_opts(opts)
+  local fff = require("fff")
+  local file_picker = require("fff.file_picker")
+
+  if not file_picker.is_initialized() then
+    local setup_success = file_picker.setup()
+    if not setup_success then
+      vim.notify("Failed to initialize file picker", vim.log.levels.ERROR)
+    end
+  end
+
+  local function parse_query(query)
+    local sep = query:find("  ") or #query
+    local dynamic_query = query:sub(1, sep)
+    local matcher_query = query:sub(sep + 2)
+    return {
+      dynamic_query = dynamic_query:gsub("^%s+", ""):gsub("%s+$", ""),
+      matcher_query = matcher_query:gsub("^%s+", ""):gsub("%s+$", ""),
+    }
+  end
+
+  local source = utils.resolve_source(opts, {
+    name = "fff",
+    parse_query = parse_query,
+    execute = function(ctx)
+      local config = ctx.get_config()
+      local query = ctx.get_query()
+      local dynamic_query = parse_query(query).dynamic_query
+      local cwd = opts.root_dir
+      if config.toggles.cwd == true then
+        cwd = vim.fn.getcwd()
+      end
+
+      -- If no query then show list of opened buffers first
+      if query == "" then
+        local buf_items = buffer_items(opts)
+        for _, b in ipairs(buf_items) do
+          ctx.item(b)
+        end
+      end
+
+      fff.change_indexing_directory(cwd)
+      fff.scan_files()
+      local fff_result = file_picker.search_files(
+        dynamic_query,
+        100,
+        4,
+        vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf()),
+        false
+      )
+      for _, f in ipairs(fff_result) do
+        local item = {
+          data = {
+            query = query,
+            filename = f.path,
+            source = "fff",
+          },
+        }
+        formatters.filename_first.transform(opts)(item)
+        ctx.item(item)
+      end
+      ctx.done()
+    end,
+    actions = u.tables.extend({
+      require("deck").alias_action("default", "open"),
+    }, actions.toggle_cwd()),
+    decorators = {
+      decorators.query,
+      decorators.buf_flags,
+      decorators.source,
+    },
+  })
+  local specifier = utils.resolve_specifier(opts)
+  return source, specifier
 end
 
 --- Grep deck source and specifier

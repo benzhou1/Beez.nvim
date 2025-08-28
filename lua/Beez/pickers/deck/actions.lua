@@ -33,25 +33,40 @@ function M.toggle_cwd(opts)
   }
 end
 
+--- Check is item is form recent files source
+---@param item table
+---@return boolean
+local function is_recent_source(item)
+  local symbols = require("deck.symbols")
+  if item.data.filename == nil then
+    return false
+  end
+
+  if item[symbols.source].name == "recent_files" then
+    return true
+  end
+  if item.data.source == "recent_files" then
+    return true
+  end
+  return false
+end
+
 --- Remove dir from recent dirs
 M.remove_recent = {
   name = "remove_recent",
   resolve = function(ctx)
-    print("here3")
-    local symbols = require("deck.symbols")
     for _, item in ipairs(ctx.get_action_items()) do
-      if item[symbols.source].name == "recent_files" then
+      if is_recent_source(item) then
         return true
       end
     end
     return false
   end,
   execute = function(ctx)
-    print("here4")
-    local symbols = require("deck.symbols")
+    local bs = require("Beez.bufswitcher")
     for _, item in ipairs(ctx.get_action_items()) do
-      if item[symbols.source].name == "recent_files" then
-        require("deck.builtin.source.recent_files"):remove(vim.fs.normalize(item.data.filename))
+      if is_recent_source(item) then
+        bs.rl:remove(item.data.filename)
       end
     end
     ctx.execute()

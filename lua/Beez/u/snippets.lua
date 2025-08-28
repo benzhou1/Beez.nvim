@@ -30,7 +30,7 @@ function M.pf_match_without_prefix(p, prefixes)
   return "", match
 end
 
---- Match postfix mathes delimited by spaces.
+--- Match postfix matches delimited by spaces.
 ---@param p table|string
 ---@param opts? {slice: number, concat: string}
 ---@return string[]
