@@ -194,6 +194,26 @@ function M.files_fasder(opts)
   return source, specifier
 end
 
+--- Gets a list of recent files items
+---@param opts? table
+---@return table
+local function get_recent_files(opts)
+  opts = opts or {}
+  local bs = require("Beez.bufswitcher")
+  local recent_files = bs.rl:list()
+  local items = {}
+  for _, r in ipairs(recent_files) do
+    local item = {
+      data = {
+        filename = r,
+        source = "recent_files",
+      },
+    }
+    table.insert(items, item)
+  end
+  return items
+end
+
 --- Recent files source
 ---@param opts table
 ---@ruturn deck.Source, deck.StartConfigSpecifier
@@ -202,15 +222,8 @@ function M.files_recent(opts)
   local source = utils.resolve_source(opts, {
     name = "recent_files",
     execute = function(ctx)
-      local bs = require("Beez.bufswitcher")
-      local recent_files = bs.rl:list()
-      for _, r in ipairs(recent_files) do
-        local item = {
-          data = {
-            filename = r,
-            source = "recent_files",
-          },
-        }
+      local recent_files = get_recent_files(opts)
+      for _, item in ipairs(recent_files) do
         formatters.filename_first.transform(opts)(item)
         ctx.item(item)
       end
@@ -339,6 +352,40 @@ function M.fff(opts)
         }
         formatters.filename_first.transform(opts)(item)
         ctx.item(item)
+      end
+
+      -- Include recent files with deck default matcher
+      if query ~= "" then
+        local items = {}
+        local recent_files = get_recent_files(opts)
+        local matcher = require("deck.builtin.matcher.default")
+        for _, recent_item in ipairs(recent_files) do
+          if recent_item.data.filename ~= nil and recent_item.data.filename ~= "" then
+            local basename = u.paths.basename(recent_item.data.filename)
+            if basename ~= nil then
+              local score = matcher.match(query, basename)
+              -- Add directory score
+              if score > 0 then
+                local dirname = u.paths.dirname(recent_item.data.filename)
+                if dirname ~= nil then
+                  score = matcher.match(query, dirname) + score
+                  recent_item.data.score = score
+                  recent_item.data.source = "recent_files"
+                  recent_item.data.query = query
+                  formatters.filename_first.transform(opts)(recent_item)
+                  table.insert(items, recent_item)
+                end
+              end
+            end
+          end
+        end
+
+        table.sort(items, function(a, b)
+          return (a.data.score or 0) > (b.data.score or 0)
+        end)
+        for _, i in ipairs(items) do
+          ctx.item(i)
+        end
       end
       ctx.done()
     end,
