@@ -310,8 +310,15 @@ function M.fff(opts)
         end
       end
 
-      fff.change_indexing_directory(cwd)
-      fff.scan_files()
+      local fff_config = require("fff.conf").get()
+      if fff_config.base_path ~= cwd then
+        fff.change_indexing_directory(cwd)
+        fff.scan_files()
+      end
+      if ctx.aborted() then
+        return ctx.done()
+      end
+
       local fff_result = file_picker.search_files(
         dynamic_query,
         100,
@@ -320,6 +327,9 @@ function M.fff(opts)
         false
       )
       for _, f in ipairs(fff_result) do
+        if ctx.aborted() then
+          return ctx.done()
+        end
         local item = {
           data = {
             query = query,
