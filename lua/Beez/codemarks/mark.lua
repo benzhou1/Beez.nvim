@@ -2,7 +2,7 @@
 ---@field file string
 ---@field lineno integer
 ---@field col integer
----@field root string
+---@field line string
 
 ---@class Beez.codemarks.mark: Beez.codemarks.markdata
 local Mark = {}
@@ -17,21 +17,31 @@ function Mark:new(data)
   c.file = data.file
   c.lineno = data.lineno
   c.col = data.col
-  c.root = data.root
+  c.line = data.line
   return c
+end
+
+--- Update the mark
+---@param updates {lineno?: integer}
+function Mark:update(updates)
+  if updates.lineno then
+    self.lineno = updates.lineno
+  end
 end
 
 --- Returns a unique key for the mark
 ---@return string
 function Mark:key()
-  return Mark.key_from_data(self:serialize())
+  local data = self:serialize()
+  return Mark.key_from_data(data.file, data.lineno)
 end
 
 --- Returns a unique key for the mark from data
----@param data Beez.codemarks.markdata
+---@param path string
+---@param lineno integer
 ---@return string
-function Mark.key_from_data(data)
-  return data.root .. ":" .. data.file .. ":" .. data.lineno
+function Mark.key_from_data(path, lineno)
+  return path .. ":" .. lineno
 end
 
 --- Serialize the mark
@@ -41,7 +51,7 @@ function Mark:serialize()
     file = self.file,
     lineno = self.lineno,
     col = self.col,
-    root = self.root,
+    line = self.line,
   }
   return data
 end

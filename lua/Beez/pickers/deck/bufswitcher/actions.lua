@@ -15,7 +15,9 @@ function M.set_active_stack(opts)
         local stack = item.data.stack
         local bs = require("Beez.bufswitcher")
         bs.sl:set_active(stack.name)
-        bs.refresh_ui()
+        vim.schedule(function()
+          bs.refresh_ui()
+        end)
         ctx.hide()
       end,
     },

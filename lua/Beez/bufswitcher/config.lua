@@ -47,7 +47,7 @@ M.def_config = {
   ui_buf_sep_hl = hl.hl.buf_sep,
   ui_pin_sep_hl = hl.hl.pin_sep,
 
-  recent_labels = { ";", "/", "," },
+  recent_labels = { ";", "/", "." },
   cycle_pinned_wrap = true,
   recent_list_limit = 1000,
 }

@@ -125,7 +125,7 @@ function Stacklist:get(name)
 end
 
 --- Returns a pinned buffer by specified options
----@param opts {label?: string}
+---@param opts {label?: string, path?: string}
 ---@return Beez.bufswitcher.pinned_buf?
 function Stacklist:get_pinned(opts)
   local stack = self:get(self.active)
@@ -136,6 +136,10 @@ function Stacklist:get_pinned(opts)
   local found
   for _, s in ipairs(stack.pinned) do
     if opts.label ~= nil and s.label == opts.label then
+      found = s
+      break
+    end
+    if opts.path ~= nil and s.path == opts.path then
       found = s
       break
     end
@@ -182,9 +186,16 @@ function Stacklist:pin(label)
 end
 
 --- Unpins current buffer from active stack
-function Stacklist:unpin()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local filepath = vim.api.nvim_buf_get_name(bufnr)
+---@param path? string
+function Stacklist:unpin(path)
+  local filepath
+  if path ~= nil then
+    filepath = path
+  else
+    local bufnr = vim.api.nvim_get_current_buf()
+    filepath = vim.api.nvim_buf_get_name(bufnr)
+  end
+
   local stack = self:get(self.active)
   if stack == nil then
     return
@@ -204,6 +215,14 @@ function Stacklist:set_active(name)
   end
   self.active = name
   self:save()
+
+  -- Load all pinned buffers in the stack
+  local pinned = self:list_pinned_buffers()
+  for _, p in ipairs(pinned) do
+    local bufnr = vim.fn.bufadd(p.path)
+    vim.fn.bufload(bufnr)
+    vim.api.nvim_set_option_value("buflisted", true, { buf = bufnr })
+  end
 end
 
 --- Returns a list of all stacks

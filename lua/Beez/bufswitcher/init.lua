@@ -102,9 +102,25 @@ function M.enable_recent_tracking()
   M.rl:enable()
 end
 
+--- Check if a label is a valid one
+---@param label string
+---@return boolean
+local function valid_label(label)
+  if label:match("^[a-z1-9" .. table.concat(c.config.recent_labels, "") .. "]$") == nil then
+    return false
+  end
+  return true
+end
+
 --- Pick a specific buffer to jump to by label
-function M.pick()
-  local label = vim.fn.nr2char(vim.fn.getchar())
+---@param label? string
+---@return boolean
+function M.pick(label)
+  label = label or vim.fn.nr2char(vim.fn.getchar())
+  if not valid_label(label) then
+    return false
+  end
+
   local recent_i, found_recent = u.tables.find(c.config.recent_labels, function(l)
     return l == label
   end)
@@ -113,14 +129,17 @@ function M.pick()
   if found_recent ~= nil then
     buf = bufs[recent_i + 1]
     if buf ~= nil then
-      return vim.cmd.edit(buf.path)
+      vim.cmd.edit(buf.path)
+      return true
     end
   end
 
   local found_pinned = M.sl:get_pinned({ label = label })
   if found_pinned ~= nil then
-    return vim.cmd.edit(found_pinned.path)
+    vim.cmd.edit(found_pinned.path)
+    return true
   end
+  return false
 end
 
 --- Default hook for hook_session_name. Uses the basename of the cwd, if session name already exists use parent dir as well.
@@ -234,6 +253,11 @@ function M.default_hook_buf_list(bufs)
   unique_names = {}
   -- Now display all pinned buffers
   local pinned_bufs = M.sl:list_pinned_buffers()
+  -- Sort alphabetically by label
+  table.sort(pinned_bufs, function(a, b)
+    return a.label < b.label
+  end)
+
   local current_buf = M.bl:current()
   for _, b in ipairs(pinned_bufs) do
     -- If pinned buffer is current, remove the first buffer so that pinned buffer can be highlighted correctly
@@ -318,15 +342,27 @@ function M.get_tabline()
 end
 
 --- Pin current buffer to specified label
-function M.pin()
-  local label = vim.fn.nr2char(vim.fn.getchar())
-  -- Ignore escape
-  if label == "\27" then
+---@param label? string
+function M.pin(label)
+  label = label or vim.fn.nr2char(vim.fn.getchar())
+  if not valid_label(label) then
     return
   end
 
   M.sl:pin(label)
   M.refresh_ui()
+end
+
+--- Toggles pin status of current buffer
+---@param label? string
+function M.toggle_pin(label)
+  local path = vim.api.nvim_buf_get_name(0)
+  local exists = M.sl:get_pinned({ path = path })
+  if exists ~= nil then
+    M.unpin()
+  else
+    M.pin(label)
+  end
 end
 
 --- Unpin a buffer

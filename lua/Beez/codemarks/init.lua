@@ -122,35 +122,20 @@ function M.gmarks.pick_update_line(opts)
   require("Beez.pickers").pick("codemarks.global_marks_update_line", opts)
 end
 
---- Toggles a new mark
----@param opts? {clear?: boolean}
-function M.marks.add(opts)
-  opts = opts or {}
-  if opts.clear then
-    M._marks:clear()
-  end
-  M._marks:add()
+--- Toggles mark on current line
+function M.marks.toggle()
+  M._marks:toggle()
   M.save()
 end
 
---- Pops the last mark on the stack
-function M.marks.pop()
-  local mark = M._marks:pop()
-  M.save()
-  if mark then
-    vim.cmd("e " .. mark.file)
-    vim.api.nvim_win_set_cursor(0, { mark.lineno, 0 })
-  end
+--- Navigate to the next mark
+function M.marks.next()
+  M._marks:next()
 end
 
 --- Undo the last popped mark
-function M.marks.undo()
-  local prev_mark = M._marks:undo()
-  M.save()
-  if prev_mark then
-    vim.cmd("e " .. prev_mark.file)
-    vim.api.nvim_win_set_cursor(0, { prev_mark.lineno, 0 })
-  end
+function M.marks.prev()
+  M._marks:prev()
 end
 
 --- Clear all marks
@@ -178,6 +163,36 @@ function M.marks.pick(opts)
   require("Beez.pickers").pick("codemarks.marks", opts)
 end
 
+--- Checks whether a mark needs
+---@param path string
+---@param lineno integer
+---@param old_line string
+---@param save fun(integer)
+local function check_for_outdated_marks(path, lineno, old_line, save)
+  local line = u.os.read_line_at(path, lineno)
+  -- If the line has changed, update the mark
+  if line ~= old_line then
+    -- Look for the new line number
+    local new_lineno = vim.fn.search(old_line, "n")
+    new_lineno = new_lineno or vim.fn.search(old_line, "nb")
+    if new_lineno > 0 then
+      local choice = 1
+      if not c.config.auto_update_out_of_sync_marks then
+        -- Focus the line that we are updating to
+        vim.api.nvim_win_set_cursor(0, { new_lineno, 0 })
+        vim.cmd("normal! zz")
+
+        -- Prompt to confirm the update
+        choice = vim.fn.confirm("Update mark to lineno: " .. new_lineno, "&Yes\n&No")
+      end
+
+      if choice == 1 then
+        save(new_lineno)
+      end
+    end
+  end
+end
+
 --- Checks current file for any outdated marks
 ---@param filename string
 function M.check_for_outdated_marks(filename)
@@ -185,31 +200,23 @@ function M.check_for_outdated_marks(filename)
   -- Filter out reads from files that arent marked
   local gmarks = M._gmarks:list({ file = filename })
   for _, m in ipairs(gmarks) do
-    local line = u.os.read_line_at(m.file, m.lineno)
-    -- If the line has changed, update the mark
-    if line ~= m.line then
-      -- Look for the new line number
-      local new_lineno = vim.fn.search(m.line, "n")
-      new_lineno = new_lineno or vim.fn.search(m.line, "nb")
-      if new_lineno > 0 then
-        local choice = 1
-        if not c.config.auto_update_out_of_sync_marks then
-          -- Focus the line that we are updating to
-          vim.api.nvim_win_set_cursor(0, { new_lineno, 0 })
-          vim.cmd("normal! zz")
+    check_for_outdated_marks(m.file, m.lineno, m.line, function(new_lineno)
+      M.gmarks.update(m:serialize(), { lineno = new_lineno }, { save = false })
+      save = true
+      vim.notify("Updated mark [" .. m.desc .. "] to lineno: " .. new_lineno, vim.log.levels.INFO)
+    end)
+  end
 
-          -- Prompt to confirm the update
-          choice =
-            vim.fn.confirm("Update mark [" .. m.desc .. "] to lineno: " .. new_lineno, "&Yes\n&No")
-        end
-
-        if choice == 1 then
-          M.gmarks.update(m:serialize(), { lineno = new_lineno }, { save = false })
-          save = true
-          vim.notify("Updated mark [" .. m.desc .. "] to lineno: " .. new_lineno, vim.log.levels.INFO)
-        end
-      end
-    end
+  local marks = M._marks:list({ file = filename })
+  for _, m in ipairs(marks) do
+    check_for_outdated_marks(m.file, m.lineno, m.line, function(new_lineno)
+      m:update({ lineno = new_lineno })
+      save = true
+      vim.notify(
+        "Updated mark at " .. m.file .. ":" .. m.lineno .. " to lineno: " .. new_lineno,
+        vim.log.levels.INFO
+      )
+    end)
   end
 
   -- Save if any marks were updated

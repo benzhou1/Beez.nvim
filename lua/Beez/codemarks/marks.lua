@@ -1,11 +1,9 @@
 local Mark = require("Beez.codemarks.mark")
-local c = require("Beez.codemarks.config")
+local u = require("Beez.u")
 
 ---@class Beez.codemarks.marks
 ---@field marks Beez.codemarks.mark[]
 ---@field keys table<string, boolean>
----@field archive Beez.codemarks.mark[]
----@field history Beez.codemarks.mark[]
 Marks = {}
 Marks.__index = Marks
 
@@ -13,55 +11,59 @@ Marks.__index = Marks
 ---@param marks Beez.codemarks.markdata[]
 ---@return Beez.codemarks.marks
 function Marks:new(marks)
-  local c = {}
-  setmetatable(c, Marks)
-  c.marks = {}
-  c.keys = {}
-  c.archive = {}
-  c.history = {}
-  for _, m in ipairs(marks) do
-    local mark = Mark:new(m)
-    table.insert(c.marks, mark)
-    c.keys[mark:key()] = true
+  local m = {}
+  setmetatable(m, Marks)
+  m.marks = {}
+  m.keys = {}
+  for _, _m in ipairs(marks) do
+    local mark = Mark:new(_m)
+    m.marks[mark.file] = m.marks[mark.file] or {}
+    table.insert(m.marks[mark.file], mark)
+    m.keys[mark:key()] = true
   end
-  return c
+  return m
 end
 
 --- Filter marks based on options
----@param opts? {file: string?, root: string?}
+---@param opts? {path?: string}
 ---@return Beez.codemarks.mark[]
 function Marks:list(opts)
   opts = opts or {}
-  local marks = {}
-  for _, mark in ipairs(self.marks) do
-    if opts.root then
-      if mark.root == opts.root then
-        table.insert(marks, mark)
-      end
-    elseif opts.file then
-      if mark.file == opts.file then
-        table.insert(marks, mark)
-      end
-    else
-      table.insert(marks, mark)
-    end
-  end
+  local path = opts.path or vim.api.nvim_buf_get_name(0)
+  local marks = self.marks[path] or {}
+
+  -- Sort mark by line number
+  table.sort(marks, function(a, b)
+    return a.lineno < b.lineno
+  end)
   return marks
 end
 
+--- Toggles a mark on current line
+function Marks:toggle()
+  local file_path = vim.api.nvim_buf_get_name(0)
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local key = Mark.key_from_data(file_path, pos[1])
+  if self.keys[key] then
+    self:del()
+  else
+    self:add()
+  end
+end
+
 --- Add mark on current line
---- @param opts? {history?: boolean}
+--- @param opts? table
 function Marks:add(opts)
   opts = opts or {}
   local file_path = vim.api.nvim_buf_get_name(0)
   local pos = vim.api.nvim_win_get_cursor(0)
-  local root = c.config.get_root()
+  local line = u.os.read_line_at(file_path, pos[1]) or ""
   ---@type Beez.codemarks.markdata
   local data = {
     file = file_path,
     lineno = pos[1],
     col = pos[2],
-    root = root,
+    line = line,
   }
 
   local mark = Mark:new(data)
@@ -71,22 +73,26 @@ function Marks:add(opts)
     return
   end
 
-  if opts.history then
-    table.insert(self.history, mark)
-  else
-    table.insert(self.marks, mark)
-    self.keys[key] = true
-    vim.notify("Created mark at: " .. mark.lineno, vim.log.levels.INFO)
-  end
+  self.marks[mark.file] = self.marks[mark.file] or {}
+  table.insert(self.marks[mark.file], mark)
+  self.keys[key] = true
+  vim.notify("Created mark at: " .. mark.lineno, vim.log.levels.INFO)
 end
 
---- Delete a mark
----@param data Beez.codemarks.markdata
-function Marks:del(data)
-  local key = Mark.key_from_data(data)
-  if self.marks[key] then
-    self.marks[key] = nil
-    self.keys[key] = nil
+--- Delete a mark on current line
+function Marks:del()
+  local file_path = vim.api.nvim_buf_get_name(0)
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local marks = self.marks[file_path]
+  if marks == nil then
+    return
+  end
+
+  local mark = u.tables.remove(marks, function(mark)
+    return mark.file == file_path and mark.lineno == pos[1]
+  end)
+  if mark ~= nil then
+    self.keys[mark:key()] = nil
   end
 end
 
@@ -94,45 +100,70 @@ end
 ---@return Beez.codemarks.markdata[]
 function Marks:serialize()
   local marks = {}
-  for _, mark in pairs(self.marks) do
-    table.insert(marks, mark:serialize())
+  for _, _marks in pairs(self.marks) do
+    for _, v in ipairs(_marks) do
+      table.insert(marks, v:serialize())
+    end
   end
   return marks
 end
 
---- Removes and returns the last mark
----@return Beez.codemarks.mark?
-function Marks:pop()
-  if #self.marks == 0 then
-    vim.notify("No marks to pop", vim.log.levels.WARN)
-    return
-  end
-  local mark = table.remove(self.marks)
-  local key = mark:key()
-  self.keys[key] = nil
-  self:add({ history = true })
-  table.insert(self.archive, mark)
-  return mark
-end
-
---- Undo the last pop operation
-function Marks:undo()
-  local archived_mark = table.remove(self.archive)
-  local prev_mark = table.remove(self.history)
-  if archived_mark == nil then
+--- Go to the next mark from current cursor position
+function Marks:next()
+  local file_path = vim.api.nvim_buf_get_name(0)
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local marks = self.marks[file_path] or {}
+  if marks == nil then
     return
   end
 
-  local key = archived_mark:key()
-  table.insert(self.marks, archived_mark)
-  self.keys[key] = archived_mark
-  return prev_mark
+  local mark = marks[1]
+  for _, m in ipairs(marks) do
+    if m.lineno > pos[1] then
+      mark = m
+      break
+    end
+  end
+  if mark ~= nil then
+    vim.api.nvim_win_set_cursor(0, { mark.lineno, mark.col })
+    vim.cmd("normal! zz")
+  end
 end
 
---- Clears all marks
+--- Go to the previous mark from current cursor position
+function Marks:prev()
+  local file_path = vim.api.nvim_buf_get_name(0)
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local marks = self.marks[file_path] or {}
+  if marks == nil then
+    return
+  end
+
+  local mark = marks[#marks]
+  for _, m in ipairs(marks) do
+    if m.lineno < pos[1] then
+      mark = m
+      break
+    end
+  end
+  if mark ~= nil then
+    vim.api.nvim_win_set_cursor(0, { mark.lineno, mark.col })
+    vim.cmd("normal! zz")
+  end
+end
+
+--- Clears all marks for current file
 function Marks:clear()
-  self.marks = {}
-  self.keys = {}
+  local file_path = vim.api.nvim_buf_get_name(0)
+  local marks = self.marks[file_path] or {}
+  if marks == nil then
+    return
+  end
+
+  for _, mark in ipairs(marks) do
+    self.keys[mark:key()] = nil
+  end
+  self.marks[file_path] = nil
 end
 
 return Marks
