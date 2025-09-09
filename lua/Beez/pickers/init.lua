@@ -10,7 +10,7 @@ local M = {
 ---@field cwd? boolean|string
 ---@field pick_opts? table
 
----@alias Beez.pick.name "smart"|"resume"|"find_files"|"find_buffers"|"git_files"|"grep"|"grep_buffer"|"lsp_definitions"|"lsp_references"|"lsp_symbols"|"lsp_workspace_symbols"|"codemarks.global_marks"|"codemarks.global_marks_update_line"|"codemarks.marks"|"scratches"|"notes.find"|"notes.grep"|"notes.find_templates"|"dbfp.connections"|"dbfp.queries"|"notes.backlinks"|"jump_list"|"bufswitcher.stacks"|"fff"
+---@alias Beez.pick.name "smart"|"resume"|"find_files"|"find_buffers"|"git_files"|"grep"|"grep_buffer"|"lsp_definitions"|"lsp_references"|"lsp_symbols"|"lsp_workspace_symbols"|"codestacks.global_marks"|"codemarks.global_marks_update_line"|"codemarks.marks"|"scratches"|"notes.find"|"notes.grep"|"notes.find_templates"|"dbfp.connections"|"dbfp.queries"|"notes.backlinks"|"jump_list"|"bufswitcher.stacks"|"fff"|"codestacks.stacks"
 
 --- Pick a picker
 ---@param name Beez.pick.name
@@ -66,7 +66,7 @@ function M.pick(name, opts)
     end
   end
   if cwd == nil then
-    cwd = u.root.get({ buf = vim.api.nvim_get_current_buf() })
+    cwd = u.root.git()
   end
   pick_opts.cwd = cwd
   pick_opts.root_dir = cwd

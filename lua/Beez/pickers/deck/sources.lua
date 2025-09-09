@@ -71,11 +71,11 @@ end
 ---@return table
 local function buffer_items(opts)
   opts = opts or {}
-  local bs = require("Beez.bufswitcher")
-  local buffers = bs.list()
+  local cs = require("Beez.codestacks")
+  local buffers = cs.bufferlist.list()
   local items = {}
   for _, buf in ipairs(buffers) do
-    if buf:is_valid() then
+    if cs.bufferlist.is_valid(buf) then
       local item = {
         data = {
           bufnr = buf.id,
@@ -199,8 +199,8 @@ end
 ---@return table
 local function get_recent_files(opts)
   opts = opts or {}
-  local bs = require("Beez.bufswitcher")
-  local recent_files = bs.rl:list()
+  local cs = require("Beez.codestacks")
+  local recent_files = cs.recentfiles.list()
   local items = {}
   for _, r in ipairs(recent_files) do
     local item = {

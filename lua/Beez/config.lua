@@ -6,6 +6,7 @@ local M = {}
 ---@field scratches Beez.scratches.config?
 ---@field codemarks Beez.codemarks.config?
 ---@field dbfp Beez.dbfp.config?
+---@field codestacks Beez.codestacks.config?
 
 ---@type Beez.config
 local def_config = {
@@ -39,6 +40,9 @@ function M.init(opts)
   end
   if M.config.dbfp then
     require("Beez.dbfp").setup(M.config.dbfp)
+  end
+  if M.config.codestacks then
+    require("Beez.codestacks").setup(M.config.codestacks)
   end
 end
 

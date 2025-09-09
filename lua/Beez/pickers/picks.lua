@@ -736,16 +736,16 @@ function M.spelling()
   }
 end
 
-function M.codemarks_global_marks()
+function M.codestacks_global_marks()
   return {
     deck = {
       run = function(opts)
-        deck_pickers.codemarks.global_marks(opts)
+        deck_pickers.codestacks.global_marks(opts)
       end,
     },
   }
 end
-M["codemarks.global_marks"] = M.codemarks_global_marks
+M["codestacks.global_marks"] = M.codestacks_global_marks
 
 function M.codemarks_global_marks_update_line()
   return {
@@ -884,5 +884,16 @@ function M.fff()
     },
   }
 end
+
+function M.codestacks_stacks()
+  return {
+    deck = {
+      run = function(opts)
+        deck_pickers.codestacks.stacks(opts)
+      end,
+    },
+  }
+end
+M["codestacks.stacks"] = M.codestacks_stacks
 
 return M
