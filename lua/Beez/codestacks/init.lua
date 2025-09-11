@@ -162,10 +162,14 @@ end
 ---@param unique_names table<string, boolean>
 ---@return string, string[][]
 function M.def_hooks.pinned_buf_name(b, i, bufs, unique_names)
+  local basename = u.paths.basename(b.path)
+  if b.path:startswith("oil://") then
+    basename = u.paths.sep .. basename
+  end
   return M.def_hooks.buf_name({
     id = 0,
     path = b.path,
-    basename = u.paths.basename(b.path),
+    basename = basename,
     dirname = u.paths.dirname(b.path),
     current = false,
   }, i, bufs, unique_names)

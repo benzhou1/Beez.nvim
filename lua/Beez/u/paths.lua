@@ -8,6 +8,9 @@ local M = {
 ---@param path string
 ---@return string
 function M.basename(path)
+  if path:startswith("oil://") then
+    path = string.sub(path, 7, -2)
+  end
   local name = path:match("([^" .. M.sep .. "]+)$")
   return name
 end

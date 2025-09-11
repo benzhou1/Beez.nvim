@@ -1,0 +1,136 @@
+local actions = require("Beez.pickers.deck.lsp.actions")
+local u = require("Beez.u")
+local utils = require("Beez.pickers.deck.utils")
+local M = {}
+
+--- Utility function for getting all definitions under cursor
+---@param cb fun(items: deck.Item[])
+function M.get_definitions(cb)
+  vim.lsp.buf.definition({
+    on_list = function(tt)
+      local items = {}
+      for _, t in ipairs(tt.items) do
+        local target_uri = t.user_data.targetUri or t.user_data.uri
+        local item = {
+          display_text = {
+            { t.text, "String" },
+            { " " },
+            { t.filename, "Comment" },
+            { ":", "Comment" },
+            { tostring(t.lnum), "Comment" },
+          },
+          data = {
+            target_bufnr = vim.uri_to_bufnr(target_uri),
+            filename = t.filename,
+            lnum = t.lnum,
+            end_lnum = t.end_lnum,
+            col = t.col,
+            end_col = t.end_col,
+          },
+        }
+        table.insert(items, item)
+      end
+      cb(items)
+    end,
+  })
+end
+
+--- Utility function for getting all references under cursor
+---@param cb fun(items: deck.Item[])
+function M.get_references(cb)
+  vim.lsp.buf.references({
+    includeDeclaration = false,
+  }, {
+    on_list = function(tt)
+      local items = {}
+      for _, t in ipairs(tt.items) do
+        local target_uri = t.user_data.targetUri or t.user_data.uri
+        local item = {
+          display_text = {
+            { t.text, "String" },
+            { " " },
+            { t.filename, "Comment" },
+            { ":", "Comment" },
+            { tostring(t.lnum), "Comment" },
+          },
+          data = {
+            target_bufnr = vim.uri_to_bufnr(target_uri),
+            filename = t.filename,
+            lnum = t.lnum,
+            end_lnum = t.end_lnum,
+            col = t.col,
+            end_col = t.end_col,
+          },
+        }
+        table.insert(items, item)
+      end
+      cb(items)
+    end,
+  })
+end
+
+--- Deck source for go to definitions
+---@param items? deck.Item[]
+---@param opts? table
+---@return deck.Source, deck.StartConfigSpecifier
+function M.go_to_definitions(items, opts)
+  opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
+
+  local source = utils.resolve_source(opts, {
+    name = "lsp.go_to_definitions",
+    execute = function(ctx)
+      if items ~= nil then
+        for _, i in ipairs(items) do
+          ctx.item(i)
+        end
+        ctx.done()
+        return
+      end
+
+      M.get_definitions(function(def_items)
+        for _, i in ipairs(def_items) do
+          ctx.item(i)
+        end
+        ctx.done()
+      end)
+    end,
+    actions = u.tables.extend(actions.peek()),
+  })
+
+  local specifier = utils.resolve_specifier(opts)
+  return source, specifier
+end
+
+--- Deck source for find references
+---@param items? deck.Item[]
+---@param opts? table
+---@return deck.Source, deck.StartConfigSpecifier
+function M.find_references(items, opts)
+  opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
+
+  local source = utils.resolve_source(opts, {
+    name = "lsp.find_references",
+    execute = function(ctx)
+      if items ~= nil then
+        for _, i in ipairs(items) do
+          ctx.item(i)
+        end
+        ctx.done()
+        return
+      end
+
+      M.get_references(function(def_items)
+        for _, i in ipairs(def_items) do
+          ctx.item(i)
+        end
+        ctx.done()
+      end)
+    end,
+    actions = u.tables.extend(actions.peek()),
+  })
+
+  local specifier = utils.resolve_specifier(opts)
+  return source, specifier
+end
+
+return M

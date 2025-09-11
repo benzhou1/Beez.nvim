@@ -404,6 +404,11 @@ function M.goto_def()
         require("fzf-lua.providers.lsp").definitions(opts)
       end,
     },
+    deck = {
+      run = function(opts)
+        require("Beez.pickers.deck.lsp").go_to_definitions(opts)
+      end
+    }
   }
 end
 
@@ -440,6 +445,11 @@ function M.goto_ref()
         require("fzf-lua.providers.lsp").references(opts)
       end,
     },
+    deck = {
+      run = function(opts)
+        require("Beez.pickers.deck.lsp").find_references(opts)
+      end
+    }
   }
 end
 
