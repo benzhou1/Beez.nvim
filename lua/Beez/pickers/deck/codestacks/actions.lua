@@ -154,26 +154,29 @@ function M.edit_global_marks(opts)
         save = function(items, lines)
           local cs = require("Beez.codestacks")
           for _, l in ipairs(lines) do
-            local desc, id = l:match("^(.-) %[id::(.-)%]$")
-            id = tonumber(id)
-            assert(id ~= nil, "Invalid ID in line: " .. l)
+            -- This happens when all marks are removed
+            if l ~= "" then
+              local desc, id = l:match("^(.-) %[id::(.-)%]$")
+              id = tonumber(id)
+              assert(id ~= nil, "Invalid ID in line: " .. l)
 
-            local item = items[id]
-            if item ~= nil then
-              -- Basically a pop
-              items[id] = nil
-              ---@type Beez.codemarks.gmark
-              local mark = item.data.mark
-              local updates = {}
+              local item = items[id]
+              if item ~= nil then
+                -- Basically a pop
+                items[id] = nil
+                ---@type Beez.codemarks.gmark
+                local mark = item.data.mark
+                local updates = {}
 
-              -- Check if description has changed
-              if mark.desc ~= desc then
-                updates.desc = desc
-              end
+                -- Check if description has changed
+                if mark.desc ~= desc then
+                  updates.desc = desc
+                end
 
-              -- Perform the update without saving
-              if next(updates) ~= nil then
-                cs.marks.update(item.data.filename, item.data.lnum, updates)
+                -- Perform the update without saving
+                if next(updates) ~= nil then
+                  cs.marks.update(item.data.filename, item.data.lnum, updates)
+                end
               end
             end
           end
