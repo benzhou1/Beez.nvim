@@ -103,6 +103,7 @@ function M.toggle_global(opts)
   }
 end
 
+--- Deck action for opening the global mark in a overlook popup
 ---@return deck.Action
 ---@param opts? {mark?: boolean}
 function M.open(opts)
@@ -115,16 +116,26 @@ function M.open(opts)
     execute = function(ctx)
       local item = ctx.get_action_items()[1]
 
-      open_action.execute(ctx)
-      if not opts.mark then
-        vim.schedule(function()
-          -- Line number was updated
-          if item.data.lnum ~= item.data.mark.lineno then
-            vim.api.nvim_win_set_cursor(0, { item.data.mark.lineno, 0 })
-          end
-          vim.cmd("normal! zz")
-        end)
-      end
+      ctx.hide()
+      vim.schedule(function()
+        require("overlook.ui").create_popup({
+          target_bufnr = vim.fn.bufnr(item.data.filename),
+          lnum = item.data.lnum,
+          col = item.data.col or 0,
+          title = item.data.filename,
+        })
+      end)
+
+      -- open_action.execute(ctx)
+      -- if not opts.mark then
+      --   vim.schedule(function()
+      --     -- Line number was updated
+      --     if item.data.lnum ~= item.data.mark.lineno then
+      --       vim.api.nvim_win_set_cursor(0, { item.data.mark.lineno, 0 })
+      --     end
+      --     vim.cmd("normal! zz")
+      --   end)
+      -- end
     end,
   }
 end
