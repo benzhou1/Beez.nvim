@@ -9,26 +9,30 @@ function M.get_definitions(cb)
   vim.lsp.buf.definition({
     on_list = function(tt)
       local items = {}
+      local unique_items = {}
       for _, t in ipairs(tt.items) do
         local target_uri = t.user_data.targetUri or t.user_data.uri
-        local item = {
-          display_text = {
-            { t.text, "String" },
-            { " " },
-            { t.filename, "Comment" },
-            { ":", "Comment" },
-            { tostring(t.lnum), "Comment" },
-          },
-          data = {
-            target_bufnr = vim.uri_to_bufnr(target_uri),
-            filename = t.filename,
-            lnum = t.lnum,
-            end_lnum = t.end_lnum,
-            col = t.col,
-            end_col = t.end_col,
-          },
-        }
-        table.insert(items, item)
+        if unique_items[t.text] == nil then
+          local item = {
+            display_text = {
+              { t.text, "String" },
+              { " " },
+              { t.filename, "Comment" },
+              { ":", "Comment" },
+              { tostring(t.lnum), "Comment" },
+            },
+            data = {
+              target_bufnr = vim.uri_to_bufnr(target_uri),
+              filename = t.filename,
+              lnum = t.lnum,
+              end_lnum = t.end_lnum,
+              col = t.col,
+              end_col = t.end_col,
+            },
+          }
+          table.insert(items, item)
+          unique_items[t.text] = true
+        end
       end
       cb(items)
     end,
@@ -79,6 +83,7 @@ function M.go_to_definitions(items, opts)
   local source = utils.resolve_source(opts, {
     name = "lsp.go_to_definitions",
     execute = function(ctx)
+      print("item = ", vim.inspect(items))
       if items ~= nil then
         for _, i in ipairs(items) do
           ctx.item(i)
