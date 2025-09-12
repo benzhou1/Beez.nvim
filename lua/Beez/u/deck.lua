@@ -59,10 +59,10 @@ function M.edit_list(ctx, opts)
   end
 
   -- Create scratch buffer
-  local buf = vim.api.nvim_create_buf(true, true)
+  local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.api.nvim_buf_set_name(buf, opts.filename or "deck_scratch")
-  vim.api.nvim_set_option_value("buftype", "", { buf = buf })
+  vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
   vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
   vim.api.nvim_set_option_value("modified", false, { buf = buf })
   vim.api.nvim_set_option_value("filetype", opts.filetype or "", { buf = buf })

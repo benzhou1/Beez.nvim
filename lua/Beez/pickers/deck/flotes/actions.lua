@@ -126,23 +126,34 @@ function M.edit_tasks(opts)
           local f = require("Beez.flotes")
           local function load_buf(filename)
             local bufnr = bufs[filename]
+            local loaded = true
             if bufnr == nil then
               -- Load the buffer by filename
-              bufnr = vim.fn.bufadd(filename)
-              pcall(vim.fn.bufload, bufnr)
-              bufs[filename] = bufnr
+              bufnr = vim.fn.bufnr(filename)
+              -- Has not been loaded yet
+              if bufnr == -1 then
+                loaded = false
+                bufnr = vim.fn.bufadd(filename)
+                pcall(vim.fn.bufload, bufnr)
+              end
+              bufs[filename] = {
+                bufnr = bufnr,
+                loaded = loaded,
+              }
             end
             return bufnr
           end
           local function cleanup_bufs()
-            for filename, bufnr in pairs(bufs) do
+            for _, buf in pairs(bufs) do
               -- Save the buffer before closing
-              vim.api.nvim_buf_call(bufnr, function()
+              vim.api.nvim_buf_call(buf.bufnr, function()
                 vim.cmd("write")
               end)
               -- Close the buffer
-              if vim.api.nvim_buf_is_valid(bufnr) then
-                vim.api.nvim_buf_delete(bufnr, { force = true })
+              if vim.api.nvim_buf_is_valid(buf.bufnr) then
+                if not buf.loaded then
+                  vim.api.nvim_buf_delete(buf.bufnr, { force = true })
+                end
               end
             end
           end
