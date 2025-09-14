@@ -107,10 +107,7 @@ function M.edit_tasks(opts)
         get_feedkey = opts.get_feedkey,
         col_pos_offset = function(pos, action)
           -- Because checkmate converts state into ascii which adds 2 to the column position
-          if pos[2] < 3 or action == "insert_end" then
-            return 2
-          end
-          return 1
+          return 2
         end,
         get_lines = function(items)
           local lines = {}

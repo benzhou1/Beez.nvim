@@ -271,7 +271,7 @@ end
 ---@field task_desc string
 ---@field tags string[]
 
---- Sort tasks based on their state and tags
+--- Sort tasks based on their state and tags and mtime
 ---@param a table
 ---@param b table
 ---@return boolean
@@ -298,6 +298,11 @@ local function sort_tasks(a, b)
   end
   for _, tag in ipairs(bt.tags) do
     bscore = bscore + (tag_scores[tag] or 0)
+  end
+  if a.data.mtime > b.data.mtime then
+    ascore = ascore + 0.5
+  elseif b.data.mtime > a.data.mtime then
+    bscore = bscore + 0.5
   end
   return ascore > bscore
 end
@@ -332,8 +337,12 @@ local function parse_task_line(line)
 end
 
 --- Display a task in deck
+---@param ctx deck.Context
 ---@param item table
-local function display_task(ctx, item, keys)
+---@param keys table<string, boolean>
+---@param indent? integer
+local function display_task(ctx, item, keys, indent)
+  indent = indent or 0
   local cmp = require("plugins.checkmate")
   local task_state = item.data.task.state
   local marker = cmp.md_to_marker(task_state)
@@ -349,7 +358,7 @@ local function display_task(ctx, item, keys)
 
   local deck_item = {
     display_text = {
-      { string.rep(" ", item.data.col), "String" },
+      { string.rep("  ", indent or 0), "Normal" },
       { "-", "Comment" },
       { " ", "String" },
       { marker, marker_hl },
@@ -373,9 +382,104 @@ local function display_task(ctx, item, keys)
   if item.children ~= nil then
     table.sort(item.children, sort_tasks)
     for _, child in ipairs(item.children) do
-      display_task(ctx, child, keys)
+      display_task(ctx, child, keys, indent + 1)
     end
   end
+end
+
+--- Get all tasks from using rg to grep
+---@param ctx deck.ExecuteContext
+local function get_tasks_from_text(ctx)
+  local f = require("Beez.flotes")
+  local IO = require("deck.kit.IO")
+  local System = require("deck.kit.System")
+  local query = ctx.get_query()
+  local root_dir = f.config.notes_dir
+  assert(root_dir ~= nil, "Flotes root directory is not set")
+
+  local task_states = " /"
+  if actions.toggles.done_task then
+    task_states = task_states .. "x"
+  end
+  local cmd = {
+    "rg",
+    "--column",
+    "--line-number",
+    "--ignore-case",
+    "-e",
+    ("- \\[[%s]?\\]"):format(task_states),
+  }
+
+  local tasks = {}
+  ctx.on_abort(System.spawn(cmd, {
+    cwd = root_dir,
+    env = {},
+    buffering = System.LineBuffering.new({
+      ignore_empty = true,
+    }),
+    on_stdout = function(text)
+      local filename = text:match("^[^:]+")
+      local lnum = tonumber(text:match(":(%d+):"))
+      local col = tonumber(text:match(":%d+:(%d+):"))
+      local t = parse_task_line(text)
+      if filename == nil or t == nil or lnum == nil then
+        return
+      end
+
+      local path = IO.join(root_dir, filename)
+      local curr_task = {
+        data = {
+          tags = t.tags,
+          query = query,
+          filename = path,
+          lnum = lnum,
+          col = col,
+          task = t,
+          mtime = u.os.mtime(path),
+        },
+      }
+      tasks[path] = tasks[path] or {}
+      tasks[path][lnum] = curr_task
+    end,
+    on_exit = function()
+      local task_list = {}
+      for _, _tasks in pairs(tasks) do
+        for lnum, t in pairs(_tasks) do
+          table.insert(task_list, t)
+
+          -- Found a child task
+          if t.data.col > 1 then
+            local i = lnum - 1
+            local lines = u.os.read_lines(t.data.filename)
+            -- Find the parent line
+            while true and i > 0 do
+              local line = lines[i]
+              local leading_ws = line:match("^(%s*)")
+              local ws_count = #leading_ws
+              -- This must be the parent
+              if ws_count < t.data.col - 1 then
+                local parent = tasks[t.data.filename][i]
+                -- Parent is a task, assign current task as a child
+                if parent ~= nil then
+                  parent.children = parent.children or {}
+                  table.insert(parent.children, t)
+                end
+                break
+              end
+              i = i - 1
+            end
+          end
+        end
+      end
+
+      local keys = {}
+      table.sort(task_list, sort_tasks)
+      for _, item in ipairs(task_list) do
+        display_task(ctx, item, keys)
+      end
+      ctx.done()
+    end,
+  }))
 end
 
 --- Deck source for flotes tasks
@@ -387,86 +491,8 @@ function M.tasks(opts)
   local source = utils.resolve_source(opts, {
     name = "find_tasks",
     execute = function(ctx)
-      local f = require("Beez.flotes")
-      local IO = require("deck.kit.IO")
-      local System = require("deck.kit.System")
-      local query = ctx.get_query()
-      local root_dir = f.config.notes_dir
-      assert(root_dir ~= nil, "Flotes root directory is not set")
-
-      local task_states = " /"
-      if actions.toggles.done_task then
-        task_states = task_states .. "x"
-      end
-      local cmd = {
-        "rg",
-        "--column",
-        "--line-number",
-        "--ignore-case",
-        "-e",
-        ("- \\[[%s]?\\]"):format(task_states),
-      }
-
-      local task_list = {}
-      ctx.on_abort(System.spawn(cmd, {
-        cwd = root_dir,
-        env = {},
-        buffering = System.LineBuffering.new({
-          ignore_empty = true,
-        }),
-        on_stdout = function(text)
-          local filename = text:match("^[^:]+")
-          local lnum = tonumber(text:match(":(%d+):"))
-          local col = tonumber(text:match(":%d+:(%d+):"))
-          local t = parse_task_line(text)
-          if filename == nil or t == nil or lnum == nil then
-            return
-          end
-
-          local curr_task = {
-            data = {
-              tags = t.tags,
-              query = query,
-              filename = IO.join(root_dir, filename),
-              lnum = lnum,
-              col = col,
-              task = t,
-            },
-          }
-          table.insert(task_list, curr_task)
-
-          -- Found a child task
-          if col > 1 then
-            local curr_lnum = lnum
-            -- Assume parent task is the last task that has a column less than the current task
-            local i = #task_list
-            while true do
-              if i == 0 then
-                break
-              end
-
-              local parent = task_list[i]
-              if parent.data.filename == curr_task.data.filename and parent.data.lnum < curr_lnum then
-                if parent.data.col < col then
-                  -- Found parent task based on column
-                  parent.children = parent.children or {}
-                  table.insert(parent.children, curr_task)
-                  break
-                end
-              end
-              i = i - 1
-            end
-          end
-        end,
-        on_exit = function()
-          local keys = {}
-          table.sort(task_list, sort_tasks)
-          for _, item in ipairs(task_list) do
-            display_task(ctx, item, keys)
-          end
-          ctx.done()
-        end,
-      }))
+      -- get_tasks_from_ts(ctx)
+      get_tasks_from_text(ctx)
     end,
     actions = u.tables.extend(
       {},
@@ -481,8 +507,20 @@ function M.tasks(opts)
           edit_opts = {
             get_pos = function(item, pos)
               -- 6 for beginning of task
-              local offset = u.utf8.len(item.data.task.task_desc) + 6
+              local offset = u.utf8.len(item.data.task.task_desc) + 6 + item.data.col - 1
               return { pos[1], offset }
+            end,
+            get_feedkey = function(feedkey)
+              return "i"
+            end,
+          },
+        },
+        edit_line_start = {
+          ---@diagnostic disable-next-line: missing-fields
+          edit_opts = {
+            get_pos = function(item, pos)
+              -- 6 for beginning of task
+              return { pos[1], 6 + item.data.col - 1 }
             end,
             get_feedkey = function(feedkey)
               return "i"
