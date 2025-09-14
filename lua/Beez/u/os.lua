@@ -76,4 +76,16 @@ function M.read_line_at(file_path, line_number)
   end
 end
 
+--- Gets the modified time of a file
+---@param path string
+---@return integer
+function M.mtime(path)
+  local stat = vim.uv.fs_stat(path)
+  if stat then
+    local mtime = stat.mtime.sec
+    return mtime
+  end
+  return 0
+end
+
 return M
