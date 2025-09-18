@@ -5,6 +5,7 @@ local M = {}
 ---@field label string[]
 ---@field name string[][]
 ---@field pinned boolean
+---@field space boolean
 
 --- Generate a tabline for rendering buffers
 ---@param stack string
@@ -20,7 +21,10 @@ function M.get(stack, bufs)
       tabline = tabline .. M.hl(" 󰐃 ", c.config.ui_pin_sep_hl) .. M.space()
     end
     local buf_tabline = M.buf(b)
-    tabline = tabline .. buf_tabline .. M.space()
+    tabline = tabline .. buf_tabline
+    if b.space ~= false then
+      tabline = tabline .. M.space()
+    end
   end
   return tabline
 end

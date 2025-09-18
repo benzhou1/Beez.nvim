@@ -207,6 +207,66 @@ function M.def_hooks.buf_list(bufs)
     table.insert(display_bufs, display_buf)
   end
 
+  local labels = {}
+  -- Only display the labels
+  local pinned_bufs = M.pinned.list()
+  for _, p in ipairs(pinned_bufs) do
+    labels[p.label] = true
+  end
+  for _, char in ipairs({
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+  }) do
+    if labels[char] then
+      table.insert(display_bufs, {
+        label = { char, c.config.ui_pin_label_hl },
+        name = { { "", "" } },
+        pinned = true,
+        space = false,
+      })
+    else
+      table.insert(display_bufs, {
+        label = { char, "Comment" },
+        name = { { "", "" } },
+        pinned = true,
+        space = false,
+      })
+    end
+  end
+
   -- -- Reset unique names for pinned buffers
   -- local unique_names = {}
   -- -- Now display all pinned buffers
