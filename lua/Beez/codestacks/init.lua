@@ -417,7 +417,11 @@ function M.pinned.pin(opts)
     end
   end
 
-  local ok, _ = call_backend(be.pin_buffer, vim.api.nvim_buf_get_name(0), label)
+  local filename = vim.api.nvim_buf_get_name(0)
+  if filename == "" then
+    return
+  end
+  local ok, _ = call_backend(be.pin_buffer, filename, label)
   if ok then
     vim.notify("Pinned buffer with label: " .. label, vim.log.levels.INFO)
     M.ui.refresh()

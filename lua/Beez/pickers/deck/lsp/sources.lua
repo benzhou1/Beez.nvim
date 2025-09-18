@@ -83,7 +83,6 @@ function M.go_to_definitions(items, opts)
   local source = utils.resolve_source(opts, {
     name = "lsp.go_to_definitions",
     execute = function(ctx)
-      print("item = ", vim.inspect(items))
       if items ~= nil then
         for _, i in ipairs(items) do
           ctx.item(i)
