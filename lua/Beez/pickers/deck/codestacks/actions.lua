@@ -118,6 +118,14 @@ function M.open(opts)
 
       ctx.hide()
       vim.schedule(function()
+        local bufnr = vim.fn.bufnr(item.data.filename)
+        -- Make sure buffer is loaded
+        if bufnr == -1 then
+          bufnr = vim.fn.bufadd(item.data.filename)
+          vim.fn.bufload(bufnr)
+          vim.api.nvim_set_option_value("buflisted", true, { buf = bufnr })
+        end
+
         require("overlook.ui").create_popup({
           target_bufnr = vim.fn.bufnr(item.data.filename),
           lnum = item.data.lnum,

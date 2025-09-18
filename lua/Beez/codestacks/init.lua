@@ -207,25 +207,25 @@ function M.def_hooks.buf_list(bufs)
     table.insert(display_bufs, display_buf)
   end
 
-  -- Reset unique names for pinned buffers
-  local unique_names = {}
-  -- Now display all pinned buffers
-  local pinned_bufs = M.pinned.list({ not_temp = true })
-  -- Sort alphabetically by label
-  table.sort(pinned_bufs, function(a, b)
-    return a.label < b.label
-  end)
-
-  for _, b in ipairs(pinned_bufs) do
-    -- Pinned buffers already has label assigned, no need to calculate it
-    local name, hls = get_pinned_name(b, i, pinned_bufs, unique_names)
-    unique_names[name] = true
-    table.insert(display_bufs, {
-      label = { b.label, c.config.ui_pin_label_hl },
-      name = hls,
-      pinned = true,
-    })
-  end
+  -- -- Reset unique names for pinned buffers
+  -- local unique_names = {}
+  -- -- Now display all pinned buffers
+  -- local pinned_bufs = M.pinned.list({ not_temp = true })
+  -- -- Sort alphabetically by label
+  -- table.sort(pinned_bufs, function(a, b)
+  --   return a.label < b.label
+  -- end)
+  --
+  -- for _, b in ipairs(pinned_bufs) do
+  --   -- Pinned buffers already has label assigned, no need to calculate it
+  --   local name, hls = get_pinned_name(b, i, pinned_bufs, unique_names)
+  --   unique_names[name] = true
+  --   table.insert(display_bufs, {
+  --     label = { b.label, c.config.ui_pin_label_hl },
+  --     name = hls,
+  --     pinned = true,
+  --   })
+  -- end
 
   return display_bufs
 end
@@ -479,6 +479,122 @@ function M.pinned.list(opts)
   else
     return pinned_buffers
   end
+end
+
+--- Show a floating window that list all pinned bufs in vertical list
+---@param opts? table
+function M.pinned.show(opts)
+  opts = opts or {}
+  local NuiLine = require("nui.line")
+  local NuiPopup = require("nui.popup")
+  local popup = NuiPopup({
+    enter = false,
+    focusable = true,
+    zindex = 50,
+    border = {
+      style = "rounded",
+      -- style = { "│", " ", "│", "│", "╯", "─", "╰", "│" },
+    },
+    buf_options = {
+      modifiable = true,
+      readonly = false,
+    },
+    win_options = {
+      winblend = 10,
+      winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+    },
+  })
+
+  local i = 1
+  local longest_line = 1
+  local function render_line(line)
+    local len = #line:content()
+    if len > longest_line then
+      longest_line = len
+    end
+    line:render(popup.bufnr, -1, i)
+  end
+
+  -- Render non temp pinned buffers first
+  local pinned = M.pinned.list({ not_temp = true })
+  table.sort(pinned, function(a, b)
+    return a.label < b.label
+  end)
+  for _, p in ipairs(pinned) do
+    local line = NuiLine()
+    line:append("  ")
+    local basename = u.paths.basename(p.path)
+    local label_idx, _, _ = basename:find(p.label, 1, true)
+    local dirname = u.paths.dirname(p.path):gsub(vim.env.HOME, "~")
+    if label_idx ~= nil then
+      line:append(basename:sub(1, label_idx - 1), c.config.ui_name_hl)
+      line:append(p.label, c.config.ui_pin_label_hl)
+      line:append(basename:sub(label_idx + 1), c.config.ui_name_hl)
+    else
+      line:append(p.label, c.config.ui_pin_label_hl)
+      line:append(basename, c.config.ui_name_hl)
+    end
+    line:append(" ")
+    line:append(dirname, c.config.ui_dir_hl)
+    render_line(line)
+    i = i + 1
+  end
+
+  -- Render temp pinned buffers next
+  pinned = M.pinned.list({ temp = true })
+  table.sort(pinned, function(a, b)
+    return a.label < b.label
+  end)
+  if #pinned > 0 then
+    -- Blank line
+    local line = NuiLine()
+    line:append("")
+    render_line(line)
+    i = i + 1
+  end
+  for _, p in ipairs(pinned) do
+    local line = NuiLine()
+    line:append("  ")
+    local basename = u.paths.basename(p.path)
+    local dirname = u.paths.dirname(p.path):gsub(vim.env.HOME, "~")
+    line:append("[" .. p.label .. "]", "Comment")
+    line:append(basename, "Comment")
+    line:append(" ")
+    line:append(dirname, c.config.ui_dir_hl)
+    render_line(line)
+    i = i + 1
+  end
+
+  -- Render any extra lines passed in opts
+  if opts.lines then
+    -- Blank line
+    local line = NuiLine()
+    line:append("")
+    render_line(line)
+    i = i + 1
+  end
+  for _, l in ipairs(opts.lines or {}) do
+    local line = NuiLine()
+    line:append("  ")
+    line:append("[" .. l.label .. "]", "Comment")
+    line:append(l.text, l.hl)
+    render_line(line)
+    i = i + 1
+  end
+
+  popup:update_layout({
+    position = {
+      row = 1,
+      col = "100%",
+    },
+    relative = "editor",
+    size = {
+      width = longest_line,
+      height = i,
+    },
+  })
+  popup:mount()
+  return popup
 end
 
 --- Finds a pinned buffer by path

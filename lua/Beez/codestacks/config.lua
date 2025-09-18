@@ -46,7 +46,7 @@ M.def_config = {
   ui_buf_sep_hl = hl.hl.buf_sep,
   ui_pin_sep_hl = hl.hl.pin_sep,
 
-  recent_labels = { ";", "/", "." },
+  recent_labels = { ";", "/", ".", "," },
   temp_labels = { "1", "2", "3", "4", "5", "6", "7", "8", "9" },
   recent_files_limit = 100,
 }
