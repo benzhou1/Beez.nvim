@@ -24,7 +24,7 @@ function M.init()
   vim.api.nvim_set_hl(0, M.hl.stack, { link = "Comment" })
   vim.api.nvim_set_hl(0, M.hl.stack_sep, { link = "Comment" })
   vim.api.nvim_set_hl(0, M.hl.buf_sep, { link = "String" })
-  vim.api.nvim_set_hl(0, M.hl.pin_sep, { link = "Search", bold = true })
+  vim.api.nvim_set_hl(0, M.hl.pin_sep, { link = "String", bold = true })
 end
 
 return M

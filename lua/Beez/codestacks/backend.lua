@@ -50,7 +50,7 @@ local backend = res
 ---@field remove_recent_file fun(path: string): boolean
 ---@field list_recent_files fun(): string[]
 ---@field save_recent_files fun(): boolean
----@field pin_buffer fun(path: string): boolean
+---@field pin_buffer fun(path: string, label: string): boolean
 ---@field unpin_buffer fun(path: string): boolean
 ---@field list_pinned_buffers fun(): Beez.codestacks.PinnedBuffer[]
 ---@field enable_recent_files fun(enable: boolean): boolean
@@ -60,5 +60,9 @@ local backend = res
 ---@field list_global_marks fun(path?: string): Beez.codestacks.GlobalMark[]
 ---@field list_all_global_marks fun(): Beez.codestacks.GlobalMark[]
 ---@field update_global_mark fun(path: string, lineno: integer, new_lineno?: integer): boolean
+---@field add_local_mark fun(path: string, line: string, lineno: integer): boolean
+---@field remove_local_mark fun(path: string, lineno: integer): boolean
+---@field list_local_marks fun(path?: string): Beez.codestacks.LocalMark[]
+---@field update_local_mark fun(path: string, lineno: integer, new_lineno?: integer): boolean
 
 return backend

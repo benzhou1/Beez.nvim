@@ -242,7 +242,7 @@ pub fn list_global_marks(_: &Lua, path: Option<String>) -> LuaResult<Vec<marks::
             let mut marks = ss.list_global_marks(path);
             marks.sort_by(|a, b| a.desc.cmp(&b.desc));
             Ok(marks)
-        },
+        }
         None => Ok(vec![]),
     }
 }
@@ -270,6 +270,61 @@ pub fn update_global_mark(
     let sm = Option::ok_or_else(stacks_man.as_mut(), || Errors::StacksNotInit)?;
     match sm.get_stacks_mut() {
         Some(ss) => Ok(ss.update_global_mark(path, lineno, new_lineno, new_desc)),
+        None => Ok(false),
+    }
+}
+
+// Add local mark to the active stack
+pub fn add_local_mark(_: &Lua, (path, lineno, line): (String, i32, String)) -> LuaResult<bool> {
+    ::tracing::info!("Adding local mark: {}:{} - {}", path, lineno, line);
+    let mut stacks_man = STACKS.write().map_err(|_| Errors::AcquireStacksLock)?;
+    let sm = Option::ok_or_else(stacks_man.as_mut(), || Errors::StacksNotInit)?;
+    match sm.get_stacks_mut() {
+        Some(ss) => Ok(ss.add_local_mark(path, line, lineno)),
+        None => Ok(false),
+    }
+}
+
+// Remove a local mark form the active stack
+pub fn remove_local_mark(_: &Lua, (path, lineno): (String, i32)) -> LuaResult<bool> {
+    ::tracing::info!("Removing global mark: {} at line {}", path, lineno);
+    let mut stacks_man = STACKS.write().map_err(|_| Errors::AcquireStacksLock)?;
+    let sm = Option::ok_or_else(stacks_man.as_mut(), || Errors::StacksNotInit)?;
+    match sm.get_stacks_mut() {
+        Some(ss) => Ok(ss.remove_local_mark(path, lineno)),
+        None => Ok(false),
+    }
+}
+
+// Return list of local marks in the active stack
+pub fn list_local_marks(_: &Lua, path: Option<String>) -> LuaResult<Vec<marks::LocalMark>> {
+    ::tracing::info!("Listing local marks...");
+    let mut stacks_man = STACKS.write().map_err(|_| Errors::AcquireStacksLock)?;
+    let sm = Option::ok_or_else(stacks_man.as_mut(), || Errors::StacksNotInit)?;
+    match sm.get_stacks() {
+        Some(ss) => match path {
+            Some(p) => Ok(ss
+                .list_local_marks()
+                .into_iter()
+                .filter(|m| m.path == p)
+                .collect()),
+            None => Ok(ss.list_local_marks()),
+        },
+        None => Ok(vec![]),
+    }
+}
+
+// Updates a local mark
+pub fn update_local_mark(
+    _: &Lua,
+    (path, lineno, new_lineno): (String, i32, Option<i32>),
+) -> LuaResult<bool> {
+    ::tracing::info!("Updating local mark for path: {} at line: {}", path, lineno);
+    ::tracing::info!("new_lineno={:?}", new_lineno);
+    let mut stacks_man = STACKS.write().map_err(|_| Errors::AcquireStacksLock)?;
+    let sm = Option::ok_or_else(stacks_man.as_mut(), || Errors::StacksNotInit)?;
+    match sm.get_stacks_mut() {
+        Some(ss) => Ok(ss.update_local_mark(path, lineno, new_lineno)),
         None => Ok(false),
     }
 }
@@ -314,6 +369,11 @@ fn codestacks_nvim(lua: &Lua) -> LuaResult<LuaTable> {
         lua.create_function(list_all_global_marks)?,
     )?;
     exports.set("update_global_mark", lua.create_function(update_global_mark)?)?;
+    // Local mark management functions
+    exports.set("add_local_mark", lua.create_function(add_local_mark)?)?;
+    exports.set("remove_local_mark", lua.create_function(remove_local_mark)?)?;
+    exports.set("list_local_marks", lua.create_function(list_local_marks)?)?;
+    exports.set("update_local_mark", lua.create_function(update_local_mark)?)?;
 
     Ok(exports)
 }

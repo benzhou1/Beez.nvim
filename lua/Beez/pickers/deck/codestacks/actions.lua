@@ -194,7 +194,7 @@ function M.edit_global_marks(opts)
 
                 -- Perform the update without saving
                 if next(updates) ~= nil then
-                  cs.marks.update(item.data.filename, item.data.lnum, updates)
+                  cs.global_marks.update(item.data.filename, item.data.lnum, updates)
                 end
               end
             end
@@ -202,7 +202,7 @@ function M.edit_global_marks(opts)
 
           -- Remaining items means some marks have been deleted
           for _, i in pairs(items) do
-            cs.marks.remove(i.data.filename, i.data.lnum)
+            cs.global_marks.remove(i.data.filename, i.data.lnum)
           end
         end,
       })

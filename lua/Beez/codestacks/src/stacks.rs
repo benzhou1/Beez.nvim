@@ -414,4 +414,81 @@ impl Stacks {
         }
         save
     }
+
+    // Adds a local mark to the active stack
+    pub fn add_local_mark(&mut self, path: String, line: String, lineno: i32) -> bool {
+        self.remove_local_mark(path.clone(), lineno);
+        let active_name = match &self.active {
+            Some(name) => name.clone(),
+            None => return false,
+        };
+        let stack = match self.stacks.get_mut(&active_name) {
+            Some(s) => s,
+            None => return false,
+        };
+        let local_mark = LocalMark { path, line, lineno };
+        stack.local_marks.push(local_mark);
+        self.save();
+        true
+    }
+
+    // Removes a local mark from active stack
+    pub fn remove_local_mark(&mut self, path: String, lineno: i32) -> bool {
+        let active_name = match &self.active {
+            Some(name) => name.clone(),
+            None => return false,
+        };
+        let stack = match self.stacks.get_mut(&active_name) {
+            Some(s) => s,
+            None => return false,
+        };
+
+        let original_len = stack.local_marks.len();
+        stack
+            .local_marks
+            .retain(|m| !(m.path == path && m.lineno == lineno));
+
+        // Dont save if nothing was removed
+        if stack.local_marks.len() == original_len {
+            return false;
+        }
+        self.save();
+        true
+    }
+
+    // Return list of local marks in the active stack
+    pub fn list_local_marks(&self) -> Vec<LocalMark> {
+        let active_name = match &self.active {
+            Some(name) => name.clone(),
+            None => return Vec::new(),
+        };
+        let stack = match self.stacks.get(&active_name) {
+            Some(s) => s,
+            None => return Vec::new(),
+        };
+        stack.local_marks.clone()
+    }
+
+    // Updates a local mark
+    pub fn update_local_mark(&mut self, path: String, lineno: i32, new_lineno: Option<i32>) -> bool {
+        let active_name = match &self.active {
+            Some(name) => name.clone(),
+            None => return false,
+        };
+        let stack = match self.stacks.get_mut(&active_name) {
+            Some(s) => s,
+            None => return false,
+        };
+        let mut save = false;
+        for lm in stack.local_marks.iter_mut() {
+            if lm.path == path && lm.lineno == lineno && new_lineno.is_some() {
+                lm.lineno = new_lineno.unwrap();
+                save = true;
+            }
+        }
+        if save {
+            self.save();
+        }
+        save
+    }
 }

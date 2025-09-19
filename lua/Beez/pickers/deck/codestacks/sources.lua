@@ -63,11 +63,11 @@ function M.global_marks(opts)
       local gmarks = {}
       local toggles = actions.toggles
       if not toggles.global_codemarks then
-        gmarks = cs.marks.list()
+        gmarks = cs.global_marks.list()
       end
 
       if toggles.global_codemarks then
-        gmarks = cs.marks.list({ all = true })
+        gmarks = cs.global_marks.list({ all = true })
       end
 
       for i, m in ipairs(gmarks) do

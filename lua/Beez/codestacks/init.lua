@@ -13,7 +13,8 @@ local M = {
   pinned = {},
   bufferlist = {},
   recentfiles = {},
-  marks = {},
+  global_marks = {},
+  local_marks = {},
   ui = {},
 }
 
@@ -82,7 +83,7 @@ local function setup_autocmds()
   vim.api.nvim_create_autocmd("BufWritePost", {
     pattern = "*",
     callback = function(event)
-      M.marks.check_for_outdated(event.match)
+      M.global_marks.check_for_outdated(event.match)
     end,
   })
 end
@@ -213,6 +214,11 @@ function M.def_hooks.buf_list(bufs)
   for _, p in ipairs(pinned_bufs) do
     labels[p.label] = true
   end
+
+  local local_marks = M.local_marks.list()
+  for i, _ in ipairs(local_marks) do
+    labels[tostring(i)] = true
+  end
   for _, char in ipairs({
     "1",
     "2",
@@ -223,6 +229,7 @@ function M.def_hooks.buf_list(bufs)
     "7",
     "8",
     "9",
+    " ",
     "a",
     "b",
     "c",
@@ -447,7 +454,7 @@ function M.pinned.pin(opts)
       if res == nil then
         return
       end
-      M.pin_buffer(opts)
+      M.pinned.pin(opts)
     end)
   end
 
@@ -495,6 +502,19 @@ function M.pinned.unpin(path)
   local pinned_buf = M.pinned.get(path)
   local ok, _ = call_backend(be.unpin_buffer, path)
   if ok then
+    if pinned_buf ~= nil and pinned_buf.label:match("^[1-9]$") then
+      -- If label temp label, fix order of the rest of the temp labels
+      local temp_pinned_bufs = M.pinned.list({ temp = true })
+      -- Sort buffers by label
+      table.sort(temp_pinned_bufs, function(a, b)
+        return a.label < b.label
+      end)
+      for i, t in ipairs(temp_pinned_bufs) do
+        if t.label > pinned_buf.label then
+          ok, _ = call_backend(be.pin_buffer, t.path, tostring(i))
+        end
+      end
+    end
     if pinned_buf ~= nil then
       vim.notify("Unpinned buffer with label: " .. pinned_buf.label, vim.log.levels.INFO)
     else
@@ -770,7 +790,7 @@ function M.ui.get_tabline()
 end
 
 --- Add a new global mark
-function M.marks.add()
+function M.global_marks.add()
   vim.ui.input({ prompt = "Describe the mark: " }, function(res)
     if res == nil then
       return
@@ -786,7 +806,7 @@ end
 --- Returns a list of global marks
 ---@param opts? {all?: boolean, path?: string}
 ---@return Beez.codestacks.GlobalMark[]
-function M.marks.list(opts)
+function M.global_marks.list(opts)
   opts = opts or {}
   if opts.all == true then
     local _, gmarks = call_backend(be.list_all_global_marks)
@@ -800,18 +820,41 @@ end
 ---@param path string
 ---@param lineno integer
 ---@param updates {desc?: string, lineno?: integer}
-function M.marks.update(path, lineno, updates)
+function M.global_marks.update(path, lineno, updates)
   call_backend(be.update_global_mark, path, lineno, updates.lineno, updates.desc)
 end
 
 --- Delete a global mark
 ---@param path string
 ---@param lineno integer
-function M.marks.remove(path, lineno)
+function M.global_marks.remove(path, lineno)
   call_backend(be.remove_global_mark, path, lineno)
 end
 
---- Checks whether a mark needs
+--- Add a new local mark
+function M.local_marks.add()
+  local line = vim.api.nvim_get_current_line()
+  local path = vim.api.nvim_buf_get_name(0)
+  local pos = vim.api.nvim_win_get_cursor(0)
+  call_backend(be.add_local_mark, path, pos[1], line)
+end
+
+--- Returns a list of local marks
+---@return Beez.codestacks.LocalMark[]
+function M.local_marks.list(opts)
+  opts = opts or {}
+  local _, lmarks = call_backend(be.list_local_marks, opts.path)
+  return lmarks
+end
+
+--- Delete a local mark
+---@param path string
+---@param lineno integer
+function M.local_marks.remove(path, lineno)
+  call_backend(be.remove_local_mark, path, lineno)
+end
+
+--- Checks whether a mark needs to be updated after a save
 ---@param path string
 ---@param lineno integer
 ---@param old_line string
@@ -831,13 +874,21 @@ end
 
 --- Checks current file for any outdated marks
 ---@param path string
-function M.marks.check_for_outdated(path)
+function M.global_marks.check_for_outdated(path)
   -- Get all global marks for path
   local _, gmarks = call_backend(be.list_global_marks, path)
   for _, m in ipairs(gmarks) do
     check_for_outdated_marks(m.file, m.lineno, m.line, function(new_lineno)
       call_backend(be.update_global_mark, m.path, m.lineno, new_lineno, nil)
-      vim.notify("Updated mark [" .. m.desc .. "] to lineno: " .. new_lineno, vim.log.levels.INFO)
+      vim.notify("Updated global mark [" .. m.desc .. "] to lineno: " .. new_lineno, vim.log.levels.INFO)
+    end)
+  end
+
+  local _, lmarks = call_backend(be.list_local_marks, path)
+  for _, m in ipairs(lmarks) do
+    check_for_outdated_marks(m.file, m.lineno, m.line, function(new_lineno)
+      call_backend(be.update_local_mark, m.path, m.lineno, new_lineno)
+      vim.notify("Updated local mark [" .. m.line .. "] to lineno: " .. new_lineno, vim.log.levels.INFO)
     end)
   end
 

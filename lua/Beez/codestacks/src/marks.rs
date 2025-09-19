@@ -2,11 +2,11 @@ use mlua::{IntoLua, Lua, Result as LuaResult, Value as LuaValue};
 use serde::{Deserialize, Serialize};
 use std::clone::Clone;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LocalMark {
-    path: String,
-    lineno: i32,
-    col: i32,
+    pub path: String,
+    pub line: String,
+    pub lineno: i32,
 }
 
 impl IntoLua for LocalMark {
@@ -14,7 +14,7 @@ impl IntoLua for LocalMark {
         let table = lua.create_table()?;
         table.set("path", self.path)?;
         table.set("lineno", self.lineno)?;
-        table.set("col", self.col)?;
+        table.set("line", self.line)?;
         Ok(LuaValue::Table(table))
     }
 }

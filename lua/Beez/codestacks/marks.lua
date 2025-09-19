@@ -10,7 +10,7 @@ local c = require("Beez.codestacks.config")
 ---@class Beez.codestacks.LocalMark
 ---@field path string
 ---@field lineno integer
----@field col integer
+---@field line string
 
 ---@class Beez.codestacks.Marks
 ---@field global_marks table<string, Beez.codestacks.GlobalMark>
