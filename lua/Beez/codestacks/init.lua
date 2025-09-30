@@ -763,6 +763,12 @@ function M.recentfiles.list()
   return list
 end
 
+--- Remmoves a path from recent files list
+---@param path string
+function M.recentfiles.remove(path)
+  call_backend(be.remove_recent_file, path)
+end
+
 --- Refresh the ui with new buffer list
 function M.ui.refresh()
   local hook_ui_refresh = c.config.hook_ui_refresh
