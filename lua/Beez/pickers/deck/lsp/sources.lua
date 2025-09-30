@@ -42,31 +42,39 @@ end
 --- Utility function for getting all references under cursor
 ---@param cb fun(items: deck.Item[])
 function M.get_references(cb)
+  local filename = vim.api.nvim_buf_get_name(0)
+  local pos = vim.api.nvim_win_get_cursor(0)
+
   vim.lsp.buf.references({
     includeDeclaration = false,
   }, {
     on_list = function(tt)
+      local unique = {}
       local items = {}
       for _, t in ipairs(tt.items) do
-        local target_uri = t.user_data.targetUri or t.user_data.uri
-        local item = {
-          display_text = {
-            { t.text, "String" },
-            { " " },
-            { t.filename, "Comment" },
-            { ":", "Comment" },
-            { tostring(t.lnum), "Comment" },
-          },
-          data = {
-            target_bufnr = vim.uri_to_bufnr(target_uri),
-            filename = t.filename,
-            lnum = t.lnum,
-            end_lnum = t.end_lnum,
-            col = t.col,
-            end_col = t.end_col,
-          },
-        }
-        table.insert(items, item)
+        local key = t.filename .. "_" .. t.lnum
+        if (t.filename ~= filename or t.lnum ~= pos[1]) and unique[key] == nil then
+          local target_uri = t.user_data.targetUri or t.user_data.uri
+          local item = {
+            display_text = {
+              { t.text, "String" },
+              { " " },
+              { t.filename, "Comment" },
+              { ":", "Comment" },
+              { tostring(t.lnum), "Comment" },
+            },
+            data = {
+              target_bufnr = vim.uri_to_bufnr(target_uri),
+              filename = t.filename,
+              lnum = t.lnum,
+              end_lnum = t.end_lnum,
+              col = t.col,
+              end_col = t.end_col,
+            },
+          }
+          table.insert(items, item)
+          unique[key] = true
+        end
       end
       cb(items)
     end,
