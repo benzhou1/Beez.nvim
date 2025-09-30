@@ -50,7 +50,7 @@ function source:get_completions(ctx, callback)
     local tags = {}
     local items = {}
     for _, line in ipairs(lines) do
-      for tag in line:gmatch("#(%w+)") do
+      for tag in line:gmatch("#([^%s]+)") do
         if tags[tag] == nil then
           tags[tag] = true
           local item = {

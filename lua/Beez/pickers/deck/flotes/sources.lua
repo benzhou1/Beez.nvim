@@ -322,7 +322,7 @@ local function parse_task_line(line)
   end
 
   local tags = {}
-  for tag in task_desc:gmatch("#([%w_]+)") do
+  for tag in task_desc:gmatch("#([^%s]+)") do
     table.insert(tags, tag)
     task_desc = task_desc:gsub(" #" .. tag, "")
   end
