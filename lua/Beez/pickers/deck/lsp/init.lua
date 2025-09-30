@@ -12,6 +12,10 @@ function M.go_to_definitions(opts)
 
     if #items == 1 then
       local item = items[1]
+      -- If not in an overloop popup, add current position to jumplist
+      if not vim.w.is_overlook_popup then
+        vim.cmd("normal! m'")
+      end
       require("overlook.ui").create_popup({
         target_bufnr = item.data.target_bufnr,
         lnum = item.data.lnum,
@@ -37,6 +41,10 @@ function M.find_references(opts)
 
     if #items == 1 then
       local item = items[1]
+      -- If not in an overloop popup, add current position to jumplist
+      if not vim.w.is_overlook_popup then
+        vim.cmd("normal! m'")
+      end
       require("overlook.ui").create_popup({
         target_bufnr = item.data.target_bufnr,
         lnum = item.data.lnum,
