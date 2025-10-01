@@ -13,5 +13,6 @@ M.flotes = require("Beez.pickers.deck.flotes")
 M.dbfp = require("Beez.pickers.deck.dbfp")
 M.bufswitcher = require("Beez.pickers.deck.bufswitcher")
 M.codestacks = require("Beez.pickers.deck.codestacks")
+M.cmdcenter = require("Beez.pickers.deck.cmdcenter")
 
 return M

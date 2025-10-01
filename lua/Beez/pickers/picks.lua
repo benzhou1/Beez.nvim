@@ -407,8 +407,8 @@ function M.goto_def()
     deck = {
       run = function(opts)
         require("Beez.pickers.deck.lsp").go_to_definitions(opts)
-      end
-    }
+      end,
+    },
   }
 end
 
@@ -448,8 +448,8 @@ function M.goto_ref()
     deck = {
       run = function(opts)
         require("Beez.pickers.deck.lsp").find_references(opts)
-      end
-    }
+      end,
+    },
   }
 end
 
@@ -905,5 +905,27 @@ function M.codestacks_stacks()
   }
 end
 M["codestacks.stacks"] = M.codestacks_stacks
+
+function M.cmdcenter_cmds()
+  return {
+    deck = {
+      run = function(opts)
+        deck_pickers.cmdcenter.cmds(opts)
+      end,
+    },
+  }
+end
+M["cmdcenter.cmds"] = M.cmdcenter_cmds
+
+function M.cmdcenter_db_headers()
+  return {
+    deck = {
+      run = function(opts)
+        deck_pickers.cmdcenter.db_headers(opts)
+      end,
+    },
+  }
+end
+M["cmdcenter.db_headers"] = M.cmdcenter_db_headers
 
 return M

@@ -7,6 +7,7 @@ local M = {}
 ---@field codemarks Beez.codemarks.config?
 ---@field dbfp Beez.dbfp.config?
 ---@field codestacks Beez.codestacks.config?
+---@field cmdcenter Beez.cmdcenter.config?
 
 ---@type Beez.config
 local def_config = {
@@ -43,6 +44,9 @@ function M.init(opts)
   end
   if M.config.codestacks then
     require("Beez.codestacks").setup(M.config.codestacks)
+  end
+  if M.config.cmdcenter then
+    require("Beez.cmdcenter").setup(M.config.cmdcenter)
   end
 end
 
