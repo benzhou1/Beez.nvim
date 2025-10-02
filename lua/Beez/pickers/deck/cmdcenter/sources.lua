@@ -55,7 +55,6 @@ function M.db_headers(opts)
   })
 
   local specifier = utils.resolve_specifier(opts, {
-    start_prompt = false,
     view = function()
       local view = require("deck.builtin.view.current_picker")()
       view.hide = function(ctx)

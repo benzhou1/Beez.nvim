@@ -4,6 +4,9 @@ local M = {
   bufcache = {},
 }
 
+--- Gets the header row in db output
+---@param name? string
+---@return string
 function M.get_header(name)
   local header = op.header(name)
   if header ~= nil then
@@ -16,6 +19,8 @@ function M.get_header(name)
   return header
 end
 
+--- Get the header values for the current row where cursor is at
+---@return string[]
 function M.get_header_values()
   local winid = op.winid()
   local pos = vim.api.nvim_win_get_cursor(winid)
@@ -44,6 +49,30 @@ function M.get_headers(name)
   return headers
 end
 
+--- Gets the list of header positions
+---@return string[]
+function M.get_header_pos(name)
+  local header_pos = op.header_pos(name)
+  if header_pos ~= nil then
+    return header_pos
+  end
+
+  local header = M.get_header(name)
+  header_pos = {}
+  local i = 1
+  while true do
+    local s, _ = string.find(header, "| ", i)
+    if s == nil then
+      break
+    end
+    table.insert(header_pos, s)
+    i = s + 1
+  end
+  return header_pos
+end
+
+--- Move cursor to the specific header column
+---@param matching_header string
 function M.move_to_header(matching_header)
   local winid = op.winid()
   local pos = vim.api.nvim_win_get_cursor(winid)
@@ -51,6 +80,35 @@ function M.move_to_header(matching_header)
   local res = vim.fn.matchstrpos(header, " " .. matching_header .. " ", 1, 1)
   vim.api.nvim_win_set_cursor(winid, { pos[1], res[2] + 1 })
   vim.cmd("normal! zszH")
+end
+
+--- Move cursor to the next header column
+function M.move_to_next_header()
+  local winid = op.winid()
+  local header_pos = M.get_header_pos()
+  local pos = vim.api.nvim_win_get_cursor(winid)
+  for _, s in ipairs(header_pos) do
+    if s > pos[2] then
+      vim.api.nvim_win_set_cursor(winid, { pos[1], s + 1 })
+      vim.cmd("normal! zszH")
+      return
+    end
+  end
+end
+
+--- Move cursor to the previous header column
+function M.move_to_prev_header()
+  local winid = op.winid()
+  local header_pos = M.get_header_pos()
+  local pos = vim.api.nvim_win_get_cursor(winid)
+  for i = 1, #header_pos do
+    local s = header_pos[#header_pos - i + 1]
+    if s + 1 < pos[2] then
+      vim.api.nvim_win_set_cursor(winid, { pos[1], s + 1 })
+      vim.cmd("normal! zszH")
+      return
+    end
+  end
 end
 
 --- Setup statuscolumn for the window to display the row id for db results
@@ -104,11 +162,27 @@ function M.set_keymaps(bufnr)
       buffer = bufnr,
     },
     {
-      "\\/",
+      "\\",
       function()
         require("Beez.pickers").pick("cmdcenter.db_headers", { type = "deck" })
       end,
       desc = "Go to header",
+      buffer = bufnr,
+    },
+    {
+      "<right>",
+      function()
+        M.move_to_next_header()
+      end,
+      desc = "Go to next header",
+      buffer = bufnr,
+    },
+    {
+      "<left>",
+      function()
+        M.move_to_prev_header()
+      end,
+      desc = "Go to previous header",
       buffer = bufnr,
     },
     {

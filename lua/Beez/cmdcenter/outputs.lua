@@ -1,9 +1,10 @@
 local M = {
   outputs = {},
   split = nil,
-  last_output = nil,
+  last_output = "",
 }
 
+--- Setup the output module
 function M.setup()
   local Split = require("nui.split")
   M.split = Split({
@@ -13,12 +14,19 @@ function M.setup()
   })
 end
 
+--- Gets the output file path of command by name
+---@param name string
+---@return string
 function M.path(name)
   local cc = require("Beez.cmdcenter")
   local output_file = vim.fs.joinpath(cc.output_dir, name)
   return output_file
 end
 
+--- Creates a new output file for command by name
+---@param output string
+---@param name string
+---@return string
 function M.create(output, name)
   M.outputs[name] = M.outputs[name] or {}
   local path = M.path(name)
@@ -26,10 +34,15 @@ function M.create(output, name)
   return path
 end
 
+--- Gets the current winid for output window
+---@return integer
 function M.winid()
   return M.split.winid
 end
 
+--- Gets or cache the bufnr for output of command by name
+---@param name? string
+---@param bufnr? integer
 function M.bufnr(name, bufnr)
   name = name or M.last_output
   if bufnr ~= nil then
@@ -42,6 +55,10 @@ function M.bufnr(name, bufnr)
   end
 end
 
+--- Gets or sets the header row for db output by name
+---@param name? string
+---@param header? string
+---@return string
 function M.header(name, header)
   name = name or M.last_output
   if header ~= nil then
@@ -53,6 +70,10 @@ function M.header(name, header)
   return data.header
 end
 
+--- Gets or sets the headers for db output by name
+---@param name? string
+---@param headers? string[]
+---@return string[]
 function M.headers(name, headers)
   name = name or M.last_output
   if headers ~= nil then
@@ -64,6 +85,25 @@ function M.headers(name, headers)
   return data.headers
 end
 
+--- Gets or sets the header positions of db output by name
+---@param name? string
+---@param header_pos? integer[]
+---@return integer[]
+function M.header_pos(name, header_pos)
+  name = name or M.last_output
+  if header_pos ~= nil then
+    M.outputs[name] = M.outputs[name] or {}
+    M.outputs[name].header_pos = header_pos
+    return header_pos
+  end
+  local data = M.outputs[name]
+  return data.header_pos
+end
+
+--- Gets or sets the command for output by name
+---@param name? string
+---@param cmd? Beez.cmdcenter.cmd
+---@return Beez.cmdcenter.cmd
 function M.cmd(name, cmd)
   name = name or M.last_output
   if cmd ~= nil then
@@ -76,6 +116,9 @@ function M.cmd(name, cmd)
   return data.cmd
 end
 
+--- Focus or opens the output window by command name
+---@param name? string
+---@param on_open? fun(winid: integer, bufnr: integer)
 function M.focus_or_open(name, on_open)
   name = name or M.last_output
   if name == nil then
@@ -106,6 +149,7 @@ function M.focus_or_open(name, on_open)
   end)
 end
 
+--- Close the output window
 function M.close()
   local cs = require("Beez.codestacks")
   M.split:unmount()
