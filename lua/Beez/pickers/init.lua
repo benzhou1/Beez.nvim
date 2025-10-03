@@ -10,7 +10,7 @@ local M = {
 ---@field cwd? boolean|string
 ---@field pick_opts? table
 
----@alias Beez.pick.name "smart"|"resume"|"find_files"|"find_buffers"|"git_files"|"grep"|"grep_buffer"|"lsp_definitions"|"lsp_references"|"lsp_symbols"|"lsp_workspace_symbols"|"codestacks.global_marks"|"codemarks.global_marks_update_line"|"codemarks.marks"|"scratches"|"notes.find"|"notes.grep"|"notes.find_templates"|"dbfp.connections"|"dbfp.queries"|"notes.backlinks"|"jump_list"|"bufswitcher.stacks"|"fff"|"codestacks.stacks"|"cmdcenter.cmds"|"cmdcenter.db_headers"
+---@alias Beez.pick.name "smart"|"resume"|"find_files"|"find_buffers"|"git_files"|"grep"|"grep_buffer"|"lsp_definitions"|"lsp_references"|"lsp_symbols"|"lsp_workspace_symbols"|"codestacks.global_marks"|"codemarks.global_marks_update_line"|"codemarks.marks"|"scratches"|"notes.find"|"notes.grep"|"notes.find_templates"|"dbfp.connections"|"dbfp.queries"|"notes.backlinks"|"jump_list"|"bufswitcher.stacks"|"fff"|"codestacks.stacks"|"cmdcenter.cmds"|"cmdcenter.db_headers"|"insert_task_tag"|"log_statements"
 
 --- Pick a picker
 ---@param name Beez.pick.name

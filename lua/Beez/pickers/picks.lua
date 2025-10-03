@@ -928,4 +928,14 @@ function M.cmdcenter_db_headers()
 end
 M["cmdcenter.db_headers"] = M.cmdcenter_db_headers
 
+function M.log_statements()
+  return {
+    deck = {
+      run = function(opts)
+        require("Beez.pickers.deck.timber").log_statements(opts)
+      end,
+    },
+  }
+end
+
 return M
