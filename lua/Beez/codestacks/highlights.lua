@@ -15,11 +15,11 @@ local M = {
 
 --- Initialize sensible defaults for highlight groups
 function M.init()
-  vim.api.nvim_set_hl(0, M.hl.current_buf, { link = "Search", bold = true })
+  vim.api.nvim_set_hl(0, M.hl.current_buf, { fg = "#DE6E7C", bold = true, underline = true })
   vim.api.nvim_set_hl(0, M.hl.name, { link = "Normal" })
   vim.api.nvim_set_hl(0, M.hl.dir, { link = "Comment" })
-  vim.api.nvim_set_hl(0, M.hl.recent_label, { link = "CurSearch" })
-  vim.api.nvim_set_hl(0, M.hl.pin_label, { link = "CurSearch" })
+  vim.api.nvim_set_hl(0, M.hl.recent_label, { link = "Search" })
+  vim.api.nvim_set_hl(0, M.hl.pin_label, { link = "Search" })
   vim.api.nvim_set_hl(0, M.hl.separator, { link = "Comment", bold = true })
   vim.api.nvim_set_hl(0, M.hl.stack, { link = "Comment" })
   vim.api.nvim_set_hl(0, M.hl.stack_sep, { link = "Comment" })

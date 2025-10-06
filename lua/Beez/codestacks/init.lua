@@ -28,6 +28,31 @@ local M = {
 ---@field global_marks Beez.codestacks.GlobalMark[]
 ---@field local_marks Beez.codestacks.LocalMark[]
 
+--- Gets or initialized popup window
+---@return NuiPopup
+local function get_popup()
+  if M.popup == nil or M.popup.winid == nil then
+    local NuiPopup = require("nui.popup")
+    M.popup = NuiPopup({
+      enter = false,
+      focusable = false,
+      zindex = 50,
+      border = {
+        style = "none",
+      },
+      buf_options = {
+        modifiable = true,
+        readonly = false,
+      },
+    })
+  else
+    if M.popup.winid ~= nil then
+      vim.api.nvim_set_option_value("winhl", "Normal:NONE", { win = M.popup.winid })
+    end
+  end
+  return M.popup
+end
+
 --- Calls rust backend and prints out error if there is any
 local function call_backend(...)
   local ok, error = pcall(...)
@@ -207,111 +232,28 @@ function M.def_hooks.buf_list(bufs)
     end
     table.insert(display_bufs, display_buf)
   end
-
-  local labels = {}
-  -- Only display the labels
-  local pinned_bufs = M.pinned.list()
-  for _, p in ipairs(pinned_bufs) do
-    labels[p.label] = true
-  end
-
-  local local_marks = M.local_marks.list()
-  for i, _ in ipairs(local_marks) do
-    labels[tostring(i)] = true
-  end
-  for _, char in ipairs({
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    " ",
-    "a",
-    "b",
-    "c",
-    "d",
-    "e",
-    "f",
-    "g",
-    "h",
-    "i",
-    "j",
-    "k",
-    "l",
-    "m",
-    "n",
-    "o",
-    "p",
-    "q",
-    "r",
-    "s",
-    "t",
-    "u",
-    "v",
-    "w",
-    "x",
-    "y",
-    "z",
-  }) do
-    if labels[char] then
-      table.insert(display_bufs, {
-        label = { char, c.config.ui_pin_label_hl },
-        name = { { "", "" } },
-        pinned = true,
-        space = false,
-      })
-    else
-      table.insert(display_bufs, {
-        label = { char, "Comment" },
-        name = { { "", "" } },
-        pinned = true,
-        space = false,
-      })
-    end
-  end
-
-  -- -- Reset unique names for pinned buffers
-  -- local unique_names = {}
-  -- -- Now display all pinned buffers
-  -- local pinned_bufs = M.pinned.list({ not_temp = true })
-  -- -- Sort alphabetically by label
-  -- table.sort(pinned_bufs, function(a, b)
-  --   return a.label < b.label
-  -- end)
-  --
-  -- for _, b in ipairs(pinned_bufs) do
-  --   -- Pinned buffers already has label assigned, no need to calculate it
-  --   local name, hls = get_pinned_name(b, i, pinned_bufs, unique_names)
-  --   unique_names[name] = true
-  --   table.insert(display_bufs, {
-  --     label = { b.label, c.config.ui_pin_label_hl },
-  --     name = hls,
-  --     pinned = true,
-  --   })
-  -- end
-
   return display_bufs
 end
 
 --- Default hook for hook_ui_refresh.
 ---@param bufs Beez.codestacks.buf[]
 function M.def_hooks.ui_refresh(bufs)
+  -- Render tabline for recent buffers
   if debug_tabline then
     M.ui.get_tabline()
   end
   if H.init_tabline then
     vim.cmd("redrawtabline")
-    return
+  else
+    if not debug_tabline then
+      vim.opt.showtabline = 2
+      vim.opt.tabline = "%!v:lua.Codestacks.ui.get_tabline()"
+    end
+    H.init_tabline = true
   end
-  if not debug_tabline then
-    vim.opt.showtabline = 2
-    vim.opt.tabline = "%!v:lua.Codestacks.ui.get_tabline()"
-  end
-  H.init_tabline = true
+
+  -- Render floating window
+  M.pinned.show()
 end
 
 --- Setup the plugin
@@ -401,14 +343,6 @@ function M.stacks.set_active(name)
     vim.schedule(function()
       M.ui.refresh()
     end)
-
-    -- -- Load all pinned buffers in the stack
-    -- local pinned = M.pinned.list()
-    -- for _, p in ipairs(pinned) do
-    --   local bufnr = vim.fn.bufadd(p.path)
-    --   vim.fn.bufload(bufnr)
-    --   vim.api.nvim_set_option_value("buflisted", true, { buf = bufnr })
-    -- end
   end
 end
 
@@ -562,119 +496,185 @@ function M.pinned.list(opts)
 end
 
 --- Show a floating window that list all pinned bufs in vertical list
----@param opts? table
+---@param opts? {names?: boolean}
 function M.pinned.show(opts)
   opts = opts or {}
+  get_popup()
   local NuiLine = require("nui.line")
-  local NuiPopup = require("nui.popup")
-  local popup = NuiPopup({
-    enter = false,
-    focusable = true,
-    zindex = 50,
-    border = {
-      style = "rounded",
-      -- style = { "│", " ", "│", "│", "╯", "─", "╰", "│" },
-    },
-    buf_options = {
-      modifiable = true,
-      readonly = false,
-    },
-    win_options = {
-      winblend = 10,
-      winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
-    },
-  })
+  local vtns = vim.api.nvim_create_namespace("Beez.codestacks.float_vt_ns")
+  local curr_filename = vim.api.nvim_buf_get_name(0)
 
   local i = 1
+  local vts = {}
   local longest_line = 1
+  --- Renders a line in float and keep track of max width
+  ---@param line NuiLine
   local function render_line(line)
     local len = #line:content()
     if len > longest_line then
       longest_line = len
     end
-    line:render(popup.bufnr, -1, i)
+    line:render(M.popup.bufnr, -1, i)
+    i = i + 1
   end
 
   -- Render non temp pinned buffers first
-  local pinned = M.pinned.list({ not_temp = true })
-  table.sort(pinned, function(a, b)
-    return a.label < b.label
-  end)
+  local pinned = M.pinned.list()
+  local local_marks = M.local_marks.list()
+  local pinned_map = {}
   for _, p in ipairs(pinned) do
-    local line = NuiLine()
-    line:append("  ")
-    local basename = u.paths.basename(p.path)
-    local label_idx, _, _ = basename:find(p.label, 1, true)
-    local dirname = u.paths.dirname(p.path):gsub(vim.env.HOME, "~")
-    if label_idx ~= nil then
-      line:append(basename:sub(1, label_idx - 1), c.config.ui_name_hl)
-      line:append(p.label, c.config.ui_pin_label_hl)
-      line:append(basename:sub(label_idx + 1), c.config.ui_name_hl)
-    else
-      line:append(p.label, c.config.ui_pin_label_hl)
-      line:append(basename, c.config.ui_name_hl)
-    end
-    line:append(" ")
-    line:append(dirname, c.config.ui_dir_hl)
-    render_line(line)
-    i = i + 1
+    pinned_map[p.label] = p
   end
+  for l, p in ipairs(local_marks) do
+    pinned_map[tostring(l)] = p
+  end
+
+  for _, l in ipairs({
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    " ",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+  }) do
+    local p = pinned_map[l]
+    local line = NuiLine()
+    local v = { l }
+    if p ~= nil then
+      local curr = p.path == curr_filename
+      if opts.names then
+        local basename = u.paths.basename(p.path)
+        if curr then
+          line:append(basename, c.config.ui_curr_buf_hl)
+        else
+          line:append(basename, c.config.ui_name_hl)
+        end
+      end
+      if curr then
+        table.insert(v, c.config.ui_curr_buf_hl)
+      else
+        table.insert(v, c.config.ui_pin_label_hl)
+      end
+    else
+      table.insert(v, "Comment")
+    end
+    render_line(line)
+    table.insert(vts, v)
+  end
+  -- for _, p in ipairs(pinned) do
+  --   local line = NuiLine()
+  --   line:append("  ")
+  --   local basename = u.paths.basename(p.path)
+  --   local label_idx, _, _ = basename:find(p.label, 1, true)
+  --   local dirname = u.paths.dirname(p.path):gsub(vim.env.HOME, "~")
+  --   if label_idx ~= nil then
+  --     line:append(basename:sub(1, label_idx - 1), c.config.ui_name_hl)
+  --     line:append(p.label, c.config.ui_pin_label_hl)
+  --     line:append(basename:sub(label_idx + 1), c.config.ui_name_hl)
+  --   else
+  --     line:append(p.label, c.config.ui_pin_label_hl)
+  --     line:append(basename, c.config.ui_name_hl)
+  --   end
+  --   line:append(" ")
+  --   line:append(dirname, c.config.ui_dir_hl)
+  --   render_line(line)
+  --   i = i + 1
+  -- end
 
   -- Render temp pinned buffers next
-  pinned = M.pinned.list({ temp = true })
-  table.sort(pinned, function(a, b)
-    return a.label < b.label
-  end)
-  if #pinned > 0 then
-    -- Blank line
-    local line = NuiLine()
-    line:append("")
-    render_line(line)
-    i = i + 1
-  end
-  for _, p in ipairs(pinned) do
-    local line = NuiLine()
-    line:append("  ")
-    local basename = u.paths.basename(p.path)
-    local dirname = u.paths.dirname(p.path):gsub(vim.env.HOME, "~")
-    line:append("[" .. p.label .. "]", "Comment")
-    line:append(basename, "Comment")
-    line:append(" ")
-    line:append(dirname, c.config.ui_dir_hl)
-    render_line(line)
-    i = i + 1
-  end
+  -- pinned = M.pinned.list({ temp = true })
+  -- table.sort(pinned, function(a, b)
+  --   return a.label < b.label
+  -- end)
+  -- if #pinned > 0 then
+  --   -- Blank line
+  --   local line = NuiLine()
+  --   line:append("")
+  --   render_line(line)
+  --   i = i + 1
+  -- end
+  -- for _, p in ipairs(pinned) do
+  --   local line = NuiLine()
+  --   line:append("  ")
+  --   local basename = u.paths.basename(p.path)
+  --   local dirname = u.paths.dirname(p.path):gsub(vim.env.HOME, "~")
+  --   line:append("[" .. p.label .. "]", "Comment")
+  --   line:append(basename, "Comment")
+  --   line:append(" ")
+  --   line:append(dirname, c.config.ui_dir_hl)
+  --   render_line(line)
+  --   i = i + 1
+  -- end
 
   -- Render any extra lines passed in opts
-  if opts.lines then
-    -- Blank line
-    local line = NuiLine()
-    line:append("")
-    render_line(line)
-    i = i + 1
-  end
-  for _, l in ipairs(opts.lines or {}) do
-    local line = NuiLine()
-    line:append("  ")
-    line:append("[" .. l.label .. "]", "Comment")
-    line:append(l.text, l.hl)
-    render_line(line)
-    i = i + 1
-  end
+  -- if opts.lines then
+  --   -- Blank line
+  --   local line = NuiLine()
+  --   line:append("")
+  --   render_line(line)
+  --   i = i + 1
+  -- end
+  -- for _, l in ipairs(opts.lines or {}) do
+  --   local line = NuiLine()
+  --   line:append("  ")
+  --   line:append("[" .. l.label .. "]", "Comment")
+  --   line:append(l.text, l.hl)
+  --   render_line(line)
+  --   i = i + 1
+  -- end
 
-  popup:update_layout({
+  M.popup:update_layout({
     position = {
-      row = 1,
+      row = math.floor((vim.o.lines - i) / 2),
       col = "100%",
     },
     relative = "editor",
     size = {
-      width = longest_line,
+      width = longest_line + 2,
       height = i,
     },
   })
-  popup:mount()
-  return popup
+  M.popup:mount()
+
+  -- Can only set extmarks after mounting
+  vim.api.nvim_buf_clear_namespace(M.popup.bufnr, vtns, 0, -1)
+  for i, v in ipairs(vts) do
+    vim.api.nvim_buf_set_extmark(M.popup.bufnr, vtns, i - 1, 0, {
+      virt_text = { v },
+      virt_text_pos = "eol_right_align",
+    })
+  end
+  return M.popup
 end
 
 --- Finds a pinned buffer by path
