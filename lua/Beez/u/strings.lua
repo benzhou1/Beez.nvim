@@ -76,6 +76,20 @@ function M.uuid(seed)
   end)
 end
 
+function M.short_uuid(seed)
+  math.randomseed((seed or 0) + os.time())
+  local template = "xxxxxxxxxxxxxxxxxxxxxx"
+  ---@diagnostic disable-next-line: redundant-return-value
+  return string.gsub(template, "[xy]", function(c)
+    local v = (c == "x") and math.random(0, 0xf) or math.random(8, 0xb)
+    local hex = string.format("%X", v)
+    if math.random() < 0.5 then
+      hex = string.lower(hex)
+    end
+    return hex
+  end)
+end
+
 --- Escapes a string for pattern matching
 ---@param text string
 ---@return string
