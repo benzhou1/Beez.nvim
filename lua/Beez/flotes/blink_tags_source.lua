@@ -25,6 +25,11 @@ end
 
 function source:get_completions(ctx, callback)
   if ctx.trigger.character == nil or ctx.trigger.character ~= "#" then
+    callback({
+      items = {},
+      is_incomplete_backward = false,
+      is_incomplete_forward = false,
+    })
     return function() end
   end
   local f = require("Beez.flotes")
