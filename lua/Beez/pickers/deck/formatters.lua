@@ -76,6 +76,7 @@ M.grep = {
     item.data.filename = Path:new(root_dir):joinpath(filename).filename
     item.data.lnum = lnum
     item.data.col = col
+    item.data.match = match
   end,
 }
 

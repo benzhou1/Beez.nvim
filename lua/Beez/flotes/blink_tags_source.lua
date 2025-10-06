@@ -51,7 +51,7 @@ function source:get_completions(ctx, callback)
     local items = {}
     for _, line in ipairs(lines) do
       for tag in line:gmatch("#([^%s]+)") do
-        if tags[tag] == nil then
+        if tags[tag] == nil and not tag:startswith("task:") then
           tags[tag] = true
           local item = {
             -- Label of the item in the UI

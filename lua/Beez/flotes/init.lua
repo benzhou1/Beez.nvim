@@ -14,6 +14,7 @@ local M = {
   },
   utils = utils,
   config = {},
+  tasks = require("Beez.flotes.tasks"),
 }
 
 --- Setup configurationk

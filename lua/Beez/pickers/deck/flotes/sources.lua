@@ -164,7 +164,7 @@ function M.grep(opts)
         local match = text:match(":%d+:%d+:(.*)$")
         local tags = {}
         for tag in match:gmatch("#(%w+)") do
-          table.insert(tags, tag)
+          tags[tag] = true
           match = match:gsub(" #" .. tag, "")
         end
 
@@ -265,12 +265,6 @@ function M.backlinks(opts)
   return source, specifier
 end
 
----@class Beez.pickers.deck.flotes.task
----@field state string
----@field task_text string
----@field task_desc string
----@field tags string[]
-
 --- Sort tasks based on their state and tags and mtime
 ---@param a table
 ---@param b table
@@ -287,16 +281,16 @@ local function sort_tasks(a, b)
     ["p2"] = 2,
     ["p3"] = 1,
   }
-  ---@type Beez.pickers.deck.flotes.task
+  ---@type Beez.flotes.Task
   local at = a.data.task
-  ---@type Beez.pickers.deck.flotes.task
+  ---@type Beez.flotes.Task
   local bt = b.data.task
   local ascore = state_scores[at.state]
   local bscore = state_scores[bt.state]
-  for _, tag in ipairs(at.tags) do
+  for tag, _ in pairs(at.tags) do
     ascore = ascore + (tag_scores[tag] or 0)
   end
-  for _, tag in ipairs(bt.tags) do
+  for tag, _ in pairs(bt.tags) do
     bscore = bscore + (tag_scores[tag] or 0)
   end
   if a.data.mtime > b.data.mtime then
@@ -305,35 +299,6 @@ local function sort_tasks(a, b)
     bscore = bscore + 0.5
   end
   return ascore > bscore
-end
-
---- Parse line into a task object
----@param line string
----@return Beez.pickers.deck.flotes.task?
-local function parse_task_line(line)
-  local task_text = line:match(":%d+:%d+:(.*)$")
-  if task_text == nil then
-    return nil
-  end
-
-  local task_state, task_desc = task_text:match("^%s*-%s%[(%s?x?/?)%]%s(.*)$")
-  if task_state == nil or task_desc == nil then
-    return nil
-  end
-
-  local tags = {}
-  for tag in task_desc:gmatch("#([^%s]+)") do
-    table.insert(tags, tag)
-    task_desc = task_desc:gsub(" #" .. tag, "")
-  end
-
-  local task = {
-    state = task_state,
-    task_text = task_text,
-    task_desc = task_desc,
-    tags = tags,
-  }
-  return task
 end
 
 --- Display a task in deck
@@ -363,9 +328,9 @@ local function display_task(ctx, item, keys, indent)
       { " ", "String" },
       { marker, marker_hl },
       { " ", "String" },
-      { item.data.task.task_desc, task_hl },
+      { item.data.task.text, task_hl },
     },
-    filter_text = item.data.task.task_text,
+    filter_text = item.data.task.line,
     data = item.data,
   }
 
@@ -417,11 +382,9 @@ local function get_tasks_from_text(ctx)
     buffering = System.LineBuffering.new({
       ignore_empty = true,
     }),
-    on_stdout = function(text)
-      local filename = text:match("^[^:]+")
-      local lnum = tonumber(text:match(":(%d+):"))
-      local col = tonumber(text:match(":%d+:(%d+):"))
-      local t = parse_task_line(text)
+    on_stdout = function(line)
+      local filename, lnum, col, text = line:match("^(.+):(%d+):(%d+):(.*)$")
+      local t = f.tasks.parse_line(text)
       if filename == nil or t == nil or lnum == nil then
         return
       end
@@ -432,8 +395,8 @@ local function get_tasks_from_text(ctx)
           tags = t.tags,
           query = query,
           filename = path,
-          lnum = lnum,
-          col = col,
+          lnum = tonumber(lnum),
+          col = tonumber(col),
           task = t,
           mtime = u.os.mtime(path),
         },
@@ -486,7 +449,7 @@ end
 ---@param opts table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.tasks(opts)
-  opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false })
+  opts = utils.resolve_opts(opts, { is_grep = false, filename_first = false, def_action_open = true })
 
   local source = utils.resolve_source(opts, {
     name = "find_tasks",
@@ -495,8 +458,8 @@ function M.tasks(opts)
       get_tasks_from_text(ctx)
     end,
     actions = u.tables.extend(
-      {},
-      actions.open_note(),
+      opts.actions or {},
+      opts.def_action_open and actions.open_note() or actions.insert_task_tag(),
       actions.toggle_done_task(),
 
       u.deck.edit_actions({

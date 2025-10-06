@@ -658,6 +658,16 @@ function M.find_tasks()
   }
 end
 
+function M.insert_task_tag()
+  return {
+    deck = {
+      run = function(opts)
+        deck_pickers.flotes.insert_task_tag(opts)
+      end,
+    },
+  }
+end
+
 function M.find_btags()
   return {
     fzf = {

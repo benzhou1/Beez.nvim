@@ -59,5 +59,16 @@ function M.find_tasks(opts)
   require("deck").start(source, specifier)
 end
 
+--- Deck picker for inserting a tag reference to task
+---@param opts? table
+function M.insert_task_tag(opts)
+  opts = opts or {}
+  opts.def_action_open = false
+  opts.actions = {
+    require("deck").alias_action("toggle_select", "flotes.task.insert_task_tag"),
+  }
+  local source, specifier = sources.tasks(opts)
+  require("deck").start(source, specifier)
+end
 
 return M

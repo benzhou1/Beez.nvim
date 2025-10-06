@@ -8,10 +8,11 @@ local M = {
 ---@return deck.Action[]
 function M.open_note(opts)
   opts = opts or {}
+  local name = "flotes.task.open_note"
   return {
-    require("deck").alias_action("default", "open_note"),
+    require("deck").alias_action("default", name),
     {
-      name = "open_note",
+      name = name,
       execute = function(ctx)
         local item = ctx.get_action_items()[1]
         local f = require("Beez.flotes")
@@ -23,6 +24,68 @@ function M.open_note(opts)
               vim.fn.cursor(item.data.lnum, item.data.col)
             end
           end)
+        end)
+      end,
+    },
+  }
+end
+
+--- Deck action to insert a tag reference to current task
+---@param opts? table
+---@return deck.Action[]
+function M.insert_task_tag(opts)
+  opts = opts or {}
+  local name = "flotes.task.insert_task_tag"
+  local winid = vim.api.nvim_get_current_win()
+  local curr_line = vim.api.nvim_get_current_line()
+  return {
+    require("deck").alias_action("default", name),
+    {
+      name = name,
+      execute = function(ctx)
+        local item = ctx.get_action_items()[1]
+        local f = require("Beez.flotes")
+        local line = u.os.read_line_at(item.data.filename, item.data.lnum)
+        if line == nil then
+          return
+        end
+        local t = f.tasks.parse_line(line)
+        if t == nil then
+          return
+        end
+
+        local task_tag = nil
+        for tag, _ in pairs(t.tags) do
+          if tag:startswith("task:") then
+            task_tag = tag
+            break
+          end
+        end
+
+        -- Generate a new task tag and add it to the task line
+        if task_tag == nil then
+          task_tag = "task:" .. u.strs.short_uuid()
+          line = line .. " #" .. task_tag
+          local lines = u.os.read_lines(item.data.filename)
+          lines[item.data.lnum] = line
+          local file = io.open(item.data.filename, "w")
+          if file ~= nil then
+            for _, l in ipairs(lines) do
+              file:write(l .. "\n")
+            end
+          end
+        end
+
+        -- Add the task tag to the end of the current line
+        if not curr_line:endswith(" ") then
+          curr_line = curr_line .. " "
+        end
+        curr_line = curr_line .. "#" .. task_tag
+        vim.api.nvim_set_current_win(winid)
+        vim.api.nvim_set_current_line(curr_line)
+        vim.cmd("startinsert")
+        vim.schedule(function()
+          ctx:hide()
         end)
       end,
     },
@@ -112,7 +175,7 @@ function M.edit_tasks(opts)
         get_lines = function(items)
           local lines = {}
           for _, item in ipairs(items) do
-            local line = item.data.task.task_text .. " [id::" .. item.data.i .. "]"
+            local line = item.data.task.line .. " [id::" .. item.data.i .. "]"
             table.insert(lines, line)
           end
           return lines
@@ -122,11 +185,11 @@ function M.edit_tasks(opts)
           local cmp = require("plugins.checkmate")
           local f = require("Beez.flotes")
           local function load_buf(filename)
-            local bufnr = bufs[filename]
+            local buf = bufs[filename]
             local loaded = true
-            if bufnr == nil then
+            if buf == nil then
               -- Load the buffer by filename
-              bufnr = vim.fn.bufnr(filename)
+              local bufnr = vim.fn.bufnr(filename)
               -- Has not been loaded yet
               if bufnr == -1 then
                 loaded = false
@@ -137,8 +200,9 @@ function M.edit_tasks(opts)
                 bufnr = bufnr,
                 loaded = loaded,
               }
+              buf = bufs[filename]
             end
-            return bufnr
+            return buf.bufnr
           end
           local function cleanup_bufs()
             for _, buf in pairs(bufs) do
@@ -171,7 +235,7 @@ function M.edit_tasks(opts)
                 -- Basically a pop
                 items[id] = nil
                 -- Task has been edited
-                if task ~= item.data.task.task_text then
+                if task ~= item.data.task.text then
                   local bufnr = load_buf(item.data.filename)
                   -- Replace the line in the file
                   vim.api.nvim_buf_set_lines(bufnr, item.data.lnum - 1, item.data.lnum, false, { task })
