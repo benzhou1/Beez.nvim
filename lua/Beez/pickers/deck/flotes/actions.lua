@@ -62,17 +62,27 @@ function M.insert_task_tag(opts)
           end
         end
 
-        -- Generate a new task tag and add it to the task line
+        local curr_file = vim.api.nvim_buf_get_name(0) == item.data.filename
+        -- If task is not in the current file gotta write to it
         if task_tag == nil then
-          task_tag = "task:" .. u.strs.short_uuid()
-          line = line .. " #" .. task_tag
-          local lines = u.os.read_lines(item.data.filename)
-          lines[item.data.lnum] = line
-          local file = io.open(item.data.filename, "w")
-          if file ~= nil then
-            for _, l in ipairs(lines) do
-              file:write(l .. "\n")
+          local uuid = u.strs.short_uuid()
+          -- Generate a new task tag and add it to the task line
+          if not curr_file then
+            task_tag = "task:" .. uuid
+            line = line .. " #" .. task_tag
+            local lines = u.os.read_lines(item.data.filename)
+            lines[item.data.lnum] = line
+            local file = io.open(item.data.filename, "w")
+            if file ~= nil then
+              for _, l in ipairs(lines) do
+                file:write(l .. "\n")
+              end
             end
+          -- Otherwise we can can just overwrite the line the current file
+          else
+            local task_line = vim.api.nvim_buf_get_lines(0, item.data.lnum - 1, item.data.lnum, false)[1]
+            task_line = task_line .. " #" .. uuid
+            vim.api.nvim_buf_set_lines(0, item.data.lnum - 1, item.data.lnum, false, { task_line })
           end
         end
 
