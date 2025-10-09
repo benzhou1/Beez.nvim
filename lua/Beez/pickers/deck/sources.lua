@@ -199,9 +199,24 @@ end
 ---@return table
 local function get_recent_files(opts)
   opts = opts or {}
-  local cs = require("Beez.codestacks")
-  local recent_files = cs.recentfiles.list()
   local items = {}
+  -- local cs = require("Beez.codestacks")
+  -- local recent_files = cs.recentfiles.list()
+  -- for _, r in ipairs(recent_files) do
+  --   local item = {
+  --     data = {
+  --       filename = r,
+  --       source = "recent_files",
+  --     },
+  --   }
+  --   table.insert(items, item)
+  -- end
+
+  local recent_files = require("mini.visits").list_paths("", {
+    filter = function(path)
+      return vim.fn.filereadable(path.path) == 1
+    end,
+  })
   for _, r in ipairs(recent_files) do
     local item = {
       data = {
@@ -554,7 +569,27 @@ end
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.dirs_recent(opts)
   opts = utils.resolve_opts(opts, { open_external = { quit = false } })
-  local source = require("deck.builtin.source.recent_dirs")(opts.source_opts)
+  local source = utils.resolve_source(opts, {
+    name = "recent_dirs",
+    execute = function(ctx)
+      local recent_dirs = require("mini.visits").list_paths("", {
+        filter = function(path)
+          return vim.fn.isdirectory(path.path) == 1
+        end,
+      })
+      for _, r in ipairs(recent_dirs) do
+        local item = {
+          data = {
+            filename = r,
+            source = "recent_dirs",
+          },
+        }
+        formatters.filename_first.transform(opts)(item)
+        ctx.item(item)
+      end
+      ctx.done()
+    end,
+  })
 
   source.actions = {}
   table.insert(
@@ -575,7 +610,6 @@ function M.dirs_recent(opts)
     actions.find_files({ name = "find_files_under_dir", dir = true }),
     actions.grep_files({ name = "grep_files_under_dir", dir = true })
   )
-  source = utils.resolve_source(opts, source)
 
   local specifier = utils.resolve_specifier(opts)
   return source, specifier
