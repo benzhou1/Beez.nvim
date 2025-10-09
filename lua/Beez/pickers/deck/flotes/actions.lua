@@ -38,6 +38,8 @@ function M.insert_task_tag(opts)
   local name = "flotes.task.insert_task_tag"
   local winid = vim.api.nvim_get_current_win()
   local curr_line = vim.api.nvim_get_current_line()
+  local curr_filename = vim.api.nvim_buf_get_name(0)
+  local curr_bufnr = vim.api.nvim_get_current_buf()
   return {
     require("deck").alias_action("default", name),
     {
@@ -62,13 +64,13 @@ function M.insert_task_tag(opts)
           end
         end
 
-        local curr_file = vim.api.nvim_buf_get_name(0) == item.data.filename
+        local curr_file = curr_filename == item.data.filename
         -- If task is not in the current file gotta write to it
         if task_tag == nil then
           local uuid = u.strs.short_uuid()
+          task_tag = "task:" .. uuid
           -- Generate a new task tag and add it to the task line
           if not curr_file then
-            task_tag = "task:" .. uuid
             line = line .. " #" .. task_tag
             local lines = u.os.read_lines(item.data.filename)
             lines[item.data.lnum] = line
@@ -80,9 +82,16 @@ function M.insert_task_tag(opts)
             end
           -- Otherwise we can can just overwrite the line the current file
           else
-            local task_line = vim.api.nvim_buf_get_lines(0, item.data.lnum - 1, item.data.lnum, false)[1]
-            task_line = task_line .. " #" .. uuid
-            vim.api.nvim_buf_set_lines(0, item.data.lnum - 1, item.data.lnum, false, { task_line })
+            local task_line =
+              vim.api.nvim_buf_get_lines(curr_bufnr, item.data.lnum - 1, item.data.lnum, false)[1]
+            task_line = task_line .. " #" .. task_tag
+            vim.api.nvim_buf_set_lines(
+              curr_bufnr,
+              item.data.lnum - 1,
+              item.data.lnum,
+              false,
+              { task_line }
+            )
           end
         end
 
