@@ -162,6 +162,15 @@ function M.set_keymaps(bufnr)
       buffer = bufnr,
     },
     {
+      "R",
+      function()
+        local cc = require("Beez.cmdcenter")
+        cc.run(op.cmd())
+      end,
+      desc = "Refresh",
+      buffer = bufnr,
+    },
+    {
       "\\",
       function()
         require("Beez.pickers").pick("cmdcenter.db_headers", { type = "deck" })
