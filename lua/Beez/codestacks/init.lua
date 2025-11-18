@@ -264,6 +264,10 @@ function M.setup(config)
   local hook_session_name = c.config.hook_session_name or M.def_hooks.default_hook_session_name
   M.config = c.config
   M.session = hook_session_name()
+  local session_path = vim.fs.joinpath(c.config.data_dir, M.session)
+  if vim.fn.isdirectory(session_path) == 0 then
+    vim.fn.mkdir(session_path, "p")
+  end
 
   M.bl = Bufferlist:new()
 

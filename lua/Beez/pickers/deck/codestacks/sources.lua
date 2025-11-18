@@ -76,6 +76,7 @@ function M.global_marks(opts)
             { m.desc, "String" },
             { " ", "String" },
             { m.path, "Comment" },
+            { ":", "String" },
             { tostring(m.lineno), "Comment" },
           },
           filter_text = m.desc .. " " .. m.path .. " #" .. m.stack,
