@@ -40,7 +40,7 @@ function M.smart()
     deck = {
       resume = false,
       run = function(opts)
-        require("deck").start(deck_pickers.sources.files_smart(opts))
+        deck_pickers.smart(opts)
       end,
     },
   }
@@ -945,6 +945,16 @@ function M.log_statements()
         require("Beez.pickers.deck.timber").log_statements(opts)
       end,
     },
+  }
+end
+
+function M.dirs()
+  return {
+    deck = {
+      run = function(opts)
+        deck_pickers.dirs(opts)
+      end
+    }
   }
 end
 

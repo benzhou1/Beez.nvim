@@ -259,7 +259,15 @@ end
 ---@param opts table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.files(opts)
-  opts = utils.resolve_opts(opts)
+  opts = utils.resolve_opts(opts, {
+    filename_first = false,
+    source_opts = {
+      transform = function(item)
+        item.data.source = "files"
+        formatters.filename_first.transform(opts)(item)
+      end,
+    },
+  })
   local source = require("deck.builtin.source.files")(opts.source_opts)
   source = utils.resolve_source(opts, source)
   source.actions = u.tables.extend(source.actions, actions.toggle_cwd())
@@ -277,6 +285,40 @@ function M.files_recent_smart(opts)
   local recent_source, specifier = M.files_recent(opts)
   local sources = { recent_source, fasder_source }
   return sources, specifier
+end
+
+--- Deck source for smart lookup for both files and directories
+---@param opts? table
+---@return deck.Source, deck.StartConfigSpecifier
+function M.smart(opts)
+  opts = vim.tbl_deep_extend("keep", opts or {}, {})
+  local sources = opts.sources or { "buffers", "dirs", "recent_files", "files", "recent_dirs" }
+  local _sources = {}
+  local specifier = {}
+
+  if u.tables.contains(sources, "buffers") then
+    local buf_source, _ = M.buffers(opts)
+    buf_source.actions = u.tables.extend(buf_source.actions, actions.toggle_cwd())
+    table.insert(_sources, buf_source)
+  end
+  if u.tables.contains(sources, "dirs") then
+    local dirs_source, _ = M.dirs(opts)
+    table.insert(_sources, dirs_source)
+  end
+  if u.tables.contains(sources, "recent_files") then
+    local recent_files_source, _ = M.files_recent(opts)
+    recent_files_source.actions = u.tables.extend(recent_files_source.actions, actions.toggle_cwd())
+    table.insert(_sources, recent_files_source)
+  end
+  if u.tables.contains(sources, "files") then
+    local files_source, specifier = M.files(opts)
+    table.insert(_sources, files_source)
+  end
+  if u.tables.contains(sources, "recent_dirs") then
+    local recent_dirs_source, _ = M.dirs_recent(opts)
+    table.insert(_sources, recent_dirs_source)
+  end
+  return _sources, specifier
 end
 
 --- Smart deck source
@@ -624,7 +666,17 @@ end
 ---@param opts table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.dirs(opts)
-  opts = utils.resolve_opts(opts, { open_external = { quit = false } })
+  opts = utils.resolve_opts(opts, {
+    open_external = { quit = false },
+    filename_first = false,
+    source_opts = {
+      transform = function(item)
+        item.data.source = "dirs"
+        item.data.is_dir = true
+        formatters.filename_first.transform(opts)(item)
+      end,
+    },
+  })
   local source = require("deck.builtin.source.dirs")(opts.source_opts)
   source = utils.resolve_source(opts, source)
   source.actions = {}

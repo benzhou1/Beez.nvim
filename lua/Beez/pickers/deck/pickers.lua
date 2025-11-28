@@ -138,4 +138,25 @@ function M.jump_list(opts)
   end
 end
 
+--- Deck picker for files
+---@param opts? table
+function M.files(opts)
+  opts = opts or {}
+  require("deck").start(sources.files(opts))
+end
+
+--- Deck picker for smart lookup (files, recent files, buffers, dirs, recent dirs, global pinned files, global pinned dirs)
+---@param opts? table
+function M.smart(opts)
+  opts = opts or {}
+  require("deck").start(sources.smart(opts))
+end
+
+--- Deck picker for finding directories
+---@param opts? table
+function M.dirs(opts)
+  opts = opts or {}
+  require("deck").start(sources.dirs(opts))
+end
+
 return M

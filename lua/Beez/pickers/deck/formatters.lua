@@ -13,6 +13,11 @@ M.filename_first = {
         filename = item.data.filename:sub(1, -2)
       end
       local basename = u.paths.basename(filename)
+      -- Add ending slash to directories
+      if item.data.is_dir then
+        basename = basename .. u.paths.sep
+      end
+
       local dirname = u.paths.dirname(filename)
       ---@diagnostic disable-next-line: param-type-mismatch
       if dirname:startswith(opts.cwd) then
