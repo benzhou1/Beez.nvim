@@ -594,13 +594,18 @@ function M.dirs_recent(opts)
   source.actions = {}
   table.insert(
     source.actions,
-    require("deck").alias_action("default", opts.default_action or "open_oil")
+    require("deck").alias_action("default", opts.default_action or "open_minifiles")
   )
-  table.insert(source.actions, actions.open_oil({ keep_open = false }))
-  table.insert(source.actions, require("deck").alias_action("open_keep", "open_oil_keep"))
-  table.insert(source.actions, actions.open_oil({ keep_open = true }))
-  table.insert(source.actions, require("deck").alias_action("prev_default", "open_oil_parent"))
-  table.insert(source.actions, actions.open_oil({ parent = true }))
+  -- table.insert(source.actions, actions.open_oil({ keep_open = false }))
+  -- table.insert(source.actions, require("deck").alias_action("open_keep", "open_oil_keep"))
+  -- table.insert(source.actions, actions.open_oil({ keep_open = true }))
+  -- table.insert(source.actions, require("deck").alias_action("prev_default", "open_oil_parent"))
+  -- table.insert(source.actions, actions.open_oil({ parent = true }))
+  table.insert(source.actions, actions.open_minifiles({ keep_open = false }))
+  table.insert(source.actions, require("deck").alias_action("open_keep", "open_minifiles_keep"))
+  table.insert(source.actions, actions.open_minifiles({ keep_open = true }))
+  table.insert(source.actions, require("deck").alias_action("prev_default", "open_minifiles_parent"))
+  table.insert(source.actions, actions.open_minifiles({ parent = true }))
   table.insert(source.actions, require("deck").alias_action("delete", "remove_recent"))
   table.insert(source.actions, actions.remove_recent)
   table.insert(source.actions, actions.open_external({ quit = opts.open_external.quit }))
@@ -625,13 +630,16 @@ function M.dirs(opts)
   source.actions = {}
   table.insert(
     source.actions,
-    require("deck").alias_action("default", opts.default_action or "open_oil")
+    require("deck").alias_action("default", opts.default_action or "open_minifiles")
   )
-  table.insert(source.actions, require("deck").alias_action("open_keep", "open_oil_keep"))
-  table.insert(source.actions, actions.open_oil({ keep_open = false }))
-  table.insert(source.actions, actions.open_oil({ keep_open = true }))
-  table.insert(source.actions, require("deck").alias_action("prev_default", "open_oil_parent"))
-  table.insert(source.actions, actions.open_oil({ parent = true }))
+  table.insert(source.actions, require("deck").alias_action("open_keep", "open_minfiles"))
+  table.insert(source.actions, actions.open_minifiles({ keep_open = false }))
+  table.insert(source.actions, actions.open_minifiles({ keep_open = true }))
+  table.insert(source.actions, require("deck").alias_action("prev_default", "open_minifiles_parent"))
+  -- table.insert(source.actions, actions.open_oil({ keep_open = false }))
+  -- table.insert(source.actions, actions.open_oil({ keep_open = true }))
+  -- table.insert(source.actions, actions.open_oil({ parent = true }))
+  table.insert(source.actions, actions.open_minifiles({ parent = true }))
   table.insert(source.actions, actions.open_external({ quit = opts.open_external.quit }))
   table.insert(source.actions, actions.open_external({ parent = true, quit = opts.open_external.quit }))
   source.actions =
@@ -665,13 +673,18 @@ function M.dirs_fasder(opts)
 
     actions = u.tables.extend(
       {
-        require("deck").alias_action("default", opts.default_action or "open_oil"),
-        require("deck").alias_action("alt_default", "open_oil_keep"),
-        require("deck").alias_action("prev_default", "open_oil_parent"),
+        require("deck").alias_action("default", opts.default_action or "open_minfiles"),
+        -- require("deck").alias_action("alt_default", "open_oil_keep"),
+        -- require("deck").alias_action("prev_default", "open_oil_parent"),
+        -- actions.open_oil({ keep_open = false }),
+        -- actions.open_oil({ keep_open = true }),
+        -- actions.open_oil({ parent = true }),
+        require("deck").alias_action("alt_default", "open_minfiles_keep"),
+        require("deck").alias_action("prev_default", "open_minfiles_parent"),
         require("deck").alias_action("delete", "remove_fasder"),
-        actions.open_oil({ keep_open = false }),
-        actions.open_oil({ keep_open = true }),
-        actions.open_oil({ parent = true }),
+        actions.open_minifiles({ keep_open = false }),
+        actions.open_minifiles({ keep_open = true }),
+        actions.open_minifiles({ parent = true }),
         actions.open_external({ quit = opts.open_external.quit }),
         actions.open_external({ parent = true, quit = opts.open_external.quit }),
         actions.open_zed({ quit = opts.open_zed.quit }),

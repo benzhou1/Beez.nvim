@@ -73,6 +73,38 @@ M.remove_recent = {
   end,
 }
 
+-- Open dir in minifiles
+M.open_minifiles = function(opts)
+  opts = opts or {}
+  if opts.keep_open == nil then
+    opts.keep_open = false
+  end
+  if opts.parent == true then
+    return {
+      name = "open_minifiles_parent",
+      execute = function(ctx)
+        local item = ctx.get_action_items()[1]
+        ctx:hide()
+        vim.schedule(function()
+          require("mini.files").open(u.paths.dirname(item.data.filename))
+        end)
+      end,
+    }
+  end
+  return {
+    name = opts.keep_open and "open_minifiles_keep" or "open_minifiles",
+    execute = function(ctx)
+      local item = ctx.get_action_items()[1]
+      if not opts.keep_open then
+        ctx:hide()
+      end
+      vim.schedule(function()
+        require("mini.files").open(item.data.filename)
+      end)
+    end,
+  }
+end
+
 -- Open dir in oil float
 M.open_oil = function(opts)
   opts = opts or {}
