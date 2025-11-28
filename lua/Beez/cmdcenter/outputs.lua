@@ -121,7 +121,7 @@ end
 ---@param on_open? fun(winid: integer, bufnr: integer)
 function M.focus_or_open(name, on_open)
   name = name or M.last_output
-  if name == nil then
+  if name == nil or name == "" then
     return
   end
 
