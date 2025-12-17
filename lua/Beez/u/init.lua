@@ -2,6 +2,7 @@ local M = { ui = {} }
 
 M.paths = require("Beez.u.paths")
 M.strs = require("Beez.u.strings")
+M.strings = M.strs
 M.async = require("Beez.u.async")
 M.class = require("Beez.u.class")
 M.nvim = require("Beez.u.nvim")
