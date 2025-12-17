@@ -113,4 +113,12 @@ function string:trimr()
   return ts
 end
 
+--- Formats the string by named fields
+---@param str string
+---@param subs table
+---@return string
+function M.format(str, subs)
+  return string.gsub(str, "%${(.-)}", subs)
+end
+
 return M
