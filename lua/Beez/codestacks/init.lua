@@ -111,6 +111,13 @@ local function setup_autocmds()
       M.global_marks.check_for_outdated(event.match)
     end,
   })
+
+  -- Refresh ui on win resize
+  vim.api.nvim_create_autocmd("WinResized", {
+    callback = function()
+      M.ui.refresh()
+    end,
+  })
 end
 
 --- Default hook for hook_session_name. Uses the basename of the cwd, if session name already exists use parent dir as well.
