@@ -10,6 +10,7 @@ function M.setup(opts)
   M.pickers = require("Beez.pickers")
   M.u = require("Beez.u")
   M.ui = require("Beez.ui")
+  M.cmds = require("Beez.cmds")
 end
 
 return M
