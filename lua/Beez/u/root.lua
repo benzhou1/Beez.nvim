@@ -19,7 +19,7 @@ local M = setmetatable({}, {
 ---@alias Beez.u.lazyrootspec string|string[]|Beez.u.lazyrootfn
 
 ---@type Beez.u.lazyrootspec[]
-M.spec = { "lsp", { ".git", "lua" }, "cwd" }
+M.spec = { { ".git", "lua" }, "cwd" }
 
 M.detectors = {}
 
