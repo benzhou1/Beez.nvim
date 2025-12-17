@@ -18,4 +18,13 @@ M.timber = require("Beez.pickers.deck.timber")
 M.projects = require("Beez.pickers.deck.projects")
 M.scripts = require("Beez.pickers.deck.scripts")
 
+--- Deck picker for recent directories
+---@param opts? table
+---@return deck.Context
+function M.recent_dirs(opts)
+  local source, specifier = M.sources.dirs_recent(opts)
+  local ctx = require("deck").start(source, specifier)
+  return ctx
+end
+
 return M

@@ -607,7 +607,7 @@ function M.tags_document(opts)
 end
 
 --- Recent dirs deck source
----@param opts table
+---@param opts? table
 ---@return deck.Source, deck.StartConfigSpecifier
 function M.dirs_recent(opts)
   opts = utils.resolve_opts(opts, { open_external = { quit = false } })
@@ -633,29 +633,27 @@ function M.dirs_recent(opts)
     end,
   })
 
-  source.actions = {}
-  table.insert(
-    source.actions,
-    require("deck").alias_action("default", opts.default_action or "open_minifiles")
-  )
-  -- table.insert(source.actions, actions.open_oil({ keep_open = false }))
-  -- table.insert(source.actions, require("deck").alias_action("open_keep", "open_oil_keep"))
-  -- table.insert(source.actions, actions.open_oil({ keep_open = true }))
-  -- table.insert(source.actions, require("deck").alias_action("prev_default", "open_oil_parent"))
-  -- table.insert(source.actions, actions.open_oil({ parent = true }))
-  table.insert(source.actions, actions.open_minifiles({ keep_open = false }))
-  table.insert(source.actions, require("deck").alias_action("open_keep", "open_minifiles_keep"))
-  table.insert(source.actions, actions.open_minifiles({ keep_open = true }))
-  table.insert(source.actions, require("deck").alias_action("prev_default", "open_minifiles_parent"))
-  table.insert(source.actions, actions.open_minifiles({ parent = true }))
-  table.insert(source.actions, require("deck").alias_action("delete", "remove_recent"))
-  table.insert(source.actions, actions.remove_recent)
-  table.insert(source.actions, actions.open_external({ quit = opts.open_external.quit }))
-  table.insert(source.actions, actions.open_external({ parent = true, quit = opts.open_external.quit }))
   source.actions = u.tables.extend(
-    source.actions,
+    source.actions or {},
     actions.find_files({ name = "find_files_under_dir", dir = true }),
-    actions.grep_files({ name = "grep_files_under_dir", dir = true })
+    actions.grep_files({ name = "grep_files_under_dir", dir = true }),
+    {
+      actions.minifiles.open_external.action(),
+      actions.minifiles.open_external.action({ parent = true }),
+      actions.open_minifiles({ keep_open = false }),
+      require("deck").alias_action("open_keep", "open_minifiles_keep"),
+      actions.open_minifiles({ keep_open = true }),
+      require("deck").alias_action("prev_default", "open_minifiles_parent"),
+      actions.open_minifiles({ parent = true }),
+      require("deck").alias_action("delete", "remove_recent"),
+      actions.remove_recent,
+      actions.open_external({ quit = opts.open_external.quit }),
+      actions.open_external({ parent = true, quit = opts.open_external.quit }),
+      require("deck").alias_action(
+        "default",
+        opts.default_action or "open_minifiles"
+      ),
+    }
   )
 
   local specifier = utils.resolve_specifier(opts)

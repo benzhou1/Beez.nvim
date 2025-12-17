@@ -73,6 +73,39 @@ M.remove_recent = {
   end,
 }
 
+M.minifiles = {}
+M.minifiles.open_external = {}
+M.minifiles.open_parent_external = {}
+-- Open dir in minifiles in separate window
+M.minifiles.open_external.action = function(opts)
+  opts = opts or {}
+  local cmds = require("Beez.cmds")
+  if opts.parent == true then
+    return {
+      name = M.minifiles.open_parent_external.name,
+      execute = function(ctx)
+        local item = ctx.get_action_items()[1]
+        local path = u.paths.dirname(item.data.filename)
+        cmds.neovide.open_minifiles(path)
+        ctx:hide()
+      end,
+    }
+  end
+  return {
+    name = M.minifiles.open_external.name,
+    execute = function(ctx)
+      local item = ctx.get_action_items()[1]
+      if not opts.keep_open then
+        ctx:hide()
+      end
+      cmds.neovide.open_minifiles(item.data.filename)
+    end,
+  }
+end
+M.minifiles.open_parent_external.action = M.minifiles.open_external.action
+M.minifiles.open_external.name = "minifiles.open_external"
+M.minifiles.open_parent_external.name = "minifiles.open_parent_external"
+
 -- Open dir in minifiles
 M.open_minifiles = function(opts)
   opts = opts or {}
