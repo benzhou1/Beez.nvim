@@ -15,5 +15,6 @@ M.bufswitcher = require("Beez.pickers.deck.bufswitcher")
 M.codestacks = require("Beez.pickers.deck.codestacks")
 M.cmdcenter = require("Beez.pickers.deck.cmdcenter")
 M.timber = require("Beez.pickers.deck.timber")
+M.projects = require("Beez.pickers.deck.projects")
 
 return M
