@@ -50,7 +50,23 @@ function M.open_lazygit_picker()
   cmds.run_job(cmd, { env = { NVIM_APPNAME = "nvim_cmds" } })
 end
 
---- Open lazygit in separate neovide window
+--- Open a nvim term window using neohub
+function M.open_term(name, path)
+  local cmds = require("Beez.cmds")
+  local cmd = {
+    "neohub",
+    "--name",
+    "term",
+    "--opts",
+    "--no-fork",
+    "--",
+    "-c",
+    "term",
+  }
+  cmds.run_job(cmd, { cwd = path, env = { NVIM_APPNAME = "nvim_term" } })
+end
+
+--- Open project in separate neohub window
 ---@param name string
 ---@param path string
 function M.open_neohub(name, path)
