@@ -807,13 +807,14 @@ function M.ui.get_tabline()
 end
 
 --- Add a new global mark
-function M.global_marks.add()
+---@param path? string
+function M.global_marks.add(path)
   vim.ui.input({ prompt = "Describe the mark: " }, function(res)
     if res == nil then
       return
     end
 
-    local path = vim.api.nvim_buf_get_name(0)
+    path = path or vim.api.nvim_buf_get_name(0)
     local pos = vim.api.nvim_win_get_cursor(0)
     local line = vim.api.nvim_get_current_line()
     call_backend(be.add_global_mark, path, res, line, pos[1])
