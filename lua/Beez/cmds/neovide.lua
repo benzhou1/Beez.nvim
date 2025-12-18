@@ -58,6 +58,7 @@ function M.open_term(name, path)
     "--name",
     "term",
     "--opts",
+    "--grid 160x30",
     "--no-fork",
     "--",
     "-c",
