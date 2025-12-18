@@ -8,6 +8,9 @@ local M = {
       dotfiles = {
         path = vim.fn.expand("~/.local/share/chezmoi"),
       },
+      nvim = {
+        path = vim.fn.expand("~/.config/nvim"),
+      },
       config = {
         path = vim.fn.expand("~/.config"),
       },
@@ -20,6 +23,9 @@ local M = {
       },
       workflow = {
         path = vim.fn.expand("~/Projects/project_w"),
+      },
+      nvim_forks = {
+        path = vim.fn.expand("~/Projects/nvim_forks"),
       },
       monoglow = {
         path = vim.fn.expand("~/Projects/nvim_forks/monoglow.nvim"),
