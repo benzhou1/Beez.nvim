@@ -437,11 +437,8 @@ function M.diffeditor(left_dir, right_dir, output_dir)
   -- Create a new tab to keep windows clean
   -- vim.cmd("tabnew")
 
-  local original_tree = OriginalTree:new(left_dir, right_dir, output_dir)
-  original_tree:render(function()
-    -- Start a diff on the first file after rendering
-    original_tree:diff()
-  end)
+  local diffeditor = require("Beez.jj.ui.diffeditor"):new(left_dir, right_dir, output_dir)
+  diffeditor:render()
 end
 
 return M
