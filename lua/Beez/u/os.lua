@@ -141,4 +141,46 @@ function M.copy_dir(src, dest, opts)
   end
 end
 
+--- Compare 2 files and see if they are identical
+---@param path1 string
+---@param path2 string
+---@return boolean
+function M.is_file_same(path1, path2)
+  local f1 = io.open(path1, "rb")
+  local f2 = io.open(path2, "rb")
+  if not f1 or not f2 then
+    return false
+  end
+
+  -- Compare sizes
+  local size1 = f1:seek("end")
+  local size2 = f2:seek("end")
+  if size1 ~= size2 then
+    f1:close()
+    f2:close()
+    return false
+  end
+
+  -- Compare contents in chunks
+  f1:seek("set")
+  f2:seek("set")
+  local chunk_size = 4096
+  while true do
+    local b1 = f1:read(chunk_size)
+    local b2 = f2:read(chunk_size)
+    if b1 ~= b2 then
+      f1:close()
+      f2:close()
+      return false
+    end
+    if not b1 then
+      break
+    end
+  end
+
+  f1:close()
+  f2:close()
+  return true
+end
+
 return M
