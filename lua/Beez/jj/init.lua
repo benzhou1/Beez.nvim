@@ -418,10 +418,6 @@ end
 
 function M.diffeditor(left_dir, right_dir, output_dir)
   local u = require("Beez.u")
-  -- Read write
-  -- 420 decimal == 0o644 octal
-  -- 0o644 = rw-r--r--
-  local chmod_mode = 420
 
   -- Make a copy of the right since it is read only
   -- local new_right_dir = right_dir .. "_beez_diff_editor_tmp"
@@ -430,8 +426,12 @@ function M.diffeditor(left_dir, right_dir, output_dir)
   vim.fn.delete(right_dir, "rf")
   u.os.copy_dir(output_dir, right_dir, { chmod_mode = chmod_mode })
 
-  -- Make output the same as left, by deleting it and then copying left to output
+  -- Make output the same as left, by deleting it and then copying left to output and make sure its writable
   vim.fn.delete(output_dir, "rf")
+  -- Read write
+  -- 420 decimal == 0o644 octal
+  -- 0o644 = rw-r--r--
+  local chmod_mode = 420
   u.os.copy_dir(left_dir, output_dir, { chmod_mode = chmod_mode })
 
   -- Create a new tab to keep windows clean

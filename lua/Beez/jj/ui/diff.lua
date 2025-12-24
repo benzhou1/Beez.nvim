@@ -26,13 +26,12 @@ function Diff:render(rel_path, cb)
   if rel_path == self.rel_path then
     return
   end
-  local lifecycle = require("vscode-diff.render.lifecycle")
   local view = require("vscode-diff.render.view")
 
   local left_filepath = vim.fs.joinpath(self.left_dir, rel_path)
   local right_filepath = vim.fs.joinpath(self.right_dir or self.right_dir, rel_path)
 
-  local left_winid, right_winid = lifecycle.get_windows(vim.api.nvim_get_current_tabpage())
+  local left_winid, right_winid = self:get_windows()
   -- If no diff is currently opened then create a new window for the diff
   if left_winid == nil or right_winid == nil then
     ---@type SessionConfig
@@ -72,8 +71,7 @@ end
 --- STATE
 -----------------------------------------------------------------------------------------------
 function Diff:is_focused()
-  local lifecycle = require("vscode-diff.render.lifecycle")
-  local left_winid, right_winid = lifecycle.get_windows(vim.api.nvim_get_current_tabpage())
+  local left_winid, right_winid = self:get_windows()
   local curr_winid = vim.api.nvim_get_current_win()
   return curr_winid == right_winid or curr_winid == left_winid
 end
@@ -88,21 +86,28 @@ function Diff:update_paths(opts)
   self.rel_path = nil
 end
 
+function Diff:get_buffers()
+  local lifecycle = require("vscode-diff.render.lifecycle")
+  return lifecycle.get_buffers(vim.api.nvim_get_current_tabpage())
+end
+
+function Diff:get_windows()
+  local lifecycle = require("vscode-diff.render.lifecycle")
+  return lifecycle.get_windows(vim.api.nvim_get_current_tabpage())
+end
 
 -----------------------------------------------------------------------------------------------
 --- ACTIONS
 -----------------------------------------------------------------------------------------------
 function Diff:focus()
-  local lifecycle = require("vscode-diff.render.lifecycle")
-  local _, right_winid = lifecycle.get_windows(vim.api.nvim_get_current_tabpage())
+  local _, right_winid = self:get_windows()
   if right_winid ~= nil then
     vim.api.nvim_set_current_win(right_winid)
   end
 end
 
 function Diff:resize(offset_width)
-  local lifecycle = require("vscode-diff.render.lifecycle")
-  local left_winid, right_winid = lifecycle.get_windows(vim.api.nvim_get_current_tabpage())
+  local left_winid, right_winid = self:get_windows()
   local width = math.floor((vim.o.columns - offset_width) / 2)
   if left_winid ~= nil then
     vim.api.nvim_win_set_width(left_winid, width)
@@ -113,10 +118,9 @@ function Diff:resize(offset_width)
 end
 
 function Diff:put()
-  local lifecycle = require("vscode-diff.render.lifecycle")
   local actions = require("vscode-diff.render.keymaps").actions
   local diff = require("vscode-diff.diff")
-  local left_buf, right_buf = lifecycle.get_buffers(vim.api.nvim_get_current_tabpage())
+  local left_buf, right_buf = self:get_buffers()
   if right_buf == nil then
     vim.notify("No right buffer found", vim.log.levels.ERROR)
     return
@@ -143,6 +147,9 @@ function Diff:put()
     return
   end
 
+  local orig_output_modifiable = vim.bo[output_buf].modifiable
+  local orig_right_modifiable = vim.bo[right_buf].modifiable
+
   -- Get lines from right buffer
   local hunk_lines = vim.api.nvim_buf_get_lines(
     right_buf,
@@ -152,6 +159,11 @@ function Diff:put()
   )
   -- Ignore swapfile?
   vim.bo[output_buf].swapfile = false
+  -- Temp allow writing
+  if not orig_output_modifiable then
+    vim.bo[output_buf].modifiable = true
+  end
+
   -- Replace lines in output buffer
   vim.api.nvim_buf_set_lines(
     output_buf,
@@ -165,11 +177,26 @@ function Diff:put()
     vim.cmd("write")
   end)
 
+  -- Restore modifiable and readonly
+  if not orig_output_modifiable then
+    vim.bo[output_buf].modifiable = false
+  end
+
+  -- Temp allow writing
+  if not orig_right_modifiable then
+    vim.bo[right_buf].modifiable = true
+  end
+
   -- Call diff get on the right to remove the hunk
   actions.diff_get(vim.api.nvim_win_get_tabpage(0), left_buf, right_buf)()
   vim.api.nvim_buf_call(right_buf, function()
     vim.cmd("write")
   end)
+
+  -- Restore modifiable and readonly
+  if not orig_right_modifiable then
+    vim.bo[right_buf].modifiable = false
+  end
   return true
 end
 
