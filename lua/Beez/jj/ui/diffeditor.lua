@@ -257,6 +257,18 @@ end
 -----------------------------------------------------------------------------------------------
 --- ACTIONS
 -----------------------------------------------------------------------------------------------
+function DiffEditor:scroll_diff(lines)
+  local _, right_winid = self.diff:get_windows()
+  if right_winid == nil then
+    return
+  end
+  local pos = vim.api.nvim_win_get_cursor(right_winid)
+  pcall(vim.api.nvim_win_set_cursor, right_winid, { pos[1] + lines, pos[2] })
+  vim.api.nvim_win_call(right_winid, function()
+    vim.cmd("normal! zz")
+  end)
+end
+
 function DiffEditor:toggle_file_change()
   local left_filepath = vim.fs.joinpath(self.left_dir, self.diff.rel_path)
   local right_filepath = vim.fs.joinpath(self.right_dir, self.diff.rel_path)
@@ -503,6 +515,7 @@ end
 -----------------------------------------------------------------------------------------------
 function DiffEditor:set_tree_keymaps()
   local u = require("Beez.u")
+  local actions = require("vscode-diff.render.keymaps").actions
   local quit = {
     "q",
     function()
@@ -545,6 +558,42 @@ function DiffEditor:set_tree_keymaps()
     end,
     desc = "Apply all changes and quit",
   }
+  local scroll_diff_down = {
+    "K",
+    function()
+      self:scroll_diff(20)
+    end,
+    desc = "Scroll diff down",
+  }
+  local scroll_diff_up = {
+    "J",
+    function()
+      self:scroll_diff(-20)
+    end,
+    desc = "Scroll diff up",
+  }
+  local scroll_to_next_hunk = {
+    "<f7>",
+    function()
+      local left_buf, _ = self.diff:get_buffers()
+      self:focus_right()
+      actions.navigate_next_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+      vim.cmd("normal! zz")
+      self:focus_prev_tree()
+    end,
+    desc = "Scroll to next hunk",
+  }
+  local scroll_to_prev_hunk = {
+    "<s-f7>",
+    function()
+      local left_buf, _ = self.diff:get_buffers()
+      self:focus_right()
+      actions.navigate_prev_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+      vim.cmd("normal! zz")
+      self:focus_prev_tree()
+    end,
+    desc = "Scroll to previous hunk",
+  }
 
   u.keymaps.set({
     vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, quit),
@@ -559,6 +608,14 @@ function DiffEditor:set_tree_keymaps()
     vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, toggle_file_change),
     vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, apply_and_quit),
     vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, apply_and_quit),
+    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, scroll_diff_down),
+    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, scroll_diff_down),
+    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, scroll_diff_up),
+    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, scroll_diff_up),
+    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, scroll_to_next_hunk),
+    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, scroll_to_next_hunk),
+    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, scroll_to_prev_hunk),
+    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, scroll_to_prev_hunk),
     {
       "<c-k>",
       function()
@@ -579,6 +636,7 @@ function DiffEditor:set_tree_keymaps()
 end
 
 function DiffEditor:set_right_keymaps(buffer)
+  local actions = require("vscode-diff.render.keymaps").actions
   local u = require("Beez.u")
   u.keymaps.set({
     {
@@ -651,6 +709,22 @@ function DiffEditor:set_right_keymaps(buffer)
       end,
       desc = "Toggle between original/output diff",
       buffer = buffer,
+    },
+    {
+      "<f7>",
+      function()
+        local left_buf, _ = self.diff:get_buffers()
+        actions.navigate_next_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+      end,
+      desc = "Navigate to the next hunk"
+    },
+    {
+      "<s-f7>",
+      function()
+        local left_buf, _ = self.diff:get_buffers()
+        actions.navigate_prev_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+      end,
+      desc = "Navigate to the prev hunk"
     },
   })
 end
