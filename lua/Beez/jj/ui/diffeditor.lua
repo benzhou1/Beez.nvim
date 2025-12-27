@@ -56,7 +56,7 @@ local function get_files_as_tree_nodes(dir_path)
       assert(rel_path ~= nil, "Could not get relative path for: " .. path)
       nodes[rel_path] = NuiTree.Node({
         text = rel_path,
-        data = { path = path, rel_path = rel_path },
+        data = { path = path, rel_path = rel_path, status = "modified" },
       })
     end
   end
@@ -273,6 +273,139 @@ function DiffEditor:toggle_file_change()
   local left_filepath = vim.fs.joinpath(self.left_dir, self.diff.rel_path)
   local right_filepath = vim.fs.joinpath(self.right_dir, self.diff.rel_path)
   local output_filepath = vim.fs.joinpath(self.output_dir, self.diff.rel_path)
+  local node
+  if self.diffing_right then
+    node = self.rtree:get(self.diff.rel_path)
+  else
+    node = self.otree:get(self.diff.rel_path)
+  end
+
+  -- Handle when files are deleted
+  if node ~= nil and node.data.status == "deleted" then
+    if self.diffing_right then
+      -- Delete file in output
+      uv.fs_unlink(output_filepath, function()
+        vim.schedule(function()
+          -- Need to reload the buffer since the file got deleted
+          local output_buf = vim.fn.bufnr(output_filepath)
+          if output_buf > 0 then
+            vim.api.nvim_buf_call(output_buf, function()
+              vim.api.nvim_command("edit")
+            end)
+          end
+
+          -- Copy file from left to right
+          uv.fs_copyfile(left_filepath, right_filepath, function()
+            uv.fs_chmod(right_filepath, 420) -- 420 is decimal for 0644 (rw-r--r--)
+            vim.schedule(function()
+              -- Need to reload the buffer since the file changed from the copy
+              local right_buf = vim.fn.bufnr(right_filepath)
+              if right_buf > 0 then
+                vim.api.nvim_buf_call(right_buf, function()
+                  vim.api.nvim_command("edit")
+                end)
+              end
+              self:_update_file_statuses()
+            end)
+          end)
+        end)
+      end)
+    else
+      -- Delete file in right
+      uv.fs_unlink(right_filepath, function()
+        vim.schedule(function()
+          -- Need to reload the buffer since the file got deleted
+          local right_buf = vim.fn.bufnr(right_filepath)
+          if right_buf > 0 then
+            vim.api.nvim_buf_call(right_buf, function()
+              vim.api.nvim_command("edit")
+            end)
+          end
+          -- Copy file from left to output
+          uv.fs_copyfile(left_filepath, output_filepath, function()
+            uv.fs_chmod(output_filepath, 420) -- 420 is decimal for 0644 (rw-r--r--)
+            vim.schedule(function()
+              -- Need to reload the buffer since the file changed from the copy
+              local output_buf = vim.fn.bufnr(output_filepath)
+              if output_buf > 0 then
+                vim.api.nvim_buf_call(output_buf, function()
+                  vim.api.nvim_command("edit")
+                end)
+              end
+              self:_update_file_statuses()
+            end)
+          end)
+        end)
+      end)
+    end
+    return
+  end
+
+  -- Handle if file is added
+  if node ~= nil and node.data.status == "added" then
+    if self.diffing_right then
+      -- First copy right to output
+      uv.fs_copyfile(right_filepath, output_filepath, function()
+        vim.schedule(function()
+          -- Need to reload the buffer since the file got copied
+          local output_buf = vim.fn.bufnr(output_filepath)
+          if output_buf > 0 then
+            vim.api.nvim_buf_call(output_buf, function()
+              vim.api.nvim_command("edit")
+            end)
+          end
+
+          -- Then delete the right file, so that it will be same as left
+          uv.fs_unlink(right_filepath, function()
+            vim.schedule(function()
+              -- Need to reload the buffer since the file got deleted
+              local right_buf = vim.fn.bufnr(right_filepath)
+              if right_buf > 0 then
+                vim.api.nvim_buf_call(right_buf, function()
+                  vim.api.nvim_command("edit")
+                end)
+              end
+
+              vim.schedule(function()
+                self:_update_file_statuses()
+              end)
+            end)
+          end)
+        end)
+      end)
+    else
+      -- First copy output to right
+      uv.fs_copyfile(output_filepath, right_filepath, function()
+        vim.schedule(function()
+          -- Need to reload the buffer since the file got copied
+          local right_buf = vim.fn.bufnr(right_filepath)
+          if right_buf > 0 then
+            vim.api.nvim_buf_call(right_buf, function()
+              vim.api.nvim_command("edit")
+            end)
+          end
+
+          -- Then delete the output file, so that it will be same as left
+          uv.fs_unlink(output_filepath, function()
+            vim.schedule(function()
+              -- Need to reload the buffer since the file got deleted
+              local output_buf = vim.fn.bufnr(output_filepath)
+              if output_buf > 0 then
+                vim.api.nvim_buf_call(output_buf, function()
+                  vim.api.nvim_command("edit")
+                end)
+              end
+
+              vim.schedule(function()
+                self:_update_file_statuses()
+              end)
+            end)
+          end)
+        end)
+      end)
+    end
+    return
+  end
 
   if self.diffing_right then
     -- Copy right to output
@@ -393,16 +526,16 @@ function DiffEditor:prev_file()
   local rel_path
   if self.diffing_right then
     local ok = self.rtree:prev()
-    rel_path = self.rtree:get_selected_path()
     if not ok then
       return
     end
+    rel_path = self.rtree:get_selected_path()
   else
     local ok = self.otree:prev()
-    rel_path = self.rtree:get_selected_path()
     if not ok then
       return
     end
+    rel_path = self.otree:get_selected_path()
   end
   self:show_diff(rel_path, self.diffing_right, function()
     if not is_diff_focused then
@@ -545,14 +678,14 @@ function DiffEditor:set_tree_keymaps()
     desc = "Move to the previous file and diff",
   }
   local toggle_file_change = {
-    "dp",
+    "<space>",
     function()
       self:toggle_file_change()
     end,
     desc = "Toggle entire file changed",
   }
   local apply_and_quit = {
-    "<leader><cr>",
+    "\\<cr>",
     function()
       vim.cmd("qa")
     end,
@@ -648,7 +781,7 @@ function DiffEditor:set_right_keymaps(buffer)
       desc = "Quit and ignore changes",
     },
     {
-      "<c-p>",
+      "-",
       function()
         self:focus_prev_tree()
       end,
@@ -696,14 +829,14 @@ function DiffEditor:set_right_keymaps(buffer)
       desc = "Move to the previous file",
     },
     {
-      "dp",
+      "<space>",
       function()
         self:toggle_hunk_change()
       end,
       buffer = buffer,
     },
     {
-      "<leader>t",
+      "\\\\",
       function()
         self:toggle_other_diff()
       end,
@@ -716,7 +849,7 @@ function DiffEditor:set_right_keymaps(buffer)
         local left_buf, _ = self.diff:get_buffers()
         actions.navigate_next_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
       end,
-      desc = "Navigate to the next hunk"
+      desc = "Navigate to the next hunk",
     },
     {
       "<s-f7>",
@@ -724,7 +857,7 @@ function DiffEditor:set_right_keymaps(buffer)
         local left_buf, _ = self.diff:get_buffers()
         actions.navigate_prev_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
       end,
-      desc = "Navigate to the prev hunk"
+      desc = "Navigate to the prev hunk",
     },
   })
 end
@@ -741,7 +874,7 @@ function DiffEditor:set_left_keymaps(buffer)
       desc = "Quit and ignore changes",
     },
     {
-      "<c-p>",
+      "-",
       function()
         self:focus_prev_tree()
       end,

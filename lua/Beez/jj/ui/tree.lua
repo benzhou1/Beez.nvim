@@ -35,6 +35,22 @@ function Tree:new(title, left_dir, right_dir, output_dir)
     get_node_id = function(node)
       return node.data.rel_path
     end,
+    prepare_node = function(node)
+      local NuiLine = require("nui.line")
+      local line = NuiLine()
+      local s, shl = "", "String"
+      if node.data.status == "modified" then
+        s, shl = "M", "DiagnosticWarn"
+      elseif node.data.status == "added" then
+        s, shl = "A", "Added"
+      elseif node.data.status == "deleted" then
+        s, shl = "D", "Search"
+      end
+
+      line:append(s, shl)
+      line:append(" " .. node.data.rel_path, "String")
+      return line
+    end,
   })
   return t
 end
