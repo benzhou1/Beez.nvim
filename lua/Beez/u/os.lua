@@ -148,7 +148,9 @@ end
 function M.is_file_same(path1, path2)
   local f1 = io.open(path1, "rb")
   local f2 = io.open(path2, "rb")
-  if not f1 or not f2 then
+  if not f1 and not f2 then
+    return true
+  elseif not f1 or not f2 then
     return false
   end
 
