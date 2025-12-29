@@ -257,6 +257,19 @@ end
 -----------------------------------------------------------------------------------------------
 --- ACTIONS
 -----------------------------------------------------------------------------------------------
+function DiffEditor:scroll_to_hunk(prev)
+  local actions = require("vscode-diff.render.keymaps").actions
+  local left_buf, _ = self.diff:get_buffers()
+  self:focus_right()
+  if not prev then
+    actions.navigate_next_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+  else
+    actions.navigate_prev_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+  end
+  vim.cmd("normal! zz")
+  self:focus_prev_tree()
+end
+
 function DiffEditor:scroll_diff(lines)
   local _, right_winid = self.diff:get_windows()
   if right_winid == nil then
@@ -270,6 +283,7 @@ function DiffEditor:scroll_diff(lines)
 end
 
 function DiffEditor:toggle_file_change()
+  local u = require("Beez.u")
   local left_filepath = vim.fs.joinpath(self.left_dir, self.diff.rel_path)
   local right_filepath = vim.fs.joinpath(self.right_dir, self.diff.rel_path)
   local output_filepath = vim.fs.joinpath(self.output_dir, self.diff.rel_path)
@@ -284,7 +298,12 @@ function DiffEditor:toggle_file_change()
   if node ~= nil and node.data.status == "deleted" then
     if self.diffing_right then
       -- Delete file in output
-      uv.fs_unlink(output_filepath, function()
+      uv.fs_unlink(output_filepath, function(err)
+        if err ~= nil then
+          vim.notify(err, vim.log.levels.WARN)
+          return
+        end
+
         vim.schedule(function()
           -- Need to reload the buffer since the file got deleted
           local output_buf = vim.fn.bufnr(output_filepath)
@@ -295,7 +314,13 @@ function DiffEditor:toggle_file_change()
           end
 
           -- Copy file from left to right
-          uv.fs_copyfile(left_filepath, right_filepath, function()
+          u.os.mkdir_p(vim.fs.dirname(right_filepath))
+          uv.fs_copyfile(left_filepath, right_filepath, function(err)
+            if err ~= nil then
+              vim.notify(err, vim.log.levels.WARN)
+              return
+            end
+
             uv.fs_chmod(right_filepath, 420) -- 420 is decimal for 0644 (rw-r--r--)
             vim.schedule(function()
               -- Need to reload the buffer since the file changed from the copy
@@ -312,7 +337,12 @@ function DiffEditor:toggle_file_change()
       end)
     else
       -- Delete file in right
-      uv.fs_unlink(right_filepath, function()
+      uv.fs_unlink(right_filepath, function(err)
+        if err ~= nil then
+          vim.notify(err, vim.log.levels.WARN)
+          return
+        end
+
         vim.schedule(function()
           -- Need to reload the buffer since the file got deleted
           local right_buf = vim.fn.bufnr(right_filepath)
@@ -322,7 +352,12 @@ function DiffEditor:toggle_file_change()
             end)
           end
           -- Copy file from left to output
-          uv.fs_copyfile(left_filepath, output_filepath, function()
+          uv.fs_copyfile(left_filepath, output_filepath, function(err)
+            if err ~= nil then
+              vim.notify(err, vim.log.levels.WARN)
+              return
+            end
+
             uv.fs_chmod(output_filepath, 420) -- 420 is decimal for 0644 (rw-r--r--)
             vim.schedule(function()
               -- Need to reload the buffer since the file changed from the copy
@@ -345,7 +380,12 @@ function DiffEditor:toggle_file_change()
   if node ~= nil and node.data.status == "added" then
     if self.diffing_right then
       -- First copy right to output
-      uv.fs_copyfile(right_filepath, output_filepath, function()
+      uv.fs_copyfile(right_filepath, output_filepath, function(err)
+        if err ~= nil then
+          vim.notify(err, vim.log.levels.WARN)
+          return
+        end
+
         vim.schedule(function()
           -- Need to reload the buffer since the file got copied
           local output_buf = vim.fn.bufnr(output_filepath)
@@ -356,7 +396,12 @@ function DiffEditor:toggle_file_change()
           end
 
           -- Then delete the right file, so that it will be same as left
-          uv.fs_unlink(right_filepath, function()
+          uv.fs_unlink(right_filepath, function(err)
+            if err ~= nil then
+              vim.notify(err, vim.log.levels.WARN)
+              return
+            end
+
             vim.schedule(function()
               -- Need to reload the buffer since the file got deleted
               local right_buf = vim.fn.bufnr(right_filepath)
@@ -375,7 +420,12 @@ function DiffEditor:toggle_file_change()
       end)
     else
       -- First copy output to right
-      uv.fs_copyfile(output_filepath, right_filepath, function()
+      uv.fs_copyfile(output_filepath, right_filepath, function(err)
+        if err ~= nil then
+          vim.notify(err, vim.log.levels.WARN)
+          return
+        end
+
         vim.schedule(function()
           -- Need to reload the buffer since the file got copied
           local right_buf = vim.fn.bufnr(right_filepath)
@@ -386,7 +436,12 @@ function DiffEditor:toggle_file_change()
           end
 
           -- Then delete the output file, so that it will be same as left
-          uv.fs_unlink(output_filepath, function()
+          uv.fs_unlink(output_filepath, function(err)
+            if err ~= nil then
+              vim.notify(err, vim.log.levels.WARN)
+              return
+            end
+
             vim.schedule(function()
               -- Need to reload the buffer since the file got deleted
               local output_buf = vim.fn.bufnr(output_filepath)
@@ -409,9 +464,19 @@ function DiffEditor:toggle_file_change()
 
   if self.diffing_right then
     -- Copy right to output
-    uv.fs_copyfile(right_filepath, output_filepath, function()
+    uv.fs_copyfile(right_filepath, output_filepath, function(err)
+      if err ~= nil then
+        vim.notify(err, vim.log.levels.WARN)
+        return
+      end
+
       -- Copy left to right
-      uv.fs_copyfile(left_filepath, right_filepath, function()
+      uv.fs_copyfile(left_filepath, right_filepath, function(err)
+        if err ~= nil then
+          vim.notify(err, vim.log.levels.WARN)
+          return
+        end
+
         uv.fs_chmod(right_filepath, 420) -- 420 is decimal for 0644 (rw-r--r--)
         vim.schedule(function()
           self:_update_file_statuses()
@@ -420,9 +485,19 @@ function DiffEditor:toggle_file_change()
     end)
   else
     -- Copy output to right
-    uv.fs_copyfile(output_filepath, right_filepath, function()
+    uv.fs_copyfile(output_filepath, right_filepath, function(err)
+      if err ~= nil then
+        vim.notify(err, vim.log.levels.WARN)
+        return
+      end
+
       -- Copy left to output
-      uv.fs_copyfile(left_filepath, output_filepath, function()
+      uv.fs_copyfile(left_filepath, output_filepath, function(err)
+        if err ~= nil then
+          vim.notify(err, vim.log.levels.WARN)
+          return
+        end
+
         uv.fs_chmod(output_filepath, 420) -- 420 is decimal for 0644 (rw-r--r--)
         vim.schedule(function()
           self:_update_file_statuses()
@@ -451,7 +526,6 @@ end
 
 function DiffEditor:focus_otree()
   self.otree:focus()
-  self.diffing_right = false
   self:show_curr_diff(function()
     self.otree:focus()
   end)
@@ -494,49 +568,35 @@ function DiffEditor:apply_and_quit()
   vim.cmd("qa")
 end
 
-function DiffEditor:next_file()
+function DiffEditor:move_to_file(prev)
   local is_diff_focused = self.diff:is_focused()
   local rel_path
   if self.diffing_right then
-    local ok = self.rtree:next()
-    rel_path = self.rtree:get_selected_path()
-    if not ok then
-      return
+    local ok
+    if not prev then
+      ok = self.rtree:next()
+    else
+      ok = self.rtree:prev()
     end
-  else
-    local ok = self.otree:next()
-    rel_path = self.otree:get_selected_path()
-    if not ok then
-      return
-    end
-  end
-  self:show_diff(rel_path, self.diffing_right, function()
-    if not is_diff_focused then
-      if self.diffing_right then
-        self.rtree:focus()
-      else
-        self.otree:focus()
-      end
-    end
-  end)
-end
 
-function DiffEditor:prev_file()
-  local is_diff_focused = self.diff:is_focused()
-  local rel_path
-  if self.diffing_right then
-    local ok = self.rtree:prev()
-    if not ok then
-      return
-    end
     rel_path = self.rtree:get_selected_path()
-  else
-    local ok = self.otree:prev()
     if not ok then
       return
     end
+  else
+    local ok
+    if not prev then
+      self.otree:next()
+    else
+      self.otree:prev()
+    end
+
     rel_path = self.otree:get_selected_path()
+    if not ok then
+      return
+    end
   end
+
   self:show_diff(rel_path, self.diffing_right, function()
     if not is_diff_focused then
       if self.diffing_right then
@@ -647,273 +707,30 @@ end
 --- KEYMAPS
 -----------------------------------------------------------------------------------------------
 function DiffEditor:set_tree_keymaps()
+  local keymaps = require("Beez.jj.keymaps")
   local u = require("Beez.u")
-  local actions = require("vscode-diff.render.keymaps").actions
-  local quit = {
-    "q",
-    function()
-      self:quit()
-    end,
-    desc = "Quit and ignore changes",
-  }
-  local focus_diff = {
-    "<cr>",
-    function()
-      self:focus_right()
-    end,
-    desc = "Open selected file in diff editors",
-  }
-  local next_file = {
-    "k",
-    function()
-      self:next_file()
-    end,
-    desc = "Move to the next file and diff",
-  }
-  local prev_file = {
-    "j",
-    function()
-      self:prev_file()
-    end,
-    desc = "Move to the previous file and diff",
-  }
-  local toggle_file_change = {
-    "<space>",
-    function()
-      self:toggle_file_change()
-    end,
-    desc = "Toggle entire file changed",
-  }
-  local apply_and_quit = {
-    "\\<cr>",
-    function()
-      vim.cmd("qa")
-    end,
-    desc = "Apply all changes and quit",
-  }
-  local scroll_diff_down = {
-    "K",
-    function()
-      self:scroll_diff(20)
-    end,
-    desc = "Scroll diff down",
-  }
-  local scroll_diff_up = {
-    "J",
-    function()
-      self:scroll_diff(-20)
-    end,
-    desc = "Scroll diff up",
-  }
-  local scroll_to_next_hunk = {
-    "<f7>",
-    function()
-      local left_buf, _ = self.diff:get_buffers()
-      self:focus_right()
-      actions.navigate_next_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
-      vim.cmd("normal! zz")
-      self:focus_prev_tree()
-    end,
-    desc = "Scroll to next hunk",
-  }
-  local scroll_to_prev_hunk = {
-    "<s-f7>",
-    function()
-      local left_buf, _ = self.diff:get_buffers()
-      self:focus_right()
-      actions.navigate_prev_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
-      vim.cmd("normal! zz")
-      self:focus_prev_tree()
-    end,
-    desc = "Scroll to previous hunk",
-  }
-
-  u.keymaps.set({
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, quit),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, quit),
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, focus_diff),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, focus_diff),
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, next_file),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, next_file),
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, prev_file),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, prev_file),
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, toggle_file_change),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, toggle_file_change),
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, apply_and_quit),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, apply_and_quit),
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, scroll_diff_down),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, scroll_diff_down),
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, scroll_diff_up),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, scroll_diff_up),
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, scroll_to_next_hunk),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, scroll_to_next_hunk),
-    vim.tbl_deep_extend("keep", { buffer = self.rtree.buf }, scroll_to_prev_hunk),
-    vim.tbl_deep_extend("keep", { buffer = self.otree.buf }, scroll_to_prev_hunk),
-    {
-      "<c-k>",
-      function()
-        self:focus_other_tree()
-      end,
-      desc = "Focus the output file tree window",
-      buffer = self.rtree.buf,
-    },
-    {
-      "<c-j>",
-      function()
-        self:focus_other_tree()
-      end,
-      desc = "Focus the right file tree window",
-      buffer = self.otree.buf,
-    },
-  })
+  local tree_keymaps = keymaps.tree(self, self.rtree.buf, self.otree.buf)
+  for _, t in pairs(tree_keymaps) do
+    u.keymaps.set({ t })
+  end
 end
 
 function DiffEditor:set_right_keymaps(buffer)
-  local actions = require("vscode-diff.render.keymaps").actions
+  local keymaps = require("Beez.jj.keymaps")
   local u = require("Beez.u")
-  u.keymaps.set({
-    {
-      "q",
-      function()
-        self:quit()
-      end,
-      buffer = buffer,
-      desc = "Quit and ignore changes",
-    },
-    {
-      "-",
-      function()
-        self:focus_prev_tree()
-      end,
-      buffer = buffer,
-      desc = "Focus the previous commit tree window",
-    },
-    {
-      "<c-j>",
-      function()
-        self:focus_rtree()
-      end,
-      buffer = buffer,
-      desc = "Focus the original commit tree window",
-    },
-    {
-      "<c-k>",
-      function()
-        self:focus_otree()
-      end,
-      buffer = buffer,
-      desc = "Focus the new commit tree window",
-    },
-    {
-      "<leader><cr>",
-      function()
-        self:apply_and_quit()
-      end,
-      buffer = buffer,
-      desc = "Quit and apply changes",
-    },
-    {
-      "<tab>",
-      function()
-        self:next_file()
-      end,
-      buffer = buffer,
-      desc = "Move to the next file",
-    },
-    {
-      "<s-tab>",
-      function()
-        self:prev_file()
-      end,
-      buffer = buffer,
-      desc = "Move to the previous file",
-    },
-    {
-      "<space>",
-      function()
-        self:toggle_hunk_change()
-      end,
-      buffer = buffer,
-    },
-    {
-      "\\\\",
-      function()
-        self:toggle_other_diff()
-      end,
-      desc = "Toggle between original/output diff",
-      buffer = buffer,
-    },
-    {
-      "<f7>",
-      function()
-        local left_buf, _ = self.diff:get_buffers()
-        actions.navigate_next_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
-      end,
-      desc = "Navigate to the next hunk",
-    },
-    {
-      "<s-f7>",
-      function()
-        local left_buf, _ = self.diff:get_buffers()
-        actions.navigate_prev_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
-      end,
-      desc = "Navigate to the prev hunk",
-    },
-  })
+  local right_keymaps = keymaps.right(self, buffer)
+  for _, t in pairs(right_keymaps) do
+    u.keymaps.set({ t })
+  end
 end
 
 function DiffEditor:set_left_keymaps(buffer)
+  local keymaps = require("Beez.jj.keymaps")
   local u = require("Beez.u")
-  u.keymaps.set({
-    {
-      "q",
-      function()
-        self:quit()
-      end,
-      buffer = buffer,
-      desc = "Quit and ignore changes",
-    },
-    {
-      "-",
-      function()
-        self:focus_prev_tree()
-      end,
-      buffer = buffer,
-      desc = "Focus the previous commit tree window",
-    },
-    {
-      "<c-j>",
-      function()
-        self:focus_rtree()
-      end,
-      buffer = buffer,
-      desc = "Focus the original commit tree window",
-    },
-    {
-      "<c-k>",
-      function()
-        self:focus_otree()
-      end,
-      buffer = buffer,
-      desc = "Focus the new commit tree window",
-    },
-    {
-      "<tab>",
-      function()
-        self:next_file()
-      end,
-      buffer = buffer,
-      desc = "Move to the next file",
-    },
-    {
-      "<s-tab>",
-      function()
-        self:prev_file()
-      end,
-      buffer = buffer,
-      desc = "Move to the previous file",
-    },
-  })
+  local left_keymaps = keymaps.left(self, buffer)
+  for _, t in pairs(left_keymaps) do
+    u.keymaps.set({ t })
+  end
 end
 
 return DiffEditor
