@@ -185,4 +185,21 @@ function M.is_file_same(path1, path2)
   return true
 end
 
+--- Mkdir -p in lua
+---@param path string
+function M.mkdir_p(path)
+  local sep = package.config:sub(1, 1)
+  local parts = {}
+  for part in string.gmatch(path, "[^" .. sep .. "]+") do
+    table.insert(parts, part)
+  end
+  local current = (sep == "/") and "/" or ""
+  for _, part in ipairs(parts) do
+    current = current .. part .. sep
+    if not uv.fs_stat(current) then
+      uv.fs_mkdir(current, 493) -- 493 is decimal for 0755
+    end
+  end
+end
+
 return M
