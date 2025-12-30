@@ -13,25 +13,15 @@ end
 
 --- Read the contents of a file
 ---@param path string
----@return string
+---@return string?
 M.read_file = function(path)
-  local a = require("plenary.async")
-  local err, fd = a.uv.fs_open(path, "r", 438)
-  assert(not err, err)
-
-  ---@diagnostic disable-next-line: redefined-local
-  local err, stat = a.uv.fs_fstat(fd)
-  assert(not err, err)
-
-  ---@diagnostic disable-next-line: redefined-local
-  local err, data = a.uv.fs_read(fd, stat.size, 0)
-  assert(not err, err)
-
-  ---@diagnostic disable-next-line: redefined-local
-  local err = a.uv.fs_close(fd)
-  assert(not err, err)
-
-  return data
+  local file = io.open(path, "r")
+  if not file then
+    return
+  end
+  local content = file:read("*a")
+  file:close()
+  return content
 end
 
 --- Read all the lines from a file
