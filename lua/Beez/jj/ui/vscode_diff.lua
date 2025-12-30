@@ -2,17 +2,17 @@
 ---@field left_dir string
 ---@field right_dir string
 ---@field output_dir string
-Diff = {}
-Diff.__index = Diff
+VsCodeDiff = {}
+VsCodeDiff.__index = VsCodeDiff
 
 --- Instaintiates a new Diff
 ---@param left_dir string
 ---@param right_dir string
 ---@param output_dir string
 ---@return Beez.jj.Diff
-function Diff:new(left_dir, right_dir, output_dir)
+function VsCodeDiff:new(left_dir, right_dir, output_dir)
   local d = {}
-  setmetatable(d, Diff)
+  setmetatable(d, VsCodeDiff)
 
   d.left_dir = left_dir
   d.right_dir = right_dir
@@ -22,7 +22,7 @@ function Diff:new(left_dir, right_dir, output_dir)
   return d
 end
 
-function Diff:render(rel_path, cb)
+function VsCodeDiff:render(rel_path, cb)
   if rel_path == self.rel_path then
     return
   end
@@ -70,13 +70,13 @@ end
 -----------------------------------------------------------------------------------------------
 --- STATE
 -----------------------------------------------------------------------------------------------
-function Diff:is_focused()
+function VsCodeDiff:is_focused()
   local left_winid, right_winid = self:get_windows()
   local curr_winid = vim.api.nvim_get_current_win()
   return curr_winid == right_winid or curr_winid == left_winid
 end
 
-function Diff:update_paths(opts)
+function VsCodeDiff:update_paths(opts)
   self.left_dir = opts.left_dir or self.left_dir
   self.right_dir = opts.right_dir or self.right_dir
   self.output_dir = opts.output_dir or self.output_dir
@@ -86,12 +86,12 @@ function Diff:update_paths(opts)
   self.rel_path = nil
 end
 
-function Diff:get_buffers()
+function VsCodeDiff:get_buffers()
   local lifecycle = require("vscode-diff.render.lifecycle")
   return lifecycle.get_buffers(vim.api.nvim_get_current_tabpage())
 end
 
-function Diff:get_windows()
+function VsCodeDiff:get_windows()
   local lifecycle = require("vscode-diff.render.lifecycle")
   return lifecycle.get_windows(vim.api.nvim_get_current_tabpage())
 end
@@ -99,14 +99,14 @@ end
 -----------------------------------------------------------------------------------------------
 --- ACTIONS
 -----------------------------------------------------------------------------------------------
-function Diff:focus()
+function VsCodeDiff:focus()
   local _, right_winid = self:get_windows()
   if right_winid ~= nil then
     vim.api.nvim_set_current_win(right_winid)
   end
 end
 
-function Diff:resize(offset_width)
+function VsCodeDiff:resize(offset_width)
   local left_winid, right_winid = self:get_windows()
   local width = math.floor((vim.o.columns - offset_width) / 2)
   if left_winid ~= nil then
@@ -117,7 +117,7 @@ function Diff:resize(offset_width)
   end
 end
 
-function Diff:put()
+function VsCodeDiff:put()
   local actions = require("vscode-diff.render.keymaps").actions
   local diff = require("vscode-diff.diff")
   local left_buf, right_buf = self:get_buffers()
@@ -200,4 +200,4 @@ function Diff:put()
   return true
 end
 
-return Diff
+return VsCodeDiff

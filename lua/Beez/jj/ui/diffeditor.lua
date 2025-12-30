@@ -39,7 +39,7 @@ function DiffEditor:new(left_dir, right_dir, output_dir)
   d.output_dir = output_dir
   d.rtree = require("Beez.jj.ui.tree"):new("New commit tree", left_dir, right_dir, output_dir)
   d.otree = require("Beez.jj.ui.tree"):new("Original commit tree", left_dir, output_dir, right_dir)
-  d.diff = require("Beez.jj.ui.diff"):new(left_dir, right_dir, output_dir)
+  d.diff = require("Beez.jj.ui.vscode_diff"):new(left_dir, right_dir, output_dir)
   d.diffing_right = true
   return d
 end

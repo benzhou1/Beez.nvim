@@ -16,10 +16,14 @@ function M.setup(opts)
       )
       return
     end
-    require("Beez.jj").start(args[1], args[2], args[3])
+    require("Beez.jj").start_diffeditor(args[1], args[2], args[3])
   end, {
     nargs = "*",
   })
+
+  vim.api.nvim_create_user_command("BeezJJ", function()
+    M.start()
+  end, {})
 
   -- Setup automcd to resize diff editor
   vim.api.nvim_create_autocmd("VimResized", {
@@ -38,7 +42,7 @@ end
 ---@param left_dir string
 ---@param right_dir string
 ---@param output_dir string
-function M.start(left_dir, right_dir, output_dir)
+function M.start_diffeditor(left_dir, right_dir, output_dir)
   local u = require("Beez.u")
   -- 420 decimal == 0o644 octal
   -- 0o644 = rw-r--r--
@@ -55,6 +59,18 @@ function M.start(left_dir, right_dir, output_dir)
 
   M.diffeditor = require("Beez.jj.ui.diffeditor"):new(left_dir, right_dir, output_dir)
   M.diffeditor:render()
+end
+
+function M.start()
+  local ui = require("Beez.jj.ui.main"):new()
+  ui:render()
+end
+
+function M.start_neovide()
+  local cmds = require("Beez.cmds")
+  local git_root = vim.fs.find(".git", { upward = true })[1]
+  local root = vim.fs.dirname(git_root)
+  cmds.neovide.open_beez_jj(root)
 end
 
 return M
