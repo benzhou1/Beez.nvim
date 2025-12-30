@@ -517,6 +517,16 @@ function DiffEditor:toggle_hunk_change()
   end
 end
 
+function DiffEditor:move_to_hunk(prev)
+  local actions = require("vscode-diff.render.keymaps").actions
+  local left_buf, _ = self.diff:get_buffers()
+  if prev then
+    actions.navigate_prev_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+  else
+    actions.navigate_next_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+  end
+end
+
 function DiffEditor:focus_rtree()
   self.rtree:focus()
   self:show_curr_diff(function()

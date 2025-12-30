@@ -58,24 +58,10 @@ function M.tree(de, rtree_buf, otree_buf)
       end,
       desc = "Scroll diff up",
     },
-    scroll_to_next_hunk = {
-      "<f7>",
-      function()
-        de:scroll_to_hunk()
-      end,
-      desc = "Scroll to next hunk",
-    },
-    scroll_to_prev_hunk = {
-      "<s-f7>",
-      function()
-        de:scroll_to_hunk(true)
-      end,
-      desc = "Scroll to previous hunk",
-    },
   }
   local rtree_keymaps = {
     focus_otree = {
-      "<c-k>",
+      "l",
       function()
         de:focus_other_tree()
       end,
@@ -85,7 +71,7 @@ function M.tree(de, rtree_buf, otree_buf)
   }
   local otree_keymaps = {
     focus_rtree = {
-      "<c-j>",
+      "h",
       function()
         de:focus_other_tree()
       end,
@@ -101,6 +87,10 @@ function M.tree(de, rtree_buf, otree_buf)
   return keymaps
 end
 
+--- Default keymaps for the left side of the diff
+---@param de Beez.jj.DiffEditor
+---@param buffer integer
+---@return table
 function M.left(de, buffer)
   local keymaps = {
     quit = {
@@ -112,51 +102,22 @@ function M.left(de, buffer)
       desc = "Quit and ignore changes",
     },
     focus_prev_tree = {
-      "-",
+      "<esc>",
       function()
         de:focus_prev_tree()
       end,
       buffer = buffer,
       desc = "Focus the previous commit tree window",
     },
-    focus_retree = {
-      "<c-j>",
-      function()
-        de:focus_rtree()
-      end,
-      buffer = buffer,
-      desc = "Focus the original commit tree window",
-    },
-    focus_otree = {
-      "<c-k>",
-      function()
-        de:focus_otree()
-      end,
-      buffer = buffer,
-      desc = "Focus the new commit tree window",
-    },
-    next_file = {
-      "<tab>",
-      function()
-        de:move_to_file()
-      end,
-      buffer = buffer,
-      desc = "Move to the next file",
-    },
-    prev_file = {
-      "<s-tab>",
-      function()
-        de:move_to_file(true)
-      end,
-      buffer = buffer,
-      desc = "Move to the previous file",
-    },
   }
   return keymaps
 end
 
+--- Default keymaps for the right side of diff
+---@param de Beez.jj.DiffEditor
+---@param buffer integer
+---@return table
 function M.right(de, buffer)
-  local actions = require("vscode-diff.render.keymaps").actions
   local keymaps = {
     quit = {
       "q",
@@ -167,28 +128,12 @@ function M.right(de, buffer)
       desc = "Quit and ignore changes",
     },
     focus_prev_tree = {
-      "-",
+      "<esc>",
       function()
         de:focus_prev_tree()
       end,
       buffer = buffer,
       desc = "Focus the previous commit tree window",
-    },
-    focus_rtree = {
-      "<c-j>",
-      function()
-        de:focus_rtree()
-      end,
-      buffer = buffer,
-      desc = "Focus the original commit tree window",
-    },
-    focus_otree = {
-      "<c-k>",
-      function()
-        de:focus_otree()
-      end,
-      buffer = buffer,
-      desc = "Focus the new commit tree window",
     },
     apply_and_quit = {
       "\\<cr>",
@@ -197,22 +142,6 @@ function M.right(de, buffer)
       end,
       buffer = buffer,
       desc = "Quit and apply changes",
-    },
-    next_file = {
-      "<tab>",
-      function()
-        de:move_to_file()
-      end,
-      buffer = buffer,
-      desc = "Move to the next file",
-    },
-    prev_file = {
-      "<s-tab>",
-      function()
-        de:move_to_file(true)
-      end,
-      buffer = buffer,
-      desc = "Move to the previous file",
     },
     toggle_hunk_change = {
       "<space>",
@@ -229,19 +158,31 @@ function M.right(de, buffer)
       desc = "Toggle between original/output diff",
       buffer = buffer,
     },
-    next_hunk = {
-      "<f7>",
+    next_hunk_k = {
+      "k",
       function()
-        local left_buf, _ = de.diff:get_buffers()
-        actions.navigate_next_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+        de:move_to_hunk()
       end,
       desc = "Navigate to the next hunk",
     },
-    prev_hunk = {
-      "<s-f7>",
+    next_hunk_l = {
+      "l",
       function()
-        local left_buf, _ = de.diff:get_buffers()
-        actions.navigate_prev_hunk(vim.api.nvim_get_current_tabpage(), left_buf)()
+        de:move_to_hunk()
+      end,
+      desc = "Navigate to the next hunk",
+    },
+    prev_hunk_j = {
+      "j",
+      function()
+        de:move_to_hunk(true)
+      end,
+      desc = "Navigate to the prev hunk",
+    },
+    prev_hunk_h = {
+      "h",
+      function()
+        de:move_to_hunk(true)
       end,
       desc = "Navigate to the prev hunk",
     },
