@@ -29,6 +29,21 @@ function M.run_cmd(cmd_to_run)
   cmds.run_job(cmd, { env = { NVIM_APPNAME = "nvim_term" } })
 end
 
+--- Open beez.jj
+---@param path string
+function M.open_beez_jj(path)
+  local cmds = require("Beez.cmds")
+  local cmd = {
+    "neovide",
+    path,
+    "--maximized",
+    "--fork",
+    "--",
+    '-c "BeezJJ"',
+  }
+  cmds.run_job(cmd, { env = { NVIM_APPNAME = "nvim_diffeditor" } })
+end
+
 --- Open lazygit in separate neovide window
 ---@param path string
 function M.open_lazygit(path)
