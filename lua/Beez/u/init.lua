@@ -15,6 +15,7 @@ M.lazy = require("Beez.u.lazy")
 M.keymaps = require("Beez.u.keymaps")
 M.snip = require("Beez.u.snippets")
 M.deck = require("Beez.u.deck")
+M.cmds = require("Beez.u.cmds")
 
 --- Setup u
 ---@param opts table?
