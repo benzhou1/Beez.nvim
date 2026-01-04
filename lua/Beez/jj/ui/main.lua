@@ -67,6 +67,19 @@ function JJView:scroll_diff(lines)
   self.udiff:scroll(lines)
 end
 
+--- Toggles all the changes for current file
+function JJView:toggle_file_changes()
+  if not self.tree:is_focused() then
+    return
+  end
+  local filepath = self.tree:get_filepath()
+  if filepath == nil then
+    return
+  end
+
+  self.udiff:toggle_file_changes(filepath)
+end
+
 --- Renders jj view
 function JJView:render()
   -- Create layout

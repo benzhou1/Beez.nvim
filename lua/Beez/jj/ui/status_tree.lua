@@ -218,6 +218,13 @@ function JJStatusTree:map(view)
       end,
       desc = "Scroll diff view up",
     },
+    toggle_changes = {
+      "<space>",
+      function()
+        view:toggle_file_changes()
+      end,
+      desc = "Toggle current file changes",
+    },
   }
 
   for _, k in pairs(keymaps) do

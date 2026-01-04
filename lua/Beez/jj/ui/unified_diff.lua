@@ -1,7 +1,7 @@
 ---@class Beez.jj.ui.Change
 ---@field status "A"|"D"
----@field orig integer
----@field mod integer
+---@field orig integer the line number that change should be applied to
+---@field mod integer  the line number
 ---@field hunk integer
 ---@field text string
 ---@field id integer
@@ -47,14 +47,36 @@ end
 function UnifiedDiff:_get_diffs()
   local diff = self.diffs[self.path]
   local curr_diff, other_diff
-  if diff.left:is_focused() then
-    curr_diff = diff.left
-    other_diff = diff.right
-  else
+  if diff.right:is_focused() then
     curr_diff = diff.right
     other_diff = diff.left
+  else
+    curr_diff = diff.left
+    other_diff = diff.right
   end
   return diff, curr_diff, other_diff
+end
+
+function UnifiedDiff:_toggle_changes(curr_diff, other_diff, line_changes)
+  -- Discard changes from current diff and apply to other diff
+  -- We want to discard changes in descending order to not mess up line numbers
+  table.sort(line_changes, function(a, b)
+    return a.lineno > b.lineno
+  end)
+  for _, lc in ipairs(line_changes) do
+    curr_diff:discard_change(lc.lineno)
+  end
+
+  -- We want to apply changes in ascending order to keep line numbers correct
+  table.sort(line_changes, function(a, b)
+    return a.lineno < b.lineno
+  end)
+  for _, lc in ipairs(line_changes) do
+    other_diff:apply_change(lc)
+  end
+
+  -- Move to the next hunk in the current diff
+  curr_diff:move_to_hunk(nil, { next = true })
 end
 
 -----------------------------------------------------------------------------------------------
@@ -83,22 +105,26 @@ function UnifiedDiff:render(filepath, cb)
   -- Create layout if not already created
   if self.left_win == nil or self.right_win == nil then
     vim.cmd("vsplit")
-    vim.cmd("set scrollbind")
     self.left_win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(self.left_win, self.left_buf)
-    vim.cmd("vsplit")
     vim.cmd("set scrollbind")
+    vim.cmd("set cursorbind")
+    vim.cmd("set scrollopt=ver,jump")
+    vim.cmd("vsplit")
     self.right_win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(self.right_win, self.right_buf)
+    vim.cmd("set scrollbind")
+    vim.cmd("set cursorbind")
+    vim.cmd("set scrollopt=ver,jump")
   end
 
   self.path = filepath
   local diff = self.diffs[filepath]
   -- Render cached diff if it exists
   if diff ~= nil then
-    diff.left:render(self.left_win, self.left_buf, diff.orig_lines, function()
-      diff.left:move_to_hunk(1, { next = true })
-      diff.right:render(self.right_win, self.right_buf, diff.orig_lines, function()
+    diff.left:render(filepath, self.left_win, self.left_buf, diff.orig_lines, function()
+      diff.right:render(filepath, self.right_win, self.right_buf, diff.orig_lines, function()
+        self:move_to_hunk(1, { next = true })
         if cb then
           cb()
         end
@@ -143,6 +169,7 @@ function UnifiedDiff:render(filepath, cb)
             id = #changes + 1,
             status = "D",
             orig = orig_start + i,
+            -- Since these are deletes, the lines just get highlighted in place so orgi and mod is the same
             mod = orig_start + i,
             text = orig_lines[orig_start + i],
             hunk = hi,
@@ -152,12 +179,18 @@ function UnifiedDiff:render(filepath, cb)
 
         -- Modified lines will be an add change
         for i = 0, mod_lines_count - 1 do
+          -- Here we want the adds to be after the deletes so mod is how ever many lines the orig took up
+          local mod = orig_start + orig_lines_count + i
+          -- Minus one if original lines count is not zero? Not sure why
+          if orig_lines_count > 0 then
+            mod = mod - 1
+          end
           ---@type Beez.jj.ui.Change
           local change = {
             id = #changes + 1,
             status = "A",
             orig = orig_start + i,
-            mod = mod_start + i,
+            mod = mod,
             text = mod_lines[mod_start + i],
             hunk = hi,
           }
@@ -166,19 +199,20 @@ function UnifiedDiff:render(filepath, cb)
       end
 
       -- Render the 2 diff buffers for the first time
-      diff.left:render(self.left_win, self.left_buf, orig_lines, function()
+      diff.left:render(filepath, self.left_win, self.left_buf, orig_lines, function()
+        -- Cache the diff
+        self.diffs[filepath] = diff
+
         -- Apply all changes to the left
         for _, c in ipairs(changes) do
           diff.left:apply_change(c)
         end
 
-        -- Move cursor to the first hunk
-        diff.left:move_to_hunk(nil, { next = true })
-
         -- The right gets no changes
-        diff.right:render(self.right_win, self.right_buf, orig_lines, function()
-          -- Cache the diff
-          self.diffs[filepath] = diff
+        diff.right:render(filepath, self.right_win, self.right_buf, orig_lines, function()
+          -- Move cursor to the first hunk
+          self:move_to_hunk(1, { next = true })
+
           if cb then
             cb()
           end
@@ -206,6 +240,7 @@ function UnifiedDiff:map(view)
       desc = "Close",
     },
     toggle_changes = {
+      mode = { "n", "v" },
       "<space>",
       function()
         self:toggle_changes()
@@ -215,28 +250,28 @@ function UnifiedDiff:map(view)
     move_to_next_change_k = {
       "k",
       function()
-        self:move_to_hunk({ next = true })
+        self:move_to_hunk(nil, { next = true })
       end,
       desc = "Move to next hunk",
     },
     move_to_prev_change_j = {
       "j",
       function()
-        self:move_to_hunk({ prev = true })
+        self:move_to_hunk(nil, { prev = true })
       end,
       desc = "Move to previous hunk",
     },
     move_to_next_change_l = {
       "l",
       function()
-        self:move_to_hunk({ next = true })
+        self:move_to_hunk(nil, { next = true })
       end,
       desc = "Move to next hunk",
     },
     move_to_prev_change_h = {
       "h",
       function()
-        self:move_to_hunk({ prev = true })
+        self:move_to_hunk(nil, { prev = true })
       end,
       desc = "Move to previous hunk",
     },
@@ -282,6 +317,14 @@ function UnifiedDiff:toggle_changes()
 
   -- Get changes for selected lines
   if mode == "v" or mode == "V" or mode == "\22" then
+    local u = require("Beez.u")
+    local s, e = u.nvim.get_visual_selection_row_range()
+    for i = s, e do
+      local lc = curr_diff:get(i)
+      if lc ~= nil then
+        table.insert(line_changes, lc)
+      end
+    end
 
   -- If nothing is selected get changes for the entire hunk
   else
@@ -309,14 +352,44 @@ function UnifiedDiff:toggle_changes()
   curr_diff:move_to_hunk(nil, { next = true })
 end
 
---- Move to a hunk in current diff buffer
----@param opts {next?: boolean, prev?: boolean}
-function UnifiedDiff:move_to_hunk(opts)
-  local _, diff, _ = self:_get_diffs()
+--- Toggle all the changes on the left diff for specific file
+---@param filepath string
+function UnifiedDiff:toggle_file_changes(filepath)
+  local diff = self.diffs[filepath]
   if diff == nil then
     return
   end
-  diff:move_to_hunk(nil, opts)
+
+  -- Toggle all changes on the left if there are any
+  local line_changes = diff.left:list()
+  local curr_diff, other_diff = diff.left, diff.right
+  -- Toggle all changes on the right instead
+  if #line_changes == 0 then
+    line_changes = diff.right:list()
+    curr_diff, other_diff = diff.right, diff.left
+  end
+  self:_toggle_changes(curr_diff, other_diff, line_changes)
+  self:move_to_hunk(1, { next = true })
+end
+
+--- Move to a hunk in current diff buffer
+---@param lineno? integer
+---@param opts {next?: boolean, prev?: boolean}
+function UnifiedDiff:move_to_hunk(lineno, opts)
+  local _, curr_diff, other_diff = self:_get_diffs()
+  if curr_diff == nil then
+    return
+  end
+
+  local line_changes = curr_diff:list()
+  -- Try to manually sync the windows after move to hunk
+  if #line_changes > 0 then
+    local ln = curr_diff:move_to_hunk(lineno, opts)
+    pcall(vim.api.nvim_win_set_cursor, other_diff.win, { ln, 0 })
+  else
+    local ln = other_diff:move_to_hunk(lineno, opts)
+    pcall(vim.api.nvim_win_set_cursor, curr_diff.win, { ln, 0 })
+  end
 end
 
 return UnifiedDiff

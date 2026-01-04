@@ -153,6 +153,7 @@ end
 --- Move cursor to next or previous hunk
 ---@param lineno? integer
 ---@param opts {next?: boolean, prev?: boolean}
+---@return integer|nil
 function DiffBuf:move_to_hunk(lineno, opts)
   local lc = self:get(lineno, { next = opts.next, prev = opts.prev, hunk = true })
   if lc == nil then
@@ -160,6 +161,10 @@ function DiffBuf:move_to_hunk(lineno, opts)
   end
 
   vim.api.nvim_win_set_cursor(self.win, { lc.lineno, 0 })
+  vim.api.nvim_win_call(self.win, function()
+    vim.cmd("normal! zz")
+  end)
+  return lc.lineno
 end
 
 --- Scroll the current buffer by specified number of lines
@@ -175,9 +180,12 @@ function DiffBuf:scroll(lines)
 end
 
 --- Renders the current file contents
+---@param filepath string
+---@param win integer
+---@param buf integer
 ---@param lines string[]
 ---@param cb? fun()
-function DiffBuf:render(win, buf, lines, cb)
+function DiffBuf:render(filepath, win, buf, lines, cb)
   self.win = win
   self.buf = buf
   if self.ns_id == nil then
@@ -186,6 +194,7 @@ function DiffBuf:render(win, buf, lines, cb)
 
   vim.api.nvim_buf_clear_namespace(self.buf, self.ns_id, 0, -1)
   vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, lines)
+  vim.bo[self.buf].filetype = vim.filetype.match({ filename = filepath }) or "text"
   vim.api.nvim_win_set_buf(self.win, self.buf)
   -- Apply changes
   local line_changes = self:list({ sort = "ascending" })
@@ -248,13 +257,15 @@ function DiffBuf:apply_change(change)
   -- 0 based line number
   local lineno = change.orig
 
-  -- Calculate line offset based on previous changes that have been inserted
-  for ln, lc in pairs(self.line_changes) do
-    if lc.status == "A" and ln <= lineno and lc.hunk ~= change.hunk then
+  -- Calculate line offset based on previous hunks
+  for _, lc in pairs(self.line_changes) do
+    if lc.hunk < change.hunk and lc.status == "A" then
+      lineno = lineno + 1
+    end
+    if lc.hunk == change.hunk and lc.orig < change.orig and lc.status ~= change.status then
       lineno = lineno + 1
     end
   end
-
   -- If change is a delete no need to do anything just highlight the line
   if change.status == "D" then
     local line_change = to_line_change(change, lineno)
@@ -268,13 +279,10 @@ function DiffBuf:apply_change(change)
     lineno = lineno + 1
     local line_change = to_line_change(change, lineno)
     self:_apply_change(line_change)
-    -- Track new line change
-    self.line_changes[lineno] = line_change
-
     -- Since line has been inserted we need to update the line numbers of subsequent changes
     local new_line_changes = {}
     for ln, lc in pairs(self.line_changes) do
-      if ln > lineno then
+      if ln >= lineno then
         new_line_changes[ln + 1] = lc
         lc.lineno = ln + 1
       else
@@ -282,6 +290,9 @@ function DiffBuf:apply_change(change)
       end
     end
     self.line_changes = new_line_changes
+
+    -- Track new line change
+    self.line_changes[lineno] = line_change
   end
 end
 
