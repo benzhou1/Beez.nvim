@@ -66,7 +66,7 @@ function M.open_lazygit_picker()
 end
 
 --- Open a nvim term window using neohub
-function M.open_term(name, path)
+function M.open_term(path)
   local cmds = require("Beez.cmds")
   local cmd = {
     "neohub",
@@ -79,6 +79,7 @@ function M.open_term(name, path)
     "-c",
     "term",
   }
+  print("🪵 cmd =", vim.inspect(cmd))
   cmds.run_job(cmd, { cwd = path, env = { NVIM_APPNAME = "nvim_term" } })
 end
 

@@ -8,6 +8,7 @@ local M = {}
 ---@field dbfp Beez.dbfp.config?
 ---@field codestacks Beez.codestacks.config?
 ---@field cmdcenter Beez.cmdcenter.config?
+---@field jj? table
 
 ---@type Beez.config
 local def_config = {
@@ -47,6 +48,9 @@ function M.init(opts)
   end
   if M.config.cmdcenter then
     require("Beez.cmdcenter").setup(M.config.cmdcenter)
+  end
+  if M.config.jj then
+    require("Beez.jj").setup(M.config.jj)
   end
 end
 

@@ -1,97 +1,123 @@
----@class Beez.jj.Diff
----@field left_dir string
----@field right_dir string
----@field output_dir string
-VsCodeDiff = {}
-VsCodeDiff.__index = VsCodeDiff
+---@class Beez.jj.ui.VscodeDiff.Diff
+---@field temppath string
 
---- Instaintiates a new Diff
----@param left_dir string
----@param right_dir string
----@param output_dir string
+---@class Beez.jj.ui.VscodeDiff
+---@field diffs table<string, Beez.jj.ui.VscodeDiff.Diff>
+VscodeDiff = {}
+VscodeDiff.__index = VscodeDiff
+
+--- Instaintiates a new VscodeDiff
 ---@return Beez.jj.Diff
-function VsCodeDiff:new(left_dir, right_dir, output_dir)
+function VscodeDiff.new()
   local d = {}
-  setmetatable(d, VsCodeDiff)
+  setmetatable(d, VscodeDiff)
 
-  d.left_dir = left_dir
-  d.right_dir = right_dir
-  d.output_dir = output_dir
-  d.rel_path = nil
-  d.require_new_diff_results = false
+  d.diffs = {}
   return d
 end
 
-function VsCodeDiff:render(rel_path, cb)
-  if rel_path == self.rel_path then
+--- Renders a vscode diff for specified file path
+---@param filepath string
+---@param cb? fun()
+function VscodeDiff:render(filepath, cb)
+  local commands = require("Beez.jj.commands")
+  local view = require("vscode-diff.render.view")
+  local left_winid, right_winid = self:get_windows()
+
+  local function render_diff(original_path)
+    -- If no diff is currently opened then create a new window for the diff
+    if left_winid == nil or right_winid == nil then
+      vim.cmd("vsplit")
+      vim.cmd("e " .. filepath)
+      ---@type SessionConfig
+      local session_config = {
+        mode = "standalone",
+        git_root = nil,
+        original_path = original_path,
+        modified_path = filepath,
+        original_revision = nil,
+        modified_revision = nil,
+        new_tab = false,
+      }
+      view.create(session_config)
+
+    -- Otherwise update the existing diff
+    else
+      ---@type SessionConfig
+      local session_config = {
+        mode = "standalone",
+        git_root = nil,
+        original_path = original_path,
+        modified_path = filepath,
+        original_revision = nil,
+        modified_revision = nil,
+        new_tab = false,
+      }
+      view.update(vim.api.nvim_get_current_tabpage(), session_config, true)
+    end
+
+    vim.schedule(function()
+      if cb ~= nil then
+        cb()
+      end
+    end)
+  end
+
+  local diff = self.diffs[filepath]
+  if diff == nil then
+    -- Use jj file show to get original content
+    commands.file_show(function(err, orig_content)
+      if err ~= nil then
+        return
+      end
+
+      -- Create a temporary file for original content
+      vim.schedule(function()
+        local tmpname = vim.fn.tempname()
+        local fd = vim.loop.fs_open(tmpname, "w", 384) -- 384 = 0600 permissions
+        if fd then
+          vim.loop.fs_write(fd, orig_content)
+          vim.loop.fs_close(fd)
+        end
+
+        diff = { temppath = tmpname }
+        self.diffs[filepath] = diff
+        render_diff(tmpname)
+      end)
+    end, {
+      path = filepath,
+      r = "@-",
+      ignore_err = {
+        "No such path",
+      },
+    })
     return
   end
-  local view = require("vscode-diff.render.view")
 
-  local left_filepath = vim.fs.joinpath(self.left_dir, rel_path)
-  local right_filepath = vim.fs.joinpath(self.right_dir or self.right_dir, rel_path)
-
-  local left_winid, right_winid = self:get_windows()
-  -- If no diff is currently opened then create a new window for the diff
-  if left_winid == nil or right_winid == nil then
-    ---@type SessionConfig
-    local session_config = {
-      mode = "standalone",
-      git_root = nil,
-      original_path = left_filepath,
-      modified_path = right_filepath,
-      original_revision = nil,
-      modified_revision = nil,
-      new_tab = false,
-    }
-    view.create(session_config)
-
-  -- Otherwise update the existing diff
-  else
-    ---@type SessionConfig
-    local session_config = {
-      mode = "standalone",
-      git_root = nil,
-      original_path = left_filepath,
-      modified_path = right_filepath,
-      original_revision = nil,
-      modified_revision = nil,
-      new_tab = false,
-    }
-    view.update(vim.api.nvim_get_current_tabpage(), session_config, true)
-  end
-
-  self.rel_path = rel_path
-  vim.schedule(function()
-    cb()
-  end)
+  render_diff(diff.temppath)
 end
 
 -----------------------------------------------------------------------------------------------
 --- STATE
 -----------------------------------------------------------------------------------------------
-function VsCodeDiff:is_focused()
+--- Checks whether the diff windows are focused or not
+---@return boolean
+function VscodeDiff:is_focused()
   local left_winid, right_winid = self:get_windows()
   local curr_winid = vim.api.nvim_get_current_win()
   return curr_winid == right_winid or curr_winid == left_winid
 end
 
-function VsCodeDiff:update_paths(opts)
-  self.left_dir = opts.left_dir or self.left_dir
-  self.right_dir = opts.right_dir or self.right_dir
-  self.output_dir = opts.output_dir or self.output_dir
-  if opts.require_new_diff_results then
-    self.require_new_diff_results = opts.require_new_diff_results
-  end
-  self.rel_path = nil
-end
-
-function VsCodeDiff:get_buffers()
+--- Get the diff buffers
+---@return integer?, integer?
+function VscodeDiff:get_buffers()
   local lifecycle = require("vscode-diff.render.lifecycle")
   return lifecycle.get_buffers(vim.api.nvim_get_current_tabpage())
 end
 
-function VsCodeDiff:get_windows()
+--- Get the diff windows
+---@return integer?, integer?
+function VscodeDiff:get_windows()
   local lifecycle = require("vscode-diff.render.lifecycle")
   return lifecycle.get_windows(vim.api.nvim_get_current_tabpage())
 end
@@ -99,14 +125,34 @@ end
 -----------------------------------------------------------------------------------------------
 --- ACTIONS
 -----------------------------------------------------------------------------------------------
-function VsCodeDiff:focus()
+--- Focus on the right diff
+function VscodeDiff:focus()
   local _, right_winid = self:get_windows()
   if right_winid ~= nil then
     vim.api.nvim_set_current_win(right_winid)
   end
 end
 
-function VsCodeDiff:resize(offset_width)
+--- Scroll the right diff window
+---@param offset integer
+function VscodeDiff:scroll(offset)
+  local _, right_winid = self:get_windows()
+  if right_winid == nil then
+    return
+  end
+
+  pcall(vim.api.nvim_win_set_cursor, right_winid, {
+    vim.api.nvim_win_get_cursor(right_winid)[1] + offset,
+    0,
+  })
+  vim.api.nvim_win_call(right_winid, function()
+    vim.cmd("normal! zz")
+  end)
+end
+
+--- Resize the diff windows so that they are evenly spaced
+---@param offset_width integer
+function VscodeDiff:resize(offset_width)
   local left_winid, right_winid = self:get_windows()
   local width = math.floor((vim.o.columns - offset_width) / 2)
   if left_winid ~= nil then
@@ -117,87 +163,37 @@ function VsCodeDiff:resize(offset_width)
   end
 end
 
-function VsCodeDiff:put()
-  local actions = require("vscode-diff.render.keymaps").actions
-  local diff = require("vscode-diff.diff")
-  local left_buf, right_buf = self:get_buffers()
-  if right_buf == nil then
-    vim.notify("No right buffer found", vim.log.levels.ERROR)
-    return
+--- Clean up temporary files by removing the buffers
+function VscodeDiff:cleanup()
+  for _, d in pairs(self.diffs) do
+    local bufnr = vim.fn.bufnr(d.temppath)
+    if bufnr ~= nil then
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end
   end
-
-  -- Load output buffer
-  local output_filepath = vim.fs.joinpath(self.output_dir, self.rel_path)
-  local output_buf = vim.fn.bufadd(output_filepath)
-  vim.fn.bufload(output_buf)
-
-  -- Need to recompute the diff because when putting from output to right this will get messed up because
-  -- the diff is between left and output, not right and output
-  local diff_results = nil
-  if self.require_new_diff_results then
-    local original_lines = vim.api.nvim_buf_get_lines(output_buf, 0, -1, false)
-    local modified_lines = vim.api.nvim_buf_get_lines(right_buf, 0, -1, false)
-    diff_results = diff.compute_diff(original_lines, modified_lines)
-    self.require_new_diff_results = false
-  end
-
-  local hunk, _ = actions.find_hunk_at_cursor(vim.api.nvim_get_current_tabpage(), left_buf, diff_results)
-  if not hunk then
-    vim.notify("No hunk at cursor position", vim.log.levels.WARN)
-    return
-  end
-
-  local orig_output_modifiable = vim.bo[output_buf].modifiable
-  local orig_right_modifiable = vim.bo[right_buf].modifiable
-
-  -- Get lines from right buffer
-  local hunk_lines = vim.api.nvim_buf_get_lines(
-    right_buf,
-    hunk.modified.start_line - 1,
-    hunk.modified.end_line - 1,
-    false
-  )
-  -- Ignore swapfile?
-  vim.bo[output_buf].swapfile = false
-  -- Temp allow writing
-  if not orig_output_modifiable then
-    vim.bo[output_buf].modifiable = true
-  end
-
-  -- Replace lines in output buffer
-  vim.api.nvim_buf_set_lines(
-    output_buf,
-    hunk.original.start_line - 1,
-    hunk.original.end_line - 1,
-    false,
-    hunk_lines
-  )
-  -- Save
-  vim.api.nvim_buf_call(output_buf, function()
-    vim.cmd("write")
-  end)
-
-  -- Restore modifiable and readonly
-  if not orig_output_modifiable then
-    vim.bo[output_buf].modifiable = false
-  end
-
-  -- Temp allow writing
-  if not orig_right_modifiable then
-    vim.bo[right_buf].modifiable = true
-  end
-
-  -- Call diff get on the right to remove the hunk
-  actions.diff_get(vim.api.nvim_win_get_tabpage(0), left_buf, right_buf)()
-  vim.api.nvim_buf_call(right_buf, function()
-    vim.cmd("write")
-  end)
-
-  -- Restore modifiable and readonly
-  if not orig_right_modifiable then
-    vim.bo[right_buf].modifiable = false
-  end
-  return true
 end
 
-return VsCodeDiff
+--- Maps default key bindings to both buffers
+---@param view Beez.jj.ui.JJView
+function VscodeDiff:map(view)
+  local u = require("Beez.u")
+  local keymaps = {
+    quit = {
+      "q",
+      function()
+        view:quit()
+      end,
+      desc = "Close",
+    },
+  }
+
+  local left_buf, right_buf = self:get_buffers()
+  for _, km in pairs(keymaps) do
+    u.keymaps.set({
+      vim.tbl_deep_extend("keep", { buffer = left_buf }, km),
+      vim.tbl_deep_extend("keep", { buffer = right_buf }, km),
+    })
+  end
+end
+
+return VscodeDiff

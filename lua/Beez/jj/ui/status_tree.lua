@@ -15,6 +15,7 @@ function JJStatusTree.new()
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].modifiable = true
   vim.bo[buf].readonly = false
+  vim.bo[buf].buftype = 'nofile'
 
   t.root = nil
   t.buf = buf
@@ -36,11 +37,13 @@ function JJStatusTree.new()
       if node.data.status == "M" then
         s, shl, thl = "M", "String", "String"
       elseif node.data.status == "A" then
-        s, shl, thl = "A", "GitSignsAdd", "GitSignsAdd"
+        s, shl, thl = "A", "Added", "Added"
       elseif node.data.status == "D" then
         s, shl, thl = "D", "Search", "Search"
       elseif node.data.status == "R" then
         s, shl, thl = "R", "Search", "Search"
+      elseif node.data.status == "C" then
+        s, shl, thl = "C", "Search", "Search"
       end
 
       line:append(s, shl)
@@ -91,6 +94,12 @@ function JJStatusTree:is_focused()
   local curr_buf = vim.api.nvim_get_current_buf()
   local is_focused = curr_buf == self.buf
   return is_focused
+end
+
+--- Sets the tree window width
+---@param width integer
+function JJStatusTree:resize(width)
+  vim.api.nvim_win_set_width(self.winid, width)
 end
 
 --- Move cursor to a file based on offset
@@ -163,6 +172,8 @@ function JJStatusTree:render(cb)
       self.tree:render()
       self.winid = vim.api.nvim_get_current_win()
       vim.api.nvim_set_current_buf(self.buf)
+      vim.wo[self.winid].number = false
+      vim.wo[self.winid].relativenumber = false
       if cb then
         cb()
       end
@@ -179,7 +190,7 @@ function JJStatusTree:map(view)
     quit = {
       "q",
       function()
-        vim.cmd("qa")
+        view:quit()
       end,
       desc = "Close view",
     },
@@ -217,13 +228,6 @@ function JJStatusTree:map(view)
         view:scroll_diff(-20)
       end,
       desc = "Scroll diff view up",
-    },
-    toggle_changes = {
-      "<space>",
-      function()
-        view:toggle_file_changes()
-      end,
-      desc = "Toggle current file changes",
     },
   }
 

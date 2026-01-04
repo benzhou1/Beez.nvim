@@ -19,7 +19,7 @@ function M.run(cmd, cb, opts)
           end
         end
       end
-      vim.notify(obj.stderr, vim.log.levels.WARN)
+      vim.notify("Error running '" .. table.concat(cmd, " ") .. "': " .. obj.stderr, vim.log.levels.WARN)
       return cb(obj.stderr, nil)
     end
     cb(nil, obj.stdout)

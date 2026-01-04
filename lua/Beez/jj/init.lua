@@ -7,33 +7,37 @@ function M.setup(opts)
 
   -- Use command that opens a diff editor for jj splits/squash etc...
   -- Use this in a dedicated tab
-  vim.api.nvim_create_user_command("BeezDiffEditor", function(params)
-    local args = params.fargs
-    if #args < 2 then
-      vim.notify(
-        "Error: BeezDiffEditor expects three arguments (left, right[, output])",
-        vim.log.levels.ERROR
-      )
-      return
-    end
-    require("Beez.jj").start_diffeditor(args[1], args[2], args[3])
-  end, {
-    nargs = "*",
-  })
+  -- vim.api.nvim_create_user_command("BeezDiffEditor", function(params)
+  --   local args = params.fargs
+  --   if #args < 2 then
+  --     vim.notify(
+  --       "Error: BeezDiffEditor expects three arguments (left, right[, output])",
+  --       vim.log.levels.ERROR
+  --     )
+  --     return
+  --   end
+  --   require("Beez.jj").start_diffeditor(args[1], args[2], args[3])
+  -- end, {
+  --   nargs = "*",
+  -- })
 
   vim.api.nvim_create_user_command("BeezJJ", function()
+    M.start(false)
+  end, {})
+
+  vim.api.nvim_create_user_command("BeezJJTab", function()
     M.start()
   end, {})
 
   -- Setup automcd to resize diff editor
-  vim.api.nvim_create_autocmd("VimResized", {
-    callback = function()
-      local diffeditor = require("Beez.jj").diffeditor
-      if diffeditor ~= nil then
-        diffeditor:resize()
-      end
-    end,
-  })
+  -- vim.api.nvim_create_autocmd("VimResized", {
+  --   callback = function()
+  --     local diffeditor = require("Beez.jj").diffeditor
+  --     if diffeditor ~= nil then
+  --       diffeditor:resize()
+  --     end
+  --   end,
+  -- })
 end
 
 --- Opens a 2-way editor for handle jj splits/squash etc...
@@ -61,9 +65,9 @@ function M.start_diffeditor(left_dir, right_dir, output_dir)
   M.diffeditor:render()
 end
 
-function M.start()
-  local ui = require("Beez.jj.ui.main"):new()
-  ui:render()
+function M.start(new_tab)
+  local ui = require("Beez.jj.ui.view").new()
+  ui:render(new_tab)
 end
 
 function M.start_neovide()

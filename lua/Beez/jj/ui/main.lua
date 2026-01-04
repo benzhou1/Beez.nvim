@@ -1,16 +1,16 @@
----@class Beez.jj.ui.JJView
+---@class Beez.jj.ui.JJMain
 ---@field tree Beez.jj.ui.JJStatusTree
 ---@field udiff Beez.jj.ui.UnifiedDiff
-JJView = {}
-JJView.__index = JJView
+JJMain = {}
+JJMain.__index = JJMain
 
---- Instaintiates a new JJView
----@return Beez.jj.ui.JJView
-function JJView:new()
+--- Instaintiates a new JJMain
+---@return Beez.jj.ui.JJMain
+function JJMain:new()
   local UnifiedDiff = require("Beez.jj.ui.unified_diff")
   local JJStatusTree = require("Beez.jj.ui.status_tree")
   local j = {}
-  setmetatable(j, JJView)
+  setmetatable(j, JJMain)
 
   j.tree = JJStatusTree.new()
   j.udiff = UnifiedDiff.new()
@@ -23,7 +23,7 @@ end
 --- Show unified diff for specified file path
 ---@param filepath string
 ---@param cb? fun()
-function JJView:show_unified_diff(filepath, cb)
+function JJMain:show_unified_diff(filepath, cb)
   self.udiff:render(filepath, function()
     if cb ~= nil then
       cb()
@@ -34,7 +34,7 @@ end
 --- Move to a file in the status tree and diff
 ---@param offset integer
 ---@param cb? fun()
-function JJView:status_move_to_file(offset, cb)
+function JJMain:status_move_to_file(offset, cb)
   if not self.tree:is_focused() then
     return
   end
@@ -52,23 +52,23 @@ function JJView:status_move_to_file(offset, cb)
 end
 
 --- Focus the diff view
-function JJView:focus_diff()
+function JJMain:focus_diff()
   self.udiff:focus()
 end
 
 --- Focus the status tree
-function JJView:focus_tree()
+function JJMain:focus_tree()
   self.tree:focus()
 end
 
 --- Scroll the diffview by specified number of lines
 ---@param lines integer
-function JJView:scroll_diff(lines)
+function JJMain:scroll_diff(lines)
   self.udiff:scroll(lines)
 end
 
 --- Toggles all the changes for current file
-function JJView:toggle_file_changes()
+function JJMain:toggle_file_changes()
   if not self.tree:is_focused() then
     return
   end
@@ -81,7 +81,7 @@ function JJView:toggle_file_changes()
 end
 
 --- Renders jj view
-function JJView:render()
+function JJMain:render()
   -- Create layout
   vim.cmd("tabnew")
   -- Render status tree
@@ -96,4 +96,4 @@ function JJView:render()
   end)
 end
 
-return JJView
+return JJMain
