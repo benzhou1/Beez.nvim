@@ -79,7 +79,6 @@ function M.open_term(path)
     "-c",
     "term",
   }
-  print("🪵 cmd =", vim.inspect(cmd))
   cmds.run_job(cmd, { cwd = path, env = { NVIM_APPNAME = "nvim_term" } })
 end
 
@@ -96,8 +95,8 @@ function M.open_neohub(name, path)
     name,
     "--opts",
     "--no-fork",
-    "--",
-    "--listen /tmp/nvimsocket-" .. name,
+    --"--",
+    --"--listen /tmp/nvimsocket-" .. name,
   }
   cmds.run_job(cmd, { cwd = path, env = { NVIM_APPNAME = "nvim" } })
 end
@@ -125,9 +124,24 @@ end
 
 --- Opens flotes in neovide window
 function M.open_flotes(nvim_cmd)
-  local cmds = require("Beez.cmds")
-  local cmd = mk_picker_cmd(nvim_cmd or "FlotesToday")
-  cmds.run_job(cmd, { env = { NVIM_APPNAME = "nvim_flotes" } })
+  local u = require("Beez.u")
+  local path = vim.fn.expand("~/SynologyDrive/flotes")
+  local socket = "/tmp/nvimsocket-flotes"
+  local cmd = {
+    "neohub",
+    "--name",
+    "flotes",
+    "--opts",
+    "--no-fork",
+    "--grid",
+    "160x30",
+    "--",
+    "-c",
+    nvim_cmd or "FlotesToday",
+    "--listen",
+    socket,
+  }
+  u.cmds.run(cmd, nil, { cwd = path, env = { NVIM_APPNAME = "nvim_flotes" } })
 end
 
 --- Opens minifiles in neovide window at specified path
