@@ -3,7 +3,7 @@ local M = {}
 --- Runs a command. Async if cb is provided.
 ---@param cmd string[]
 ---@param cb? fun(err: string|nil, stdout: string|nil)
----@param opts? {ignore_err?: string[], env?: table<string, string>, cwd?: string, detach?: boolean}
+---@param opts? {ignore_err?: string[], env?: table<string, string>, cwd?: string, detach?: boolean, wait?: boolean}
 function M.run(cmd, cb, opts)
   opts = opts or {}
   local system_opts = {
@@ -13,7 +13,11 @@ function M.run(cmd, cb, opts)
     detach = opts.detach,
   }
   if cb == nil then
-    return vim.system(cmd, system_opts):wait()
+    local sys = vim.system(cmd, system_opts)
+    if opts.wait ~= false then
+      return sys:wait()
+    end
+    return sys
   end
 
   vim.system(cmd, system_opts, function(obj)
