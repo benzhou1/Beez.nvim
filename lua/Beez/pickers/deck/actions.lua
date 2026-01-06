@@ -128,6 +128,9 @@ M.open_minifiles = function(opts)
     name = opts.keep_open and "open_minifiles_keep" or "open_minifiles",
     execute = function(ctx)
       local item = ctx.get_action_items()[1]
+      if item == nil then
+        return
+      end
       if not opts.keep_open then
         ctx:hide()
       end
