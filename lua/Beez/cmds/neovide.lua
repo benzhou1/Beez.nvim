@@ -149,12 +149,12 @@ end
 function M.open_minifiles(path)
   local cmds = require("Beez.cmds")
   local cmd = {
-    "neohub",
-    path,
-    "--name minifiles",
-    "--opts",
-    "--no-fork",
+    "neovide",
+    "--fork",
     "--grid 160x30",
+    "--",
+    "-c",
+    '\'lua vim.api.nvim_feedkeys(":e ", "n", false)\'',
   }
   cmds.run_job(cmd, { cwd = path, env = { NVIM_APPNAME = "nvim_minifiles" } })
 end
