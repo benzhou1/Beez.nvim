@@ -56,6 +56,9 @@ local M = {
       ["terraform_cleanroom_aks"] = {
         path = vim.fn.expand("~/Projects/terraform-cleanroom-aks"),
       },
+      ["helm_cloudimanage_integration"] = {
+        path = vim.fn.expand("~/Projects/helm-cloudimanage-integration"),
+      },
     },
   },
 }
