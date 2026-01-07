@@ -53,6 +53,9 @@ local M = {
         path = vim.fn.expand("~/Projects/zmk"),
         root = vim.fn.expand("~/Projects/zmk/zmk-keyboards-ataraxia"),
       },
+      ["terraform_cleanroom_aks"] = {
+        path = vim.fn.expand("~/Projects/terraform-cleanroom-aks"),
+      },
     },
   },
 }
