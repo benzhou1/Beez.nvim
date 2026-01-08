@@ -7,12 +7,17 @@ M.filename_first = {
     return function(item)
       local filename = item.data.filename
       if not filename then
-        return
+        return false
       end
+
       if item.data.filename:endswith(u.paths.sep) then
         filename = item.data.filename:sub(1, -2)
       end
       local basename = u.paths.basename(filename)
+      if basename == nil then
+        return false
+      end
+
       -- Add ending slash to directories
       if item.data.is_dir then
         basename = basename .. u.paths.sep
@@ -43,6 +48,7 @@ M.filename_first = {
           { dirname, "Comment" },
         }
       end
+      return true
     end
   end,
 }

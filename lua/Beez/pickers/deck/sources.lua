@@ -626,8 +626,10 @@ function M.dirs_recent(opts)
             source = "recent_dirs",
           },
         }
-        formatters.filename_first.transform(opts)(item)
-        ctx.item(item)
+        local ok = formatters.filename_first.transform(opts)(item)
+        if ok then
+          ctx.item(item)
+        end
       end
       ctx.done()
     end,
@@ -649,10 +651,7 @@ function M.dirs_recent(opts)
       actions.remove_recent,
       actions.open_external({ quit = opts.open_external.quit }),
       actions.open_external({ parent = true, quit = opts.open_external.quit }),
-      require("deck").alias_action(
-        "default",
-        opts.default_action or "open_minifiles"
-      ),
+      require("deck").alias_action("default", opts.default_action or "open_minifiles"),
     }
   )
 
