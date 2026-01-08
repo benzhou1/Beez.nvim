@@ -59,6 +59,9 @@ local M = {
       ["helm_cloudimanage_integration"] = {
         path = vim.fn.expand("~/Projects/helm-cloudimanage-integration"),
       },
+      ["project_w_chart"] = {
+        path = vim.fn.expand("~/Projects/project_w_chart"),
+      },
     },
   },
 }
