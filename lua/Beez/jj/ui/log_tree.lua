@@ -1,6 +1,5 @@
 ---@class Beez.jj.ui.JJLogTree
----@field editor_buf integer?
----@field editor_winid integer?
+---@field desc_editor Beez.jj.ui.DescEditor
 ---@field winid integer
 ---@field buf integer
 ---@field tree NuiTree
@@ -12,6 +11,7 @@ JJLogTree.__index = JJLogTree
 function JJLogTree.new()
   local NuiTree = require("nui.tree")
   local NuiLine = require("nui.line")
+  local DescEditor = require("Beez.jj.ui.describe_editor")
   local t = {}
   setmetatable(t, JJLogTree)
 
@@ -25,6 +25,7 @@ function JJLogTree.new()
   t.editor_buf = nil
   t.editor_winid = nil
 
+  t.desc_editor = DescEditor.new()
   t.winid = nil
   t.buf = buf
   t.tree = NuiTree({
@@ -73,93 +74,6 @@ function JJLogTree.new()
     end,
   })
   return t
-end
-
---- Opens a editor window as a vsplit with specified content and hooks for when editor is closed
----@param content string[]
----@param opts? {on_quit?: fun(new_content: string[], saved: boolean), filter?: fun(content: string[]): string[]}
-function JJLogTree:_open_editor_window(content, opts)
-  opts = opts or {}
-  if not self:is_focused() then
-    return
-  end
-
-  local u = require("Beez.u")
-  -- A new edit is being made, clean up any existing editor window
-  if self.editor_winid ~= nil then
-    self:cleanup({ buf = false })
-  end
-
-  -- Create a split for the editor window
-  vim.cmd("vsplit")
-  self.editor_winid = vim.api.nvim_get_current_win()
-  self.editor_buf = vim.api.nvim_create_buf(false, true)
-  vim.bo[self.editor_buf].modifiable = true
-  vim.bo[self.editor_buf].readonly = false
-
-  vim.schedule(function()
-    local tmpname = vim.fn.tempname()
-    -- Populate the buffer with existing description
-    vim.api.nvim_buf_set_lines(self.editor_buf, 0, -1, false, content)
-    vim.api.nvim_win_set_buf(self.editor_winid, self.editor_buf)
-    -- Make it a normal buffer with a name so that it can be saved
-    vim.bo[self.editor_buf].buftype = ""
-    vim.api.nvim_buf_set_name(self.editor_buf, tmpname)
-
-    local saved = false
-    -- Q to quit ignoring changes
-    u.keymaps.set({
-      {
-        "q",
-        function()
-          saved = false
-          vim.cmd("q")
-        end,
-        desc = "Quit and ignore changes",
-        buffer = self.editor_buf,
-      },
-    })
-
-    -- Track whether buffer was saved or not
-    vim.api.nvim_create_autocmd("BufWritePost", {
-      callback = function(_)
-        saved = true
-      end,
-      once = true,
-      buffer = self.editor_buf,
-    })
-
-    local autocmd_id
-    -- Traack if window has been closed
-    autocmd_id = vim.api.nvim_create_autocmd("WinClosed", {
-      callback = function(args)
-        -- Only want to do this for the editor window
-        if args.match ~= tostring(self.editor_winid) then
-          return
-        end
-
-        -- Clean up autocmd so that its one shot
-        vim.api.nvim_del_autocmd(autocmd_id)
-
-        -- Read the buffer lines
-        local new_content = vim.api.nvim_buf_get_lines(self.editor_buf, 0, -1, false)
-        if opts.filter ~= nil then
-          new_content = opts.filter(new_content)
-        end
-
-        -- Cleanup the editor window
-        self:cleanup({ buf = false })
-        -- Only proceed if changes were saved
-        if not saved then
-          return
-        end
-
-        if opts.on_quit ~= nil then
-          opts.on_quit(new_content, saved)
-        end
-      end,
-    })
-  end)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -417,9 +331,10 @@ function JJLogTree:squash()
       table.insert(lines, "JJ:\t" .. st .. " " .. fp)
     end
   end
+  table.insert(lines, "JJ:")
   table.insert(lines, 'JJ: Lines starting with "JJ:" (like this one) will be removed.')
 
-  self:_open_editor_window(lines, {
+  self.desc_editor:render(lines, {
     on_quit = function(new_lines, saved)
       if not saved then
         return
@@ -506,9 +421,10 @@ function JJLogTree:describe(opts)
       -- Last line is empty, remove itbuiltin_draft_commit_description
       table.remove(lines)
       -- Add instruction line for JJ
+      table.insert(lines, "JJ:")
       table.insert(lines, 'JJ: Lines starting with "JJ:" (like this one) will be removed.')
 
-      self:_open_editor_window(lines, {
+      self.desc_editor:render(lines, {
         on_quit = function(new_lines, saved)
           if not saved then
             return
@@ -560,22 +476,7 @@ function JJLogTree:cleanup(opts)
     -- Not sure why but we need to remove the buffer otherwise nvim thinks there is a change
     vim.api.nvim_buf_delete(self.buf, { force = true })
   end
-
-  if self.editor_winid == nil then
-    return
-  end
-
-  local is_modified = vim.api.nvim_get_option_value("modified", { buf = self.editor_buf })
-  -- Force discard changes and unload buffer
-  if is_modified then
-    vim.api.nvim_set_option_value("modified", false, { buf = self.editor_buf })
-    vim.cmd("bdelete! " .. self.editor_buf)
-  end
-  -- Close the describe window
-  pcall(vim.api.nvim_win_close, self.editor_winid, true)
-
-  self.editor_buf = nil
-  self.editor_winid = nil
+  self.desc_editor:cleanup()
 end
 
 --- Maps default key bindings to the view
