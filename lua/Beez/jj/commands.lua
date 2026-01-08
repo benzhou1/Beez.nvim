@@ -10,6 +10,26 @@ function M.st(cb, opts)
   u.cmds.run(cmd, cb, opts)
 end
 
+--- Runs jj git push
+---@param cb fun(err?: string, stdout?: string)
+---@param opts? table
+function M.push(cb, opts)
+  opts = opts or {}
+  local u = require("Beez.u")
+  local cmd = { "jj", "git", "push" }
+  u.cmds.run(cmd, cb, opts)
+end
+
+--- Runs jj tug
+---@param cb fun(err?: string, stdout?: string)
+---@param opts? table
+function M.tug(cb, opts)
+  opts = opts or {}
+  local u = require("Beez.u")
+  local cmd = { "jj", "tug" }
+  u.cmds.run(cmd, cb, opts)
+end
+
 --- Runs jj diff
 ---@param cb? function(err?: string, stdout?: string)
 ---@param opts? table

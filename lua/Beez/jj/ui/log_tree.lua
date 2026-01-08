@@ -468,6 +468,33 @@ function JJLogTree:split()
   end)
 end
 
+--- JJ tug
+function JJLogTree:tug()
+  local commands = require("Beez.jj.commands")
+  commands.tug(function(err)
+    if err ~= nil then
+      return
+    end
+    vim.notify("Tugged", vim.log.levels.INFO)
+    self:render()
+  end)
+end
+
+--- JJ git push with confirmation
+function JJLogTree:push()
+  local commands = require("Beez.jj.commands")
+  local choice = vim.fn.confirm("Are you sure you want to push?", "&Yes\n&No")
+  if choice == 1 then
+    commands.push(function(err)
+      if err ~= nil then
+        return
+      end
+      vim.notify("Pushed changes successfully", vim.log.levels.INFO)
+      self:render()
+    end)
+  end
+end
+
 --- Cleans up the describe window if it was created and log buffer
 ---@param opts? {buf?: boolean}
 function JJLogTree:cleanup(opts)
@@ -547,6 +574,18 @@ function JJLogTree:map(view)
       "S",
       function()
         self:split()
+      end,
+    },
+    tug = {
+      "T",
+      function()
+        self:tug()
+      end,
+    },
+    push = {
+      "P",
+      function()
+        self:push()
       end,
     },
   }
