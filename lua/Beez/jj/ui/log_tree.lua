@@ -168,12 +168,19 @@ end
 --- Gets the commit id for the current jj log line
 ---@return string?
 function JJLogTree:commit_id()
-  local node = self.tree:get_node()
+  local node = self:node()
   if node == nil then
     return
   end
-
   return node.data.commit_id
+end
+
+--- Gets the tree node
+---@param lineno? integer
+---@return NuiTree.Node?
+function JJLogTree:node(lineno)
+  local node = self.tree:get_node(lineno)
+  return node
 end
 
 -----------------------------------------------------------------------------------------------
@@ -304,33 +311,14 @@ end
 
 --- Squashes current working copy into current commit under the cursor and imitate the commit message in a split
 function JJLogTree:squash()
-  -- JJ: Enter a description for the combined commit.
-  -- JJ: Description from the destination commit:
-  -- fix(u.cmds): Cleanup cmds to use u.cmds instead of Beez.cmds
-  -- fix(cmds.neovide): Cleanup open_neohub and open_flotes
-  --
-  -- JJ: Description from source commit:
-  -- first line
-  -- second line
-  -- third line
-  --
-  -- JJ: Change ID: qpymynyn
-  -- JJ: This commit contains the following changes:
-  -- JJ:     M lua/Beez/cmds/init.lua
-  -- JJ:     M lua/Beez/cmds/neovide.lua
-  -- JJ:     M lua/Beez/jj/commands.lua
-  -- JJ:     M lua/Beez/jj/init.lua
-  -- JJ:     M lua/Beez/jj/ui/log_tree.lua
-  -- JJ:     M lua/Beez/jj/ui/status_tree.lua
-  -- JJ:     M lua/Beez/jj/ui/view.lua
-  -- JJ:     M lua/Beez/jj/ui/vscode_diff.lua
-  -- JJ:
-  -- JJ: Lines starting with "JJ:" (like this one) will be removed.
-
   local u = require("Beez.u")
   local commands = require("Beez.jj.commands")
-  local commit_id = self:commit_id()
-  if commit_id == nil then
+  local node = self:node()
+  if node == nil or node.data.commit_id == nil then
+    return
+  end
+  local commit_id = node.data.commit_id
+  if node.data.marker == "@" then
     return
   end
 
@@ -433,7 +421,6 @@ function JJLogTree:squash()
 
   self:_open_editor_window(lines, {
     on_quit = function(new_lines, saved)
-      print("🪵 new_lines =", vim.inspect(new_lines))
       if not saved then
         return
       end
@@ -550,6 +537,21 @@ function JJLogTree:describe(opts)
   end, log_opts)
 end
 
+--- Split on the working copy
+--- Opens a describe editor window on success
+function JJLogTree:split()
+  local commands = require("Beez.jj.commands")
+  commands.split(function(err)
+    if err ~= nil then
+      return
+    end
+
+    vim.schedule(function()
+      self:describe({ commit_id = "@-" })
+    end)
+  end)
+end
+
 --- Cleans up the describe window if it was created and log buffer
 ---@param opts? {buf?: boolean}
 function JJLogTree:cleanup(opts)
@@ -638,6 +640,12 @@ function JJLogTree:map(view)
       "I",
       function()
         self:describe()
+      end,
+    },
+    split = {
+      "S",
+      function()
+        self:split()
       end,
     },
   }

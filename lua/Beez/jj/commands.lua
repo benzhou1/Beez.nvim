@@ -46,6 +46,22 @@ function M.describe(commit_id, cb, opts)
   u.cmds.run(cmd, cb, opts)
 end
 
+--- Runs jj split
+---@param cb fun(err?: string, stdout?: string)
+---@param opts? table
+function M.split(cb, opts)
+  opts = opts or {}
+  local u = require("Beez.u")
+  local cmd = { "jj", "split" }
+
+  opts.m = opts.m or ""
+  if opts.m ~= nil then
+    table.insert(cmd, "-m")
+    table.insert(cmd, opts.m)
+  end
+  u.cmds.run(cmd, cb, opts)
+end
+
 --- Runs jj edit
 ---@param commit_id string
 ---@param cb fun(err?: string, stdout?: string)
