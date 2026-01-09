@@ -1,80 +1,125 @@
 local M = {
-  diffeditor = nil,
+  view = nil,
 }
 
+local function setup_user_cmds()
+  -- User command to run jj in a terminal at the git root
+  vim.api.nvim_create_user_command(
+    "JJ", -- Command name (:MyCommand)
+    function(opts)
+      local parts = vim.split(opts.args, "%s+")
+      local subcommand = parts[1]
+      if subcommand == "log" or subcommand == "" then
+        M.log()
+        return
+      elseif subcommand == "split" then
+        M.split()
+        return
+      elseif subcommand == "describe" then
+        M.describe()
+        return
+      elseif subcommand == "tug" then
+        M.tug()
+        return
+      elseif subcommand == "undo" then
+        M.undo()
+        return
+      elseif subcommand == "new" then
+        M.new()
+        return
+      end
+
+      local sterm = require("snacks.terminal")
+      local git_root = vim.fs.find(".git", { upward = true })[1]
+      local root = vim.fs.dirname(git_root)
+      local terminal, created = sterm.get(nil, { cwd = root, auto_insert = false, keep_mode = true })
+      if not created and terminal ~= nil then
+        terminal:show()
+        terminal:focus()
+      end
+      if terminal ~= nil then
+        local chan = vim.bo[terminal.buf].channel
+        vim.fn.chansend(chan, "jj " .. opts.args .. "\n")
+      end
+    end,
+    {
+      nargs = "*",
+      complete = function(arg_lead, cmd_line, cursor_pos)
+        return { "log", "split", "describe", "tug", "undo", "new" }
+      end,
+    }
+  )
+end
+
+--- Setup jj
+---@param opts? table
 function M.setup(opts)
   opts = opts or {}
+  M.view = require("Beez.jj.ui.view").new()
 
-  -- Use command that opens a diff editor for jj splits/squash etc...
-  -- Use this in a dedicated tab
-  -- vim.api.nvim_create_user_command("BeezDiffEditor", function(params)
-  --   local args = params.fargs
-  --   if #args < 2 then
-  --     vim.notify(
-  --       "Error: BeezDiffEditor expects three arguments (left, right[, output])",
-  --       vim.log.levels.ERROR
-  --     )
-  --     return
-  --   end
-  --   require("Beez.jj").start_diffeditor(args[1], args[2], args[3])
-  -- end, {
-  --   nargs = "*",
-  -- })
-
-  vim.api.nvim_create_user_command("BeezJJ", function()
-    M.start(false)
-  end, {})
-
-  vim.api.nvim_create_user_command("BeezJJTab", function()
-    M.start()
-  end, {})
-
-  -- Setup automcd to resize diff editor
-  -- vim.api.nvim_create_autocmd("VimResized", {
-  --   callback = function()
-  --     local diffeditor = require("Beez.jj").diffeditor
-  --     if diffeditor ~= nil then
-  --       diffeditor:resize()
-  --     end
-  --   end,
-  -- })
+  setup_user_cmds()
 end
 
---- Opens a 2-way editor for handle jj splits/squash etc...
---- Opens 2 trees one for original commit and one for new commit
---- Should be used in a dedicated tab
----@param left_dir string
----@param right_dir string
----@param output_dir string
-function M.start_diffeditor(left_dir, right_dir, output_dir)
-  local u = require("Beez.u")
-  -- 420 decimal == 0o644 octal
-  -- 0o644 = rw-r--r--
-  local chmod_mode = 420
+--- Starts/focus jj log view
+function M.log(opts)
+  if M.view == nil then
+    return
+  end
 
-  -- Make a copy of the right since it is read only
-  vim.fn.delete(right_dir, "rf")
-  u.os.copy_dir(output_dir, right_dir, { chmod_mode = chmod_mode })
-
-  -- Make output the same as left, by deleting it and then copying left to output and make sure its writable
-  vim.fn.delete(output_dir, "rf")
-  -- Read write
-  u.os.copy_dir(left_dir, output_dir, { chmod_mode = chmod_mode })
-
-  M.diffeditor = require("Beez.jj.ui.diffeditor"):new(left_dir, right_dir, output_dir)
-  M.diffeditor:render()
+  opts = opts or {}
+  M.view:render({ cb = opts.cb })
 end
 
-function M.start(new_tab)
-  local ui = require("Beez.jj.ui.view").new()
-  ui:render(new_tab)
+--- JJ split with log view
+function M.split()
+  if M.view == nil then
+    return
+  end
+
+  M.log()
+  M.view.logtree:split()
 end
 
-function M.start_neovide()
-  local cmds = require("Beez.cmds")
-  local git_root = vim.fs.find(".git", { upward = true })[1]
-  local root = vim.fs.dirname(git_root)
-  cmds.neovide.open_beez_jj(root)
+--- JJ describe with log view
+function M.describe()
+  if M.view == nil then
+    return
+  end
+
+  M.log({
+    cb = function()
+      M.view.logtree:describe()
+    end,
+  })
+end
+
+-- JJ tug with log view
+function M.tug()
+  if M.view == nil then
+    return
+  end
+
+  M.log()
+  M.view.logtree:tug()
+end
+
+--- JJ undo with log view
+function M.undo()
+  if M.view == nil then
+    return
+  end
+
+  M.log()
+  M.view.logtree:undo()
+end
+
+function M.new()
+  if M.view == nil then
+    return
+  end
+
+  M.log()
+  M.view.logtree:new_commit()
 end
 
 return M

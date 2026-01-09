@@ -22,9 +22,6 @@ function JJLogTree.new()
   vim.bo[buf].bufhidden = "hide"
   vim.bo[buf].swapfile = false
 
-  t.editor_buf = nil
-  t.editor_winid = nil
-
   t.desc_editor = DescEditor.new()
   t.winid = nil
   t.buf = buf
@@ -183,13 +180,41 @@ function JJLogTree:render(cb)
         vim.api.nvim_win_set_buf(self.winid, self.buf)
         vim.wo[self.winid].number = false
         vim.wo[self.winid].relativenumber = false
-        vim.api.nvim_win_set_height(self.winid, 15)
+        self:resize()
       end
       if cb ~= nil then
         cb()
       end
     end)
   end)
+end
+
+--- Resize the log view
+function JJLogTree:resize()
+  if self:is_opened() then
+    vim.api.nvim_win_set_height(self.winid, 20)
+  end
+end
+
+--- Close log view
+function JJLogTree:close()
+  if self:is_opened() then
+    vim.api.nvim_win_close(self.winid, true)
+    self.winid = nil
+  end
+end
+
+--- Is log view currently opened
+---@return boolean
+function JJLogTree:is_opened()
+  return self.winid ~= nil and vim.api.nvim_win_is_valid(self.winid)
+end
+
+--- Focus log view
+function JJLogTree:focus()
+  if self:is_opened() then
+    vim.api.nvim_set_current_win(self.winid)
+  end
 end
 
 --- Checks whether the log view is focused
@@ -496,13 +521,9 @@ function JJLogTree:push()
 end
 
 --- Cleans up the describe window if it was created and log buffer
----@param opts? {buf?: boolean}
+---@param opts? table
 function JJLogTree:cleanup(opts)
   opts = opts or {}
-  if opts.buf ~= false then
-    -- Not sure why but we need to remove the buffer otherwise nvim thinks there is a change
-    vim.api.nvim_buf_delete(self.buf, { force = true })
-  end
   self.desc_editor:cleanup()
 end
 

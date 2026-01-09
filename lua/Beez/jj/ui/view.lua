@@ -39,7 +39,7 @@ function JJView:show_diff(filepath, cb)
   end)
 end
 
---- Move to a file in the status sttree and diff
+--- Move to a file in the status tree and diff
 ---@param offset integer
 ---@param cb? fun()
 function JJView:status_move_to_file(offset, cb)
@@ -75,54 +75,47 @@ function JJView:scroll_diff(lines)
   self.diff:scroll(lines)
 end
 
---- Toggles all the changes for current file
-function JJView:toggle_file_changes()
-  if not self.sttree:is_focused() then
-    return
-  end
-  local filepath = self.sttree:get_filepath()
-  if filepath == nil then
-    return
-  end
-
-  self.diff:toggle_file_changes(filepath)
-end
-
 --- Cleansup and quits the view
 function JJView:quit()
   self.diff:cleanup()
   self.logtree:cleanup()
-  if self.new_tab then
-    vim.cmd("tabclose")
-  else
-    vim.cmd("qa")
-  end
+  self.logtree:close()
 end
 
 --- Renders jj view
-function JJView:render(new_tab)
-  self.new_tab = new_tab ~= false
-  -- Create layout
-  if new_tab ~= false then
-    vim.cmd("tabnew")
+function JJView:render(opts)
+  opts = opts or {}
+  if self.logtree:is_opened() then
+    self.logtree:focus()
+    return
   end
 
-  -- Render status tree
-  self.sttree:render(function()
-    self.sttree:map(self)
-    vim.cmd("split")
-    -- Then render log tree
-    self.logtree:render(function()
-      self.logtree:map(self)
-      self.sttree:focus()
-      -- Then diff the first file
-      self:status_move_to_file(1, function()
-        -- Map keybinds to diff view only once
-        self.diff:map(self)
-        self.sttree:focus()
-      end)
-    end)
+  -- Layout for log view
+  vim.cmd("belowright split | enew")
+  self.logtree:render(function()
+    self.logtree:map(self)
+    self.logtree:focus()
+    if opts.cb ~= nil then
+      opts.cb()
+    end
   end)
+
+  -- Render status tree
+  -- self.sttree:render(function()
+  --   self.sttree:map(self)
+  --   vim.cmd("split")
+  --   -- Then render log tree
+  --   self.logtree:render(function()
+  --     self.logtree:map(self)
+  --     self.sttree:focus()
+  --     -- Then diff the first file
+  --     self:status_move_to_file(1, function()
+  --       -- Map keybinds to diff view only once
+  --       self.diff:map(self)
+  --       self.sttree:focus()
+  --     end)
+  --   end)
+  -- end)
 end
 
 return JJView
