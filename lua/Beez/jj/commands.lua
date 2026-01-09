@@ -38,15 +38,19 @@ function M.diff(cb, opts)
   opts = opts or {}
   local u = require("Beez.u")
   local cmd = { "jj", "diff" }
-  if opts.r ~= nil then
-    table.insert(cmd, "-r")
-    table.insert(cmd, opts.r)
-  end
-  if opts.name_only == true then
-    table.insert(cmd, "--name-only")
-  end
-  if opts.summary == true then
-    table.insert(cmd, "--summary")
+  if opts.raw ~= nil then
+    u.tables.extend(cmd, opts.raw)
+  else
+    if opts.r ~= nil then
+      table.insert(cmd, "-r")
+      table.insert(cmd, opts.r)
+    end
+    if opts.name_only == true then
+      table.insert(cmd, "--name-only")
+    end
+    if opts.summary == true then
+      table.insert(cmd, "--summary")
+    end
   end
   return u.cmds.run(cmd, cb, opts)
 end

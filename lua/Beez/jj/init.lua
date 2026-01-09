@@ -122,4 +122,14 @@ function M.new()
   M.view.logtree:new_commit()
 end
 
+--- JJ diff with CodeDiff directly and show log view
+function M.diff()
+  if M.view == nil then
+    return
+  end
+
+  M.log()
+  vim.cmd("CodeDiff")
+end
+
 return M

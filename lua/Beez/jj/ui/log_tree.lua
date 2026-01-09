@@ -520,6 +520,40 @@ function JJLogTree:push()
   end
 end
 
+--- JJ diff with CodeDiff
+function JJLogTree:diff()
+  local u = require("Beez.u")
+  local commands = require("Beez.jj.commands")
+  local mode = vim.fn.mode()
+  -- Grab commit id of visual selection
+  if mode == "v" or mode == "V" then
+    local lines, linee = u.nvim.get_visual_selection_row_range()
+    local commit_ids = {}
+    for i = lines, linee do
+      local node = self:node(i)
+      if node ~= nil and node.data.commit_id ~= nil then
+        local commit_id = node.data.commit_id
+        table.insert(commit_ids, commit_id)
+      end
+    end
+
+    local commit_id_str = table.concat(commit_ids, " | ")
+    commands.diff(function(_) end, { r = commit_id_str })
+    return
+  end
+
+  local node = self:node()
+  if node == nil or node.data.commit_id == nil then
+    return
+  end
+  if node.data.marker == "@" then
+    vim.cmd("CodeDiff")
+  else
+    local commit_id = node.data.commit_id
+    commands.diff(function(_) end, { r = commit_id })
+  end
+end
+
 --- Cleans up the describe window if it was created and log buffer
 ---@param opts? table
 function JJLogTree:cleanup(opts)
@@ -607,6 +641,13 @@ function JJLogTree:map(view)
       "P",
       function()
         self:push()
+      end,
+    },
+    diff = {
+      mode = { "n", "v" },
+      "<cr>",
+      function()
+        self:diff()
       end,
     },
   }
