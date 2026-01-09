@@ -83,6 +83,14 @@ function M.split(cb, opts)
     table.insert(cmd, "-m")
     table.insert(cmd, opts.m)
   end
+  if opts.raw ~= nil then
+    u.tables.extend(cmd, opts.raw)
+  else
+    if opts.r ~= nil then
+      table.insert(cmd, "-r")
+      table.insert(cmd, opts.r)
+    end
+  end
   u.cmds.run(cmd, cb, opts)
 end
 

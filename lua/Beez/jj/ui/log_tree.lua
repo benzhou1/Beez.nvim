@@ -120,7 +120,7 @@ function JJLogTree:render(cb)
       -- Split up the rest of the line by space delimiter
       local groups = vim.split(rest or "", " ")
 
-      local marker, change_id, author, date, time, branch, ref, commit_id, commit_uuid
+      local marker, change_id, author, date, time, bookmark, branch, ref, commit_id, commit_uuid
       marker = first ~= nil and vim.split(first, " ")[1] or nil
 
       -- Use marker symbol to determine if its a commit line or a description line
@@ -129,6 +129,7 @@ function JJLogTree:render(cb)
         author = groups[2]
         date = groups[3]
         time = groups[4]
+
         -- Sometimes just the ref is present
         if #groups == 6 then
           ref = groups[5]
@@ -141,6 +142,12 @@ function JJLogTree:render(cb)
         elseif #groups == 7 then
           branch = groups[5]
           ref = groups[6]
+          commit_id = groups[7]
+        -- Sometimes we have bookmark, branch and ref
+        elseif #groups == 8 then
+          bookmark = groups[5]
+          branch = groups[6]
+          ref = groups[7]
           commit_id = groups[7]
         else
           commit_id = groups[5]
@@ -170,6 +177,7 @@ function JJLogTree:render(cb)
           commit_id = commit_id,
           branch = branch,
           ref = ref,
+          bookmark = bookmark,
         },
       })
       table.insert(nodes, node)
@@ -635,7 +643,7 @@ function JJLogTree:map(view)
       end,
     },
     edit = {
-      "<cr>",
+      "e",
       function()
         self:edit()
       end,

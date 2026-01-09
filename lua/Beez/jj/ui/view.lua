@@ -8,7 +8,6 @@ JJView.__index = JJView
 --- Instaintiates a new JJView
 ---@return Beez.jj.ui.JJView
 function JJView.new()
-  local VscodeDiff = require("Beez.jj.ui.vscode_diff")
   local JJStatusTree = require("Beez.jj.ui.status_tree")
   local JJLogTree = require("Beez.jj.ui.log_tree")
   local j = {}
@@ -17,7 +16,6 @@ function JJView.new()
   j.new_tab = true
   j.sttree = JJStatusTree.new()
   j.logtree = JJLogTree.new()
-  j.diff = VscodeDiff.new()
   return j
 end
 
@@ -75,23 +73,19 @@ function JJView:scroll_diff(lines)
   self.diff:scroll(lines)
 end
 
---- Cleansup and quits the view
+--- Cleanup and quits the view
 function JJView:quit()
-  self.diff:cleanup()
+  if self.diff ~= nil then
+    self.diff:cleanup()
+  end
   self.logtree:cleanup()
   self.logtree:close()
 end
 
---- Renders jj view
-function JJView:render(opts)
+--- Refresh the log view
+---@param opts? table
+function JJView:refresh(opts)
   opts = opts or {}
-  if self.logtree:is_opened() then
-    self.logtree:focus()
-    return
-  end
-
-  -- Layout for log view
-  vim.cmd("belowright split | enew")
   self.logtree:render(function()
     self.logtree:map(self)
     self.logtree:focus()
@@ -99,6 +93,17 @@ function JJView:render(opts)
       opts.cb()
     end
   end)
+end
+
+--- Renders jj view
+function JJView:render(opts)
+  opts = opts or {}
+
+  -- Layout for log view
+  if not self.logtree:is_opened() then
+    vim.cmd("belowright split | enew")
+  end
+  self:refresh(opts)
 
   -- Render status tree
   -- self.sttree:render(function()
