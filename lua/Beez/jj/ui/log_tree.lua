@@ -83,6 +83,9 @@ function JJLogTree:commit_id()
   if node == nil then
     return
   end
+  if node.data.marker == "@" then
+    return "@"
+  end
   return node.data.commit_id
 end
 
@@ -480,17 +483,41 @@ end
 
 --- Split on the working copy
 --- Opens a describe editor window on success
-function JJLogTree:split()
+function JJLogTree:split(opts)
+  opts = opts or {}
   local commands = require("Beez.jj.commands")
+  local commit_id = opts.commit_id or self:commit_id() or "@"
+  local node
+
+  -- Find the node that has the corresponding commit id
+  for _, n in ipairs(self.tree:get_nodes()) do
+    if n.data.commit_id == commit_id then
+      node = n
+    end
+  end
+
   commands.split(function(err)
     if err ~= nil then
       return
     end
 
-    vim.schedule(function()
-      self:describe({ commit_id = "@-" })
+    self:render(function()
+      vim.schedule(function()
+        if commit_id ~= "@" then
+          -- Find the new commit id that was created from the split
+          if node ~= nil then
+            for _, n in ipairs(self.tree:get_nodes()) do
+              if node.data.change_id == n.data.change_id then
+                self:describe({ commit_id = n.data.commit_id })
+              end
+            end
+          end
+        else
+          self:describe({ commit_id = "@-" })
+        end
+      end)
     end)
-  end)
+  end, { r = commit_id })
 end
 
 --- JJ tug
