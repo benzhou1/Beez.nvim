@@ -263,13 +263,10 @@ end
 function JJLogTree:squash()
   local u = require("Beez.u")
   local commands = require("Beez.jj.commands")
-  local node = self:node()
-  if node == nil or node.data.commit_id == nil then
-    return
-  end
-  local commit_id = node.data.commit_id
-  if node.data.marker == "@" then
-    return
+  local commit_id = self:commit_id()
+  -- Squash into previous commit id
+  if commit_id == "@" then
+    commit_id = "@-"
   end
 
   -- Get the description of the source commit
@@ -555,6 +552,12 @@ function JJLogTree:push()
   end
 end
 
+--- Refreshes the log view
+---@param cb? fun
+function JJLogTree:refresh(cb)
+  self:render(cb)
+end
+
 --- JJ diff with CodeDiff
 function JJLogTree:diff()
   local u = require("Beez.u")
@@ -637,7 +640,13 @@ function JJLogTree:map(view)
       end,
     },
     squash = {
-      "s",
+      "sq",
+      function()
+        self:squash()
+      end,
+    },
+    interactive_squash = {
+      "sq",
       function()
         self:squash()
       end,
@@ -661,7 +670,7 @@ function JJLogTree:map(view)
       end,
     },
     split = {
-      "S",
+      "sp",
       function()
         self:split()
       end,
@@ -683,6 +692,12 @@ function JJLogTree:map(view)
       "<cr>",
       function()
         self:diff()
+      end,
+    },
+    refresh = {
+      "R",
+      function()
+        self:refresh()
       end,
     },
   }
