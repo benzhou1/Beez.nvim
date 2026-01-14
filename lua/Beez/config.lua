@@ -9,6 +9,7 @@ local M = {}
 ---@field codestacks Beez.codestacks.config?
 ---@field cmdcenter Beez.cmdcenter.config?
 ---@field jj? table
+---@field zk? table
 
 ---@type Beez.config
 local def_config = {
@@ -51,6 +52,9 @@ function M.init(opts)
   end
   if M.config.jj then
     require("Beez.jj").setup(M.config.jj)
+  end
+  if M.config.zk then
+    require("Beez.zk").setup(M.config.zk)
   end
 end
 
