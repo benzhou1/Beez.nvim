@@ -1,5 +1,6 @@
 local M = {}
 M.neovide = require("Beez.cmds.neovide")
+M.aerospace = require("Beez.cmds.aerospace")
 
 --- Runs a command in the background
 ---@param cmd string[]
