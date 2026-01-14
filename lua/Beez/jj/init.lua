@@ -63,7 +63,6 @@ local function setup_user_cmds()
   end, {
     nargs = "*",
     complete = function(arg_lead, cmd_line, cursor_pos)
-      return { "log", "split", "describe", "tug", "undo", "new" }
       return { "log", "split", "describe", "tug", "undo", "new", "diff" }
     end,
   })
