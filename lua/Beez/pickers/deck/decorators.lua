@@ -48,7 +48,7 @@ M.query = {
 
     for _, q in ipairs(queries) do
       local start_idx, end_idx = string.find(string.lower(item.display_text), string.lower(q))
-      if start_idx ~= nil and end_idx ~= nil then
+      while start_idx ~= nil and end_idx ~= nil do
         table.insert(dec, {
           col = start_idx - 1,
           end_col = end_idx,
@@ -56,6 +56,7 @@ M.query = {
           ephemeral = true,
           priority = 9999,
         })
+        start_idx, end_idx = string.find(string.lower(item.display_text), string.lower(q), end_idx)
       end
     end
     return dec
