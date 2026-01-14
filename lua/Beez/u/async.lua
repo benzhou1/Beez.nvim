@@ -21,7 +21,12 @@ function M.periodic(opts)
         local status, error = pcall(opts.cb, timer)
         if not status then
           vim.notify("Failed periodic function: " .. vim.inspect(error), "error")
+          pcall(function()
+            timer:close()
+          end)
+          return
         end
+
         ---@diagnostic disable-next-line: param-type-mismatch
         if os.time(os.date("!*t")) - start > opts.timeout then
           pcall(function()
@@ -37,7 +42,7 @@ end
 ---@field delay number
 ---@field cb function
 
---- Runs a function periodically
+--- Runs a function after some delay
 ---@param opts Beez.u.async.delayedopts
 function M.delayed(opts)
   local timer = vim.uv.new_timer()
