@@ -162,7 +162,10 @@ function M.log(cb, opts)
   opts = opts or {}
   local u = require("Beez.u")
   local config = opts.config
-    or "template-aliases.\"format_short_commit_id(id)\"=\"id.shortest(8) ++ '[' ++ id.shortest() ++ ']'\""
+    or {
+      "template-aliases.\"format_short_commit_id(id)\"=\"id.shortest(8) ++ '[' ++ id.shortest() ++ ']'\"",
+      'templates.log_node=coalesce(if(current_working_copy, "@"), if(immutable, "-"), "*")',
+    }
 
   local template = opts.T or "builtin_log_compact_full_description"
   local cmd = {
@@ -172,8 +175,15 @@ function M.log(cb, opts)
     "--no-pager",
   }
   if config ~= nil and config ~= false then
-    table.insert(cmd, "--config")
-    table.insert(cmd, config)
+    if type(config) == "table" then
+      for _, c in ipairs(config) do
+        table.insert(cmd, "--config")
+        table.insert(cmd, c)
+      end
+    else
+      table.insert(cmd, "--config")
+      table.insert(cmd, config)
+    end
   end
   if opts.no_graph ~= nil then
     table.insert(cmd, "--no-graph")

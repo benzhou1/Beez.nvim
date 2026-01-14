@@ -49,8 +49,15 @@ function JJLogTree.new()
         return node.text
       end
       -- Reconstruct line from its data parts
-      l:append(node.data.marker, node.data.marker == "@" and "Added" or "String")
-      l:append(node.data.first:gsub(node.data.marker, "", 1), "String")
+      -- Split up first, to before marker and after marker
+      if node.data.marker == "@" then
+        local s, e = string.find(node.data.first, node.data.marker)
+        l:append(node.data.first:sub(1, e - 1), "String")
+        l:append(node.data.marker, "Added")
+        l:append(node.data.first:sub(e + 1), "String")
+      else
+        l:append(node.data.first:gsub("-", "○"):gsub("*", "◆"), "String")
+      end
       l:append(node.data.change_id, "String")
       l:append(" ", "String")
       l:append(node.data.author, "Added")
@@ -115,16 +122,22 @@ function JJLogTree:render(cb)
     local lines = vim.split(log_lines, "\n")
     local nodes = {}
     for _, l in ipairs(lines) do
-      -- Gets the first part of the line up to the first alpha numeric char
-      local first, rest = l:match("^(.-[%W_]*)([%w].*)$")
+      local first, rest, marker, change_id, author, date, time, bookmark, branch, ref, commit_id, commit_uuid
+      -- Look for marker
+      local s, e = string.find(l, "[@%-*]")
+      if s ~= nil and e ~= nil then
+        first = l:sub(1, e + 2)
+        rest = l:sub(e + 3)
+        marker = l:sub(s, e)
+      end
+      first = first or ""
+      rest = rest or l
+
       -- Split up the rest of the line by space delimiter
       local groups = vim.split(rest or "", " ")
 
-      local marker, change_id, author, date, time, bookmark, branch, ref, commit_id, commit_uuid
-      marker = first ~= nil and vim.split(first, " ")[1] or nil
-
       -- Use marker symbol to determine if its a commit line or a description line
-      if marker == "◆" or marker == "@" or marker == "○" then
+      if marker == "-" or marker == "@" or marker == "*" then
         change_id = groups[1]
         author = groups[2]
         date = groups[3]
