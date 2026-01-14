@@ -16,7 +16,14 @@ function M.go_to_definitions(opts)
       if not vim.w.is_overlook_popup then
         vim.cmd("normal! m'")
       end
-      require("overlook.ui").create_popup({
+
+      local ok, overlook_ui = pcall(require, "overlook.ui")
+      if not ok then
+        vim.cmd("e " .. item.data.filename)
+        return
+      end
+
+      overlook_ui.create_popup({
         target_bufnr = item.data.target_bufnr,
         lnum = item.data.lnum,
         col = item.data.col,
@@ -45,7 +52,14 @@ function M.find_references(opts)
       if not vim.w.is_overlook_popup then
         vim.cmd("normal! m'")
       end
-      require("overlook.ui").create_popup({
+
+      local ok, overlook_ui = pcall(require, "overlook.ui")
+      if not ok then
+        vim.cmd("e " .. item.data.filename)
+        return
+      end
+
+      overlook_ui.create_popup({
         target_bufnr = item.data.target_bufnr,
         lnum = item.data.lnum,
         col = item.data.col,
