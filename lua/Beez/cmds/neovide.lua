@@ -122,6 +122,25 @@ function M.open_recent_dirs_picker()
   cmds.run_job(cmd, { env = { NVIM_APPNAME = "nvim_cmds" } })
 end
 
+--- Opens zk note in in neovide window with nvim_zk app
+function M.open_zk(path)
+  local u = require("Beez.u")
+  local socket = "/tmp/nvimsocket-zk"
+  local cmd = {
+    "neohub",
+    "--name",
+    "zk",
+    "--opts",
+    "--no-fork",
+    "--grid",
+    "160x30",
+    "--",
+    "--listen",
+    socket,
+  }
+  u.cmds.run(cmd, nil, { cwd = u.paths.dirname(path), env = { NVIM_APPNAME = "nvim_zk" } })
+end
+
 --- Opens flotes in neovide window
 function M.open_flotes(nvim_cmd)
   local u = require("Beez.u")
