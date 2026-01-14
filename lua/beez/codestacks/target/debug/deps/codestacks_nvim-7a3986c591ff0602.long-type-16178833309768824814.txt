@@ -1,0 +1,1 @@
+std::iter::Cloned<std::iter::Filter<std::collections::hash_map::Iter<'_, std::string::String, std::vec::Vec<marks::GlobalMark>>, {closure@src/stacks.rs:294:25: 294:28}>>

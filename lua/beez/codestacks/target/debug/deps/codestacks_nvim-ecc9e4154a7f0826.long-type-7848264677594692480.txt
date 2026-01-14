@@ -1,0 +1,1 @@
+std::sync::poison::PoisonError<std::sync::poison::rwlock::RwLockWriteGuard<'_, core::option::Option<stacks::StacksManager>>>

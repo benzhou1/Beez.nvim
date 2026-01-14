@@ -1,0 +1,2 @@
+std::iter::Cloned<std::collections::hash_map::Values<'_, std::string::String, stacks::Stacks>>
+core::iter::adapters::cloned::Cloned<std::collections::hash::map::Values<'_, alloc::string::String, stacks::Stacks>>

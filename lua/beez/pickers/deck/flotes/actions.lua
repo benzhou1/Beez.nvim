@@ -1,0 +1,287 @@
+local u = require("beez.u")
+local M = {
+  toggles = { done_task = false },
+}
+
+--- Open note in flotes window
+---@param opts? table
+---@return deck.Action[]
+function M.open_note(opts)
+  opts = opts or {}
+  local name = "flotes.task.open_note"
+  return {
+    require("deck").alias_action("default", name),
+    {
+      name = name,
+      execute = function(ctx)
+        local item = ctx.get_action_items()[1]
+        local f = require("beez.flotes")
+        ctx:hide()
+        vim.schedule(function()
+          f.show({ note_path = item.data.filename })
+          vim.schedule(function()
+            if item.data.lnum then
+              vim.fn.cursor(item.data.lnum, item.data.col)
+            end
+          end)
+        end)
+      end,
+    },
+  }
+end
+
+--- Deck action to insert a tag reference to current task
+---@param opts? table
+---@return deck.Action[]
+function M.insert_task_tag(opts)
+  opts = opts or {}
+  local name = "flotes.task.insert_task_tag"
+  local winid = vim.api.nvim_get_current_win()
+  local curr_line = vim.api.nvim_get_current_line()
+  local curr_filename = vim.api.nvim_buf_get_name(0)
+  local curr_bufnr = vim.api.nvim_get_current_buf()
+  return {
+    require("deck").alias_action("default", name),
+    {
+      name = name,
+      execute = function(ctx)
+        local item = ctx.get_action_items()[1]
+        local f = require("beez.flotes")
+        local line = u.os.read_line_at(item.data.filename, item.data.lnum)
+        if line == nil then
+          return
+        end
+        local t = f.tasks.parse_line(line)
+        if t == nil then
+          return
+        end
+
+        local task_tag = nil
+        for tag, _ in pairs(t.tags) do
+          if tag:startswith("task:") then
+            task_tag = tag
+            break
+          end
+        end
+
+        local curr_file = curr_filename == item.data.filename
+        -- If task is not in the current file gotta write to it
+        if task_tag == nil then
+          local uuid = u.strs.short_uuid()
+          task_tag = "task:" .. uuid
+          -- Generate a new task tag and add it to the task line
+          if not curr_file then
+            line = line .. " #" .. task_tag
+            local lines = u.os.read_lines(item.data.filename)
+            lines[item.data.lnum] = line
+            local file = io.open(item.data.filename, "w")
+            if file ~= nil then
+              for _, l in ipairs(lines) do
+                file:write(l .. "\n")
+              end
+            end
+          -- Otherwise we can can just overwrite the line the current file
+          else
+            local task_line =
+              vim.api.nvim_buf_get_lines(curr_bufnr, item.data.lnum - 1, item.data.lnum, false)[1]
+            task_line = task_line .. " #" .. task_tag
+            vim.api.nvim_buf_set_lines(
+              curr_bufnr,
+              item.data.lnum - 1,
+              item.data.lnum,
+              false,
+              { task_line }
+            )
+          end
+        end
+
+        -- Add the task tag to the end of the current line
+        if not curr_line:endswith(" ") then
+          curr_line = curr_line .. " "
+        end
+        curr_line = curr_line .. "#" .. task_tag
+        vim.api.nvim_set_current_win(winid)
+        vim.api.nvim_set_current_line(curr_line)
+        vim.cmd("startinsert")
+        vim.schedule(function()
+          ctx:hide()
+        end)
+      end,
+    },
+  }
+end
+
+--- Create a new note with title
+M.new_note = {
+  name = "new_note",
+  execute = function(ctx)
+    local f = require("beez.flotes")
+    local title = ctx.get_query()
+    ctx:hide()
+    f.new_note(title, {})
+  end,
+}
+
+--- Delete note
+M.delete_note = {
+  name = "delete_note",
+  execute = function(ctx)
+    local Path = require("plenary.path")
+    for _, item in ipairs(ctx.get_action_items()) do
+      local path = Path:new(item.data.filename)
+      local choice = vim.fn.confirm("Are you sure you want to delete this note?", "&Yes\n&No")
+      if choice == 1 then
+        path:rm()
+        vim.notify("Deleted note: " .. path.filename, "info")
+        ctx:execute()
+      end
+    end
+  end,
+}
+
+--- Create note from template
+M.new_note_from_template = {
+  name = "new_note_from_template",
+  execute = function(ctx)
+    local item = ctx.get_action_items()[1]
+    ctx:hide()
+    vim.schedule(function()
+      require("beez.flotes").new_note_from_template(item.data.name)
+    end)
+  end,
+}
+
+--- Deck action to toggle showing done tasks or not
+---@param opts? table
+---@return deck.Action[]
+function M.toggle_done_task(opts)
+  opts = opts or {}
+  return {
+    require("deck").alias_action("toggle1", "toggle_done_task"),
+    {
+      name = "toggle_done_task",
+      execute = function(ctx)
+        M.toggles.done_task = not M.toggles.done_task
+        if M.toggles.done_task then
+          vim.notify("Showing done tasks...", vim.log.levels.INFO)
+        else
+          vim.notify("Showing only open tasks...", vim.log.levels.INFO)
+        end
+        ctx.execute()
+      end,
+    },
+  }
+end
+
+--- Deck action to edit tasks in a scratch buffer
+---@param opts table
+---@return deck.Action
+function M.edit_tasks(opts)
+  return {
+    name = opts.name,
+    ---@param ctx deck.Context
+    execute = function(ctx)
+      u.deck.edit_list(ctx, {
+        action = opts.action,
+        filetype = "markdown",
+        filename = "deck_scratch.md",
+        get_pos = opts.get_pos,
+        get_feedkey = opts.get_feedkey,
+        col_pos_offset = function(pos, action)
+          -- Because checkmate converts state into ascii which adds 2 to the column position
+          return 2
+        end,
+        get_lines = function(items)
+          local lines = {}
+          for _, item in ipairs(items) do
+            local line = item.data.task.line .. " [id::" .. item.data.i .. "]"
+            table.insert(lines, line)
+          end
+          return lines
+        end,
+        save = function(items, lines)
+          local bufs = {}
+          local cmp = require("plugins.checkmate")
+          local f = require("beez.flotes")
+          local function load_buf(filename)
+            local buf = bufs[filename]
+            local loaded = true
+            if buf == nil then
+              -- Load the buffer by filename
+              local bufnr = vim.fn.bufnr(filename)
+              -- Has not been loaded yet
+              if bufnr == -1 then
+                loaded = false
+                bufnr = vim.fn.bufadd(filename)
+                pcall(vim.fn.bufload, bufnr)
+              end
+              bufs[filename] = {
+                bufnr = bufnr,
+                loaded = loaded,
+              }
+              buf = bufs[filename]
+            end
+            return buf.bufnr
+          end
+          local function cleanup_bufs()
+            for _, buf in pairs(bufs) do
+              -- Save the buffer before closing
+              vim.api.nvim_buf_call(buf.bufnr, function()
+                vim.cmd("write")
+              end)
+              -- Close the buffer
+              if vim.api.nvim_buf_is_valid(buf.bufnr) then
+                if not buf.loaded then
+                  vim.api.nvim_buf_delete(buf.bufnr, { force = true })
+                end
+              end
+            end
+          end
+
+          local new_tasks = {}
+          for _, l in ipairs(lines) do
+            local task, id = l:match("^(.-) %[id::(.-)%]$")
+            if id == nil then
+              if l ~= "" then
+                table.insert(new_tasks, l)
+              end
+            else
+              local state = l:match("%s*-%s%[(.*)%]%s")
+              task = cmp.marker_to_md_task(state, task)
+              id = tonumber(id)
+              local item = items[id]
+              if item ~= nil then
+                -- Basically a pop
+                items[id] = nil
+                -- Task has been edited
+                if task ~= item.data.task.text then
+                  local bufnr = load_buf(item.data.filename)
+                  -- Replace the line in the file
+                  vim.api.nvim_buf_set_lines(bufnr, item.data.lnum - 1, item.data.lnum, false, { task })
+                end
+              end
+            end
+          end
+
+          -- Remaining items means some marks have been deleted
+          for _, item in pairs(items) do
+            local bufnr = load_buf(item.data.filename)
+            vim.api.nvim_buf_set_lines(bufnr, item.data.lnum - 1, item.data.lnum, false, {})
+          end
+
+          -- Add new tasks to today journal
+          for _, new_task in ipairs(new_tasks) do
+            local journal_path = f.journal({ desc = "today", create = true, show = false })
+            local bufnr = load_buf(journal_path)
+            local line_count = vim.api.nvim_buf_line_count(bufnr)
+            new_task = "- [ ] " .. new_task
+            vim.api.nvim_buf_set_lines(bufnr, line_count, line_count, false, { new_task })
+          end
+          cleanup_bufs()
+        end,
+      })
+    end,
+  }
+end
+
+return M
