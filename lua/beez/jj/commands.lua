@@ -170,7 +170,7 @@ function M.log(cb, opts)
   local config = opts.config
     or {
       "template-aliases.\"format_short_commit_id(id)\"=\"id.shortest(8) ++ '[' ++ id.shortest() ++ ']'\"",
-      'templates.log_node=coalesce(if(current_working_copy, "@"), if(immutable, "-"), "*")',
+      'templates.log_node=coalesce(if(current_working_copy, "@"), if(immutable, "-"), if(conflict, "!"), "*")',
     }
 
   local template = opts.T or "builtin_log_compact_full_description"
