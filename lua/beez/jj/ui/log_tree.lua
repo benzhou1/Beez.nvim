@@ -50,13 +50,17 @@ function JJLogTree.new()
       end
       -- Reconstruct line from its data parts
       -- Split up first, to before marker and after marker
+      local s, e = string.find(node.data.first, node.data.marker)
       if node.data.marker == "@" then
-        local s, e = string.find(node.data.first, node.data.marker)
         l:append(node.data.first:sub(1, e - 1), "String")
         l:append(node.data.marker, "Added")
         l:append(node.data.first:sub(e + 1), "String")
+      elseif node.data.marker == "!" then
+        l:append(node.data.first:sub(1, e - 1), "String")
+        l:append("x", "ErrorMsg")
+        l:append(node.data.first:sub(e + 1), "String")
       else
-        l:append(node.data.first:gsub("-", "○"):gsub("*", "◆"), "String")
+        l:append(node.data.first:gsub("-", "○", 1):gsub("*", "◆", 1):gsub("!", "x", 1), "String")
       end
       l:append(node.data.change_id, "String")
       l:append(" ", "String")
@@ -76,6 +80,9 @@ function JJLogTree.new()
       l:append(node.data.commit_id:gsub(node.data.commit_uuid, "", 1), "String")
       if node.data.divergent then
         l:append(" (divergent)", "WarningMsg")
+      end
+      if node.data.conflict then
+        l:append(" (conflict)", "ErrorMsg")
       end
       return l
     end,
@@ -125,13 +132,14 @@ function JJLogTree:render(cb)
     local lines = vim.split(log_lines, "\n")
     local nodes = {}
     for _, l in ipairs(lines) do
-      local first, rest, marker, change_id, author, date, time, bookmark, branch, ref, commit_id, commit_uuid, divergent
+      local first, rest, marker, change_id, author, date, time, bookmark, branch, ref, commit_id, commit_uuid, divergent, conflict
       divergent = false
+      conflict = false
 
       -- Look for first alpha numeric char
       local _s, _e = string.find(l, "%w")
       -- Look for marker. It only counts if its before the first alphanumeric char
-      local s, e = string.find(l, "[@%-*]")
+      local s, e = string.find(l, "[@%-*!]")
       if s ~= nil and e ~= nil and s < _s and e < _e then
         first = l:sub(1, e + 2)
         rest = l:sub(e + 3)
@@ -144,7 +152,7 @@ function JJLogTree:render(cb)
       local groups = vim.split(rest or "", " ")
 
       -- Use marker symbol to determine if its a commit line or a description line
-      if marker == "-" or marker == "@" or marker == "*" then
+      if marker == "-" or marker == "@" or marker == "*" or marker == "!" then
         change_id = groups[1]
         author = groups[2]
         date = groups[3]
@@ -152,9 +160,12 @@ function JJLogTree:render(cb)
 
         -- Sometimes just the ref is present
         if #groups == 6 then
-          -- If there is a divergence, treat this as a group size of 5
+          -- If there is a divergence or conflict, treat this as a group size of 5
           if groups[6] == "(divergent)" then
             divergent = true
+            commit_id = groups[5]
+          elseif groups[6] == "(conflict)" then
+            conflict = true
             commit_id = groups[5]
           else
             ref = groups[5]
@@ -205,6 +216,7 @@ function JJLogTree:render(cb)
           ref = ref,
           bookmark = bookmark,
           divergent = divergent,
+          conflict = conflict,
         },
       })
       table.insert(nodes, node)
