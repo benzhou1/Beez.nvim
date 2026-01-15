@@ -77,12 +77,18 @@ end
 
 --- Edits a note by path
 ---@param path string
-function M.edit(path)
+---@param pos? integer[]
+function M.edit(path, pos)
   local u = require("beez.u")
   local cmds = require("beez.cmds")
 
   if M.config.open_in_neovide == false then
     vim.cmd.edit(path)
+    if pos ~= nil then
+      vim.schedule(function()
+        vim.api.nvim_win_set_cursor(0, pos)
+      end)
+    end
     return
   end
 
@@ -91,8 +97,21 @@ function M.edit(path)
     app = "neovide",
     title = "zk",
     cb = function()
-      local cmd = { "nvim", "--server", "/tmp/nvimsocket-zk", "--remote-send", ":e " .. path .. "<cr>" }
+      local socket = "/tmp/nvimsocket-zk"
+      local cmd = { "nvim", "--server", socket, "--remote-send", ":e " .. path .. "<cr>" }
       u.cmds.run(cmd)
+      if pos ~= nil then
+        vim.schedule(function()
+          cmd = {
+            "nvim",
+            "--server",
+            socket,
+            "--remote-send",
+            ":call cursor(" .. pos[1] .. ", " .. pos[2] .. ")<cr>",
+          }
+          u.cmds.run(cmd)
+        end)
+      end
     end,
   })
 end
