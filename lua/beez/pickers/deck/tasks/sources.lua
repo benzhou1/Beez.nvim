@@ -72,6 +72,7 @@ end
 ---@param keys table<string, boolean>
 ---@param indent? integer
 local function display_task(ctx, item, keys, indent)
+  local u = require("beez.u")
   indent = indent or 0
   local cmp = require("plugins.checkmate")
   local task_state = item.data.task.state
@@ -86,6 +87,7 @@ local function display_task(ctx, item, keys, indent)
     marker_hl = "CheckmateInprogressMarker"
   end
 
+  local title = u.os.read_first_line(item.data.filename)
   local deck_item = {
     display_text = {
       { string.rep("  ", indent or 0), "Normal" },
@@ -94,6 +96,8 @@ local function display_task(ctx, item, keys, indent)
       { marker, marker_hl },
       { " ", "String" },
       { item.data.task.text, task_hl },
+      { "  ", "String" },
+      { title, "Comment" },
     },
     filter_text = item.data.task.line,
     data = item.data,
@@ -124,6 +128,7 @@ function M.list_tasks(opts)
   opts = opts or {}
   local u = require("beez.u")
   local actions = require("beez.pickers.deck.tasks.actions")
+  local decorators = require("beez.pickers.deck.tasks.decorators")
 
   local source = {
     name = "find_tasks",
@@ -220,46 +225,7 @@ function M.list_tasks(opts)
     }))
   end
 
-  source.actions = actions.actions(
-    actions.toggle_done_task.name,
-    actions.edit.name,
-  )
-
-  source.actions = u.tables.extend(
-    opts.actions or {},
-    opts.def_action_open and actions.open_note() or actions.insert_task_tag(),
-    actions.toggle_done_task(),
-
-    u.deck.edit_actions({
-      prefix = "edit_tasks.",
-      edit_line = actions.edit_tasks,
-      edit_line_end = {
-        ---@diagnostic disable-next-line: missing-fields
-        edit_opts = {
-          get_pos = function(item, pos)
-            -- 6 for beginning of task
-            local offset = u.utf8.len(item.data.task.task_desc) + 6 + item.data.col - 1
-            return { pos[1], offset }
-          end,
-          get_feedkey = function(feedkey)
-            return "i"
-          end,
-        },
-      },
-      edit_line_start = {
-        ---@diagnostic disable-next-line: missing-fields
-        edit_opts = {
-          get_pos = function(item, pos)
-            -- 6 for beginning of task
-            return { pos[1], 6 + item.data.col - 1 }
-          end,
-          get_feedkey = function(feedkey)
-            return "i"
-          end,
-        },
-      },
-    })
-  )
+  source.actions = u.tables.extend(actions.toggle_done(), actions.edit(), actions.open_note())
 
   source.decorators = {
     decorators.hash_tags(),

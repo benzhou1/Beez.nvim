@@ -81,10 +81,16 @@ M.snacks = require("beez.pickers.snacks")
 M.fzf = require("beez.pickers.fzf")
 M.deck = require("beez.pickers.deck")
 
+---@class beez.pickers.deck.opts
+---@field source_opts? table
+---@field specifier_opts? table
+
+--- Deck picker for showing a list of tasks
+---@param opts? beez.pickers.deck.opts
 function M.list_tasks(opts)
   opts = opts or {}
-  local source, specifier = require("beez.pickers.deck.tasks.sources")
-
+  local source = require("beez.pickers.deck.tasks.sources").list_tasks(opts)
+  require("deck").start(source)
 end
 
 return M
