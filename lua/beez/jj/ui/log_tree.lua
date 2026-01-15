@@ -74,6 +74,9 @@ function JJLogTree.new()
       end
       l:append(node.data.commit_uuid, "Search")
       l:append(node.data.commit_id:gsub(node.data.commit_uuid, "", 1), "String")
+      if node.data.divergent then
+        l:append(" (divergent)", "WarningMsg")
+      end
       return l
     end,
   })
@@ -122,10 +125,14 @@ function JJLogTree:render(cb)
     local lines = vim.split(log_lines, "\n")
     local nodes = {}
     for _, l in ipairs(lines) do
-      local first, rest, marker, change_id, author, date, time, bookmark, branch, ref, commit_id, commit_uuid
-      -- Look for marker
+      local first, rest, marker, change_id, author, date, time, bookmark, branch, ref, commit_id, commit_uuid, divergent
+      divergent = false
+
+      -- Look for first alpha numeric char
+      local _s, _e = string.find(l, "%w")
+      -- Look for marker. It only counts if its before the first alphanumeric char
       local s, e = string.find(l, "[@%-*]")
-      if s ~= nil and e ~= nil then
+      if s ~= nil and e ~= nil and s < _s and e < _e then
         first = l:sub(1, e + 2)
         rest = l:sub(e + 3)
         marker = l:sub(s, e)
@@ -145,12 +152,18 @@ function JJLogTree:render(cb)
 
         -- Sometimes just the ref is present
         if #groups == 6 then
-          ref = groups[5]
-          if not ref:contains("()") then
-            branch = ref
-            ref = nil
+          -- If there is a divergence, treat this as a group size of 5
+          if groups[6] == "(divergent)" then
+            divergent = true
+            commit_id = groups[5]
+          else
+            ref = groups[5]
+            if not ref:contains("()") then
+              branch = ref
+              ref = nil
+            end
+            commit_id = groups[6]
           end
-          commit_id = groups[6]
         -- Sometimes branch and ref are present
         elseif #groups == 7 then
           branch = groups[5]
@@ -191,6 +204,7 @@ function JJLogTree:render(cb)
           branch = branch,
           ref = ref,
           bookmark = bookmark,
+          divergent = divergent,
         },
       })
       table.insert(nodes, node)
