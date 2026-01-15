@@ -29,9 +29,11 @@ local function setup_user_cmds()
       M.new(cmd)
     elseif subcommand == "jira" then
       local cmd = { "zk", "jira" }
-      if #parts > 1 then
-        u.tables.extend(cmd, u.tables.slice(parts, 2))
-      end
+      local jira = table.concat(u.tables.slice(parts, 2), " ")
+      local ticket, content = jira:match("(%S+)%s*-%s(.*)")
+      table.insert(cmd, ticket)
+      table.insert(cmd, "--extra")
+      table.insert(cmd, "body=" .. content)
       table.insert(cmd, "-p")
       M.new(cmd)
     elseif subcommand == "list" then
