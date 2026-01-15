@@ -168,26 +168,26 @@ function M.edit_list(ctx, opts)
   end
 end
 
----@class Beez.u.deck.edit_actions_opts.opts
+---@class beez.u.deck.edit_actions_opts.opts
 ---@field disable? boolean
 ---@field action_name? string
 ---@field edit_opts? Beez.u.deck.edit_list_opts
 
----@class Beez.u.deck.edit_actions_opts
+---@class beez.u.deck.edit_actions_opts
 ---@field prefix string
 ---@field edit_line fun(opts: Beez.u.deck.edit_list_opts): deck.Action
----@field edit_line_start? Beez.u.deck.edit_actions_opts.opts
----@field edit_line_end? Beez.u.deck.edit_actions_opts.opts
----@field insert? Beez.u.deck.edit_actions_opts.opts
----@field delete? Beez.u.deck.edit_actions_opts.opts
----@field write? Beez.u.deck.edit_actions_opts.opts
----@field delete_char? Beez.u.deck.edit_actions_opts.opts
----@field replace_char? Beez.u.deck.edit_actions_opts.opts
----@field insert_above? Beez.u.deck.edit_actions_opts.opts
----@field insert_below? Beez.u.deck.edit_actions_opts.opts
+---@field edit_line_start? beez.u.deck.edit_actions_opts.opts
+---@field edit_line_end? beez.u.deck.edit_actions_opts.opts
+---@field insert? beez.u.deck.edit_actions_opts.opts
+---@field delete? beez.u.deck.edit_actions_opts.opts
+---@field write? beez.u.deck.edit_actions_opts.opts
+---@field delete_char? beez.u.deck.edit_actions_opts.opts
+---@field replace_char? beez.u.deck.edit_actions_opts.opts
+---@field insert_above? beez.u.deck.edit_actions_opts.opts
+---@field insert_below? beez.u.deck.edit_actions_opts.opts
 
 --- Convenience function for returning a set of deck actions for editing lines
----@param opts Beez.u.deck.edit_actions_opts
+---@param opts beez.u.deck.edit_actions_opts
 ---@return deck.Action[]
 function M.edit_actions(opts)
   opts = vim.tbl_deep_extend("keep", opts or {}, {
